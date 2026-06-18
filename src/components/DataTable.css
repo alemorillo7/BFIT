@@ -1,0 +1,149 @@
+.datatable-wrapper {
+  display: flex;
+  flex-direction: column;
+  background: var(--color-surface);
+}
+
+.datatable-header {
+  padding: 1.5rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.datatable-title {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.datatable-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.search-box {
+  position: relative;
+  width: 250px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+}
+
+.search-input {
+  padding-left: 2.25rem;
+}
+
+.sortable-header {
+  cursor: pointer;
+  user-select: none;
+}
+
+.sortable-header:hover {
+  color: var(--color-primary);
+}
+
+.th-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.sort-icon {
+  opacity: 0.4;
+}
+
+.sortable-header:hover .sort-icon {
+  opacity: 1;
+}
+
+.actions-th {
+  text-align: right;
+  width: 100px;
+}
+
+.actions-cell {
+  text-align: right;
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
+.edit-btn {
+  color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.edit-btn:hover {
+  background-color: var(--color-primary);
+  color: white;
+}
+
+.delete-btn {
+  color: var(--color-danger);
+  background-color: var(--color-danger-light);
+}
+
+.delete-btn:hover {
+  background-color: var(--color-danger);
+  color: white;
+}
+
+.loading-state, .empty-state {
+  padding: 3rem;
+  text-align: center;
+  color: var(--color-text-muted);
+}
+
+.datatable-footer {
+  padding: 1rem 1.5rem;
+  border-top: 1px solid var(--color-border);
+  font-size: 0.875rem;
+  color: var(--color-text-muted);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-info {
+  font-weight: 500;
+  color: var(--color-text);
+}
+
+.icon-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .search-box {
+    width: 100%;
+  }
+  .datatable-actions {
+    width: 100%;
+    flex-wrap: wrap;
+  }
+  .hide-mobile {
+    display: none;
+  }
+  .btn {
+    padding: 0.5rem;
+  }
+}

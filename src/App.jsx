@@ -1,0 +1,134 @@
+import React, { useState } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import Layout from './components/Layout';
+import Login from './pages/Login';
+import DataView from './pages/DataView';
+
+function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Column Configurations for different sheets
+  const padresAlumnosCols = [
+    { key: 'nombre_mama', label: 'Nombre Madre' },
+    { key: 'telefono_wa_mama', label: 'Tel. Madre' },
+    { key: 'telefono_wa_papa', label: 'Tel. Padre' },
+    { key: 'nombre_hijo', label: 'Nombre Alumno' },
+    { key: 'curso', label: 'Curso' },
+    { key: 'tipo_menu', label: 'Tipo Menú' },
+    { key: 'tipo_pago', label: 'Tipo Pago' },
+    { key: 'saldo_bs', label: 'Saldo', render: (val) => <span className={`font-medium ${parseFloat(val) < 0 ? 'text-danger' : 'text-success'}`}>{val} Bs</span> },
+    { key: 'activo', label: 'Estado', render: (val) => <span className={`badge ${val === 'TRUE' || val === 'Activo' ? 'badge-success' : 'badge-danger'}`}>{val === 'TRUE' ? 'Activo' : 'Inactivo'}</span> },
+    { key: 'observaciones', label: 'Observaciones' },
+    { key: 'Registrado IA', label: 'Reg. IA' },
+    { key: 'Ultima fecha de pago ', label: 'Últ. Pago' },
+  ];
+
+  const menuTradicionalCols = [
+    { key: 'semana', label: 'Semana' },
+    { key: 'dia', label: 'Día' },
+    { key: 'sopa', label: 'Sopa' },
+    { key: 'segundo', label: 'Segundo' },
+    { key: 'guarnicion', label: 'Guarnición' },
+    { key: 'postre', label: 'Postre' },
+    { key: 'bebida_nota', label: 'Bebida / Nota' },
+  ];
+
+  const menuFitCols = [
+    { key: 'semana', label: 'Semana' },
+    { key: 'dia', label: 'Día' },
+    { key: 'segundo', label: 'Segundo' },
+    { key: 'guarnicion', label: 'Guarnición' },
+    { key: 'postre', label: 'Postre' },
+    { key: 'bebida_nota', label: 'Bebida / Nota' },
+  ];
+
+  const merienditasCols = [
+    { key: 'semana', label: 'Semana' },
+    { key: 'dia', label: 'Día' },
+    { key: 'merienda', label: 'Merienda' },
+    { key: 'juguito', label: 'Juguito' },
+  ];
+
+  const platosAlternativosCols = [
+    { key: 'id', label: 'ID' },
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'descripcion_completa', label: 'Descripción Completa' },
+  ];
+
+  const configCols = [
+    { key: 'variable', label: 'Variable' },
+    { key: 'valor', label: 'Valor' },
+    { key: 'descripcion', label: 'Descripción' },
+  ];
+
+  const cambiosCols = [
+    { key: 'fecha', label: 'Fecha' },
+    { key: 'usuario', label: 'Usuario' },
+    { key: 'seccion', label: 'Sección' },
+    { key: 'registro_afectado', label: 'Registro Afectado' },
+    { key: 'cambio_realizado', label: 'Cambio Realizado' },
+    { key: 'observaciones', label: 'Observaciones' },
+  ];
+
+  const genericCols = [
+    { key: 'nombre', label: 'Nombre' },
+    { key: 'detalle', label: 'Detalle' },
+    { key: 'observaciones', label: 'Observaciones' },
+  ];
+
+  return (
+    <Router>
+      <Routes>
+        <Route path="/login" element={
+          !isAuthenticated ? <Login onLogin={() => setIsAuthenticated(true)} /> : <Navigate to="/padres-alumnos" />
+        } />
+        
+        <Route path="/" element={
+          isAuthenticated ? <Layout onLogout={() => setIsAuthenticated(false)} /> : <Navigate to="/login" />
+        }>
+          <Route index element={<Navigate to="/padres-alumnos" />} />
+          
+          <Route path="padres-alumnos" element={
+            <DataView title="Padres / Alumnos" sheetName="Padres_Alumnos" columns={padresAlumnosCols} />
+          } />
+          
+          <Route path="menu-tradicional" element={
+            <DataView title="Menú Tradicional" sheetName="Menu_Tradicional" columns={menuTradicionalCols} />
+          } />
+          
+          <Route path="menu-fit" element={
+            <DataView title="Menú Fit" sheetName="Menu_Fit" columns={menuFitCols} />
+          } />
+          
+          <Route path="merienditas" element={
+            <DataView title="Merienditas" sheetName="Merienditas" columns={merienditasCols} />
+          } />
+          
+          <Route path="platos-alternativos" element={
+            <DataView title="Platos Alternativos" sheetName="Platos_Alternativos" columns={platosAlternativosCols} />
+          } />
+          
+          <Route path="registros-cambios" element={
+            <DataView title="Registros de Cambios" sheetName="Registros_Cambios" columns={cambiosCols} />
+          } />
+          
+          <Route path="observaciones" element={
+            <DataView title="Observaciones Generales" sheetName="Observaciones" columns={genericCols} />
+          } />
+          
+          <Route path="clientes-preferenciales" element={
+            <DataView title="Clientes Preferenciales" sheetName="Clientes Preferenciales" columns={genericCols} />
+          } />
+          
+          <Route path="config" element={
+            <DataView title="Configuración" sheetName="Config" columns={configCols} />
+          } />
+        </Route>
+        
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Router>
+  );
+}
+
+export default App;
