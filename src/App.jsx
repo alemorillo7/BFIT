@@ -63,17 +63,24 @@ function App() {
 
   const cambiosCols = [
     { key: 'fecha', label: 'Fecha' },
-    { key: 'usuario', label: 'Usuario' },
-    { key: 'seccion', label: 'Sección' },
-    { key: 'registro_afectado', label: 'Registro Afectado' },
-    { key: 'cambio_realizado', label: 'Cambio Realizado' },
-    { key: 'observaciones', label: 'Observaciones' },
+    { key: 'nombre_padre', label: 'Nombre Padre' },
+    { key: 'nombre_hijo', label: 'Nombre Hijo' },
+    { key: 'curso', label: 'Curso' },
+    { key: 'plato_original', label: 'Plato Original' },
+    { key: 'plato_elegido', label: 'Plato Elegido' },
+    { key: 'hora_registro', label: 'Hora Registro' },
   ];
 
-  const genericCols = [
+  const observacionesCols = [
+    { key: 'alumno', label: 'Alumno' },
+    { key: 'fecha', label: 'Fecha' },
+    { key: 'motivo_de_falta', label: 'Motivo de Falta' },
+    { key: 'hora_registro', label: 'Hora Registro' },
+  ];
+
+  const clientesPrefCols = [
+    { key: 'telefono (sin el +)', label: 'Teléfono' },
     { key: 'nombre', label: 'Nombre' },
-    { key: 'detalle', label: 'Detalle' },
-    { key: 'observaciones', label: 'Observaciones' },
   ];
 
   return (
@@ -113,11 +120,11 @@ function App() {
           } />
           
           <Route path="observaciones" element={
-            <DataView title="Observaciones Generales" sheetName="Observaciones" columns={genericCols} />
+            <DataView title="Observaciones Generales" sheetName="Observaciones" columns={observacionesCols} />
           } />
           
           <Route path="clientes-preferenciales" element={
-            <DataView title="Clientes Preferenciales" sheetName="Clientes Preferenciales" columns={genericCols} />
+            <DataView title="Clientes Preferenciales" sheetName="Clientes Preferenciales" columns={clientesPrefCols} />
           } />
           
           <Route path="config" element={

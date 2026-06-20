@@ -56,7 +56,6 @@ const Modal = ({ isOpen, onClose, title, columns, initialData, onSubmit, isSubmi
                   value={formData[col.key] || ''}
                   onChange={(e) => handleChange(e, col.key)}
                   placeholder={`Ingrese ${col.label.toLowerCase()}`}
-                  required={col.key !== 'observaciones'} // Todos requeridos excepto observaciones por ahora
                   disabled={isSubmitting}
                 />
               </div>
