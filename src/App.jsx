@@ -24,6 +24,7 @@ function App() {
   ];
 
   const menuTradicionalCols = [
+    { key: 'ID', label: 'ID' },
     { key: 'semana', label: 'Semana' },
     { key: 'dia', label: 'Día' },
     { key: 'sopa', label: 'Sopa' },
@@ -34,6 +35,7 @@ function App() {
   ];
 
   const menuFitCols = [
+    { key: 'ID', label: 'ID' },
     { key: 'semana', label: 'Semana' },
     { key: 'dia', label: 'Día' },
     { key: 'segundo', label: 'Segundo' },
@@ -43,6 +45,7 @@ function App() {
   ];
 
   const merienditasCols = [
+    { key: 'ID', label: 'ID' },
     { key: 'semana', label: 'Semana' },
     { key: 'dia', label: 'Día' },
     { key: 'merienda', label: 'Merienda' },
@@ -79,6 +82,7 @@ function App() {
   ];
 
   const clientesPrefCols = [
+    { key: 'ID', label: 'ID' },
     { key: 'telefono (sin el +)', label: 'Teléfono' },
     { key: 'nombre', label: 'Nombre' },
   ];

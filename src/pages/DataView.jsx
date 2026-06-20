@@ -82,13 +82,14 @@ const DataView = ({ title, sheetName, columns }) => {
     setModalType('create');
     let prefill = null;
     
-    // Lógica para auto-incrementar IDs si la tabla tiene una columna 'id'
-    if (cols.some(c => c.key === 'id')) {
+    // Lógica para auto-incrementar IDs si la tabla tiene una columna 'id' (case-insensitive)
+    const idCol = cols.find(c => c.key.toLowerCase() === 'id');
+    if (idCol) {
       const maxId = currentData.reduce((max, row) => {
-        const rowId = parseInt(row.id);
+        const rowId = parseInt(row[idCol.key]);
         return !isNaN(rowId) && rowId > max ? rowId : max;
       }, 0);
-      prefill = { id: (maxId + 1).toString() };
+      prefill = { [idCol.key]: (maxId + 1).toString() };
     }
 
     setSelectedRecord(prefill);
