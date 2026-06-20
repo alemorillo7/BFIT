@@ -5,7 +5,19 @@ import Login from './pages/Login';
 import DataView from './pages/DataView';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return localStorage.getItem('bfit_auth') === 'true';
+  });
+
+  const handleLogin = () => {
+    localStorage.setItem('bfit_auth', 'true');
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem('bfit_auth');
+    setIsAuthenticated(false);
+  };
 
   // Column Configurations for different sheets
   const padresAlumnosCols = [
@@ -91,11 +103,11 @@ function App() {
     <Router>
       <Routes>
         <Route path="/login" element={
-          !isAuthenticated ? <Login onLogin={() => setIsAuthenticated(true)} /> : <Navigate to="/padres-alumnos" />
+          !isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/padres-alumnos" />
         } />
         
         <Route path="/" element={
-          isAuthenticated ? <Layout onLogout={() => setIsAuthenticated(false)} /> : <Navigate to="/login" />
+          isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" />
         }>
           <Route index element={<Navigate to="/padres-alumnos" />} />
           

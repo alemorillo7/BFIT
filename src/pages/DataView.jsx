@@ -3,6 +3,9 @@ import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
 import DataTable from '../components/DataTable';
 import Modal from '../components/Modal';
 
+// Caché global en memoria para carga instantánea al cambiar de pestañas
+const sheetCache = {};
+
 const DataView = ({ title, sheetName, columns }) => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,10 +27,19 @@ const DataView = ({ title, sheetName, columns }) => {
   }, [sheetName, columns]);
 
   const loadData = async () => {
-    setLoading(true);
+    // Si ya tenemos datos cacheados, los mostramos instantáneamente
+    if (sheetCache[sheetName]) {
+      setData(sheetCache[sheetName]);
+      setLoading(false); // Quitamos la pantalla de carga porque ya hay algo que ver
+    } else {
+      setLoading(true);
+    }
+
     try {
+      // De todas formas vamos a buscar a Google Sheets en el fondo (background)
       const result = await fetchSheetData(sheetName);
-      setData(result);
+      sheetCache[sheetName] = result; // Guardamos lo más nuevo en el caché
+      setData(result); // Actualizamos la tabla silenciosamente si hubo cambios
     } catch (error) {
       console.error(`Error loading data for ${sheetName}:`, error);
       alert(`Error al cargar datos de ${sheetName}. Revisa la consola.`);
@@ -103,7 +115,6 @@ const DataView = ({ title, sheetName, columns }) => {
       try {
         setLoading(true);
         await sendWebhookMutation(targetSheet, 'BAJA', row);
-        alert('Registro eliminado. n8n procesará la baja.');
       } catch (err) {
         alert('Error al intentar eliminar el registro.');
       } finally {
@@ -117,7 +128,6 @@ const DataView = ({ title, sheetName, columns }) => {
     try {
       const action = modalType === 'create' ? 'ALTA' : 'MODIFICACION';
       await sendWebhookMutation(activeSheet, action, formData);
-      alert(`Operación exitosa: ${action}. n8n procesará los cambios en el sheet.`);
       setIsModalOpen(false);
     } catch (err) {
       alert('Error al guardar el registro. Intente nuevamente.');
