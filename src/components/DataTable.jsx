@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Search, Download, Edit2, Trash2, Plus, ArrowUpDown, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Download, Edit2, Trash2, Plus, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
 import * as Papa from 'papaparse';
 import './DataTable.css';
 
@@ -10,6 +10,8 @@ const DataTable = ({
   onEdit, 
   onDelete, 
   onCreate,
+  onPromote,
+  onBulkPromote,
   isLoading 
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -94,6 +96,13 @@ const DataTable = ({
             <span className="hide-mobile">Exportar</span>
           </button>
           
+          {onBulkPromote && (
+            <button className="btn btn-primary" style={{ backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={onBulkPromote}>
+              <GraduationCap size={18} />
+              <span className="hide-mobile">Subir Todos de Curso</span>
+            </button>
+          )}
+
           {onCreate && (
             <button className="btn btn-primary" onClick={onCreate}>
               <Plus size={18} />
@@ -118,7 +127,7 @@ const DataTable = ({
                     </div>
                   </th>
                 ))}
-                {(onEdit || onDelete) && <th className="actions-th">Acciones</th>}
+                {(onEdit || onDelete || onPromote) && <th className="actions-th">Acciones</th>}
               </tr>
             </thead>
             <tbody>
@@ -130,9 +139,14 @@ const DataTable = ({
                         {col.render ? col.render(row[col.key], row) : row[col.key]}
                       </td>
                     ))}
-                    {(onEdit || onDelete) && (
+                    {(onEdit || onDelete || onPromote) && (
                       <td className="actions-cell">
                         <div className="action-buttons">
+                          {onPromote && (
+                            <button className="icon-btn" style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }} onClick={() => onPromote(row)} title="Subir de Curso">
+                              <GraduationCap size={16} />
+                            </button>
+                          )}
                           {onEdit && (
                             <button className="icon-btn edit-btn" onClick={() => onEdit(row)} title="Editar">
                               <Edit2 size={16} />
@@ -150,7 +164,7 @@ const DataTable = ({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length + (onEdit || onDelete ? 1 : 0)} className="empty-state">
+                  <td colSpan={columns.length + (onEdit || onDelete || onPromote ? 1 : 0)} className="empty-state">
                     No se encontraron registros.
                   </td>
                 </tr>
