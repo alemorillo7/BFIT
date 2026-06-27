@@ -10,7 +10,8 @@ import {
   MessageSquare, 
   Star,
   Settings,
-  LogOut
+  LogOut,
+  Bot
 } from 'lucide-react';
 import './Sidebar.css';
 
@@ -25,6 +26,7 @@ const Sidebar = ({ isCollapsed, isOpen, onLogout }) => {
     { name: 'Observaciones', path: '/observaciones', icon: <MessageSquare size={20} /> },
     { name: 'Clientes Preferenciales', path: '/clientes-preferenciales', icon: <Star size={20} /> },
     { name: 'Configuración', path: '/config', icon: <Settings size={20} /> },
+    { name: 'Panel de Agente', path: 'https://app.chatwoot.com/app/accounts/156508/conversations/11', icon: <Bot size={20} />, isExternal: true },
   ];
 
   return (
@@ -37,17 +39,35 @@ const Sidebar = ({ isCollapsed, isOpen, onLogout }) => {
       </div>
       
       <nav className="sidebar-nav">
-        {menuItems.map((item) => (
-          <NavLink 
-            key={item.path} 
-            to={item.path} 
-            className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
-            title={isCollapsed ? item.name : undefined}
-          >
-            {item.icon}
-            {!isCollapsed && <span>{item.name}</span>}
-          </NavLink>
-        ))}
+        {menuItems.map((item) => {
+          if (item.isExternal) {
+            return (
+              <a 
+                key={item.path} 
+                href={item.path} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="nav-item"
+                title={isCollapsed ? item.name : undefined}
+                style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}
+              >
+                {item.icon}
+                {!isCollapsed && <span>{item.name}</span>}
+              </a>
+            );
+          }
+          return (
+            <NavLink 
+              key={item.path} 
+              to={item.path} 
+              className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
+              title={isCollapsed ? item.name : undefined}
+            >
+              {item.icon}
+              {!isCollapsed && <span>{item.name}</span>}
+            </NavLink>
+          );
+        })}
       </nav>
       
       <div className="sidebar-footer">
