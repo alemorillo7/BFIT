@@ -155,6 +155,17 @@ const DataView = ({ title, sheetName, columns }) => {
       try {
         setLoading(true);
         await sendWebhookMutation(targetSheet, 'BAJA', row);
+        
+        // Optimistic Update: Actualizar la UI inmediatamente
+        if (targetSheet === sheetName) {
+          const updatedData = data.filter(d => d !== row);
+          setData(updatedData);
+          sheetCache[sheetName] = updatedData;
+        } else if (targetSheet === 'Alternativas_Merienditas') {
+          const updatedSubData = subData.filter(d => d !== row);
+          setSubData(updatedSubData);
+          sheetCache['Alternativa a merienditas'] = updatedSubData;
+        }
       } catch (err) {
         alert('Error al intentar eliminar el registro.');
       } finally {
@@ -169,8 +180,30 @@ const DataView = ({ title, sheetName, columns }) => {
       const action = modalType === 'create' ? 'ALTA' : 'MODIFICACION';
       await sendWebhookMutation(activeSheet, action, formData);
       setIsModalOpen(false);
-      // Recargar datos en background
-      loadData();
+      
+      // Optimistic Update: Actualizar la UI inmediatamente
+      if (activeSheet === sheetName) {
+        let updatedData = [];
+        if (modalType === 'create') {
+          updatedData = [...data, formData];
+        } else {
+          updatedData = data.map(d => d === selectedRecord ? formData : d);
+        }
+        setData(updatedData);
+        sheetCache[sheetName] = updatedData;
+      } else if (activeSheet === 'Alternativas_Merienditas') {
+        let updatedSubData = [];
+        if (modalType === 'create') {
+          updatedSubData = [...subData, formData];
+        } else {
+          updatedSubData = subData.map(d => d === selectedRecord ? formData : d);
+        }
+        setSubData(updatedSubData);
+        sheetCache['Alternativa a merienditas'] = updatedSubData;
+      }
+      
+      // Opcional: Recargar datos en background para sincronizar eventualmente
+      // loadData();
     } catch (err) {
       alert('Error al guardar el registro. Intente nuevamente.');
     } finally {
