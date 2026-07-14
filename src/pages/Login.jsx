@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Login.css';
 
@@ -8,9 +8,9 @@ const Login = ({ onLogin }) => {
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Simple mock auth
+  const handleSubmit = (event) => {
+    event.preventDefault();
+
     if (username === 'admin' && password === 'bfit2026') {
       onLogin();
       navigate('/padres-alumnos');
@@ -28,34 +28,34 @@ const Login = ({ onLogin }) => {
           </h1>
           <p>Bienvenido al Panel Administrativo</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="login-form">
           {error && <div className="error-message">{error}</div>}
-          
+
           <div className="form-group">
             <label className="label">Usuario</label>
-            <input 
-              type="text" 
-              className="input" 
+            <input
+              type="text"
+              className="input"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(event) => setUsername(event.target.value)}
               placeholder="admin"
-              required 
+              required
             />
           </div>
-          
+
           <div className="form-group">
             <label className="label">Contraseña</label>
-            <input 
-              type="password" 
-              className="input" 
+            <input
+              type="password"
+              className="input"
               value={password}
-              onChange={(e) => setPassword(e.target.value)}
+              onChange={(event) => setPassword(event.target.value)}
               placeholder="••••••••"
-              required 
+              required
             />
           </div>
-          
+
           <button type="submit" className="btn btn-primary login-btn">
             Ingresar al Sistema
           </button>

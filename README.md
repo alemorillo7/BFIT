@@ -1,16 +1,43 @@
-# React + Vite
+# Panel de agentes conversacionales
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Interfaz estilo WhatsApp/CRM conectada a Supabase para operadores que gestionan conversaciones, etiquetas y contactos en tiempo real.
 
-Currently, two official plugins are available:
+## Qué incluye
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Bandeja de conversaciones con búsqueda, orden por última actividad y filtros por etiquetas
+- Ventana de chat con soporte para texto, links, imagen, audio y archivos
+- Toggle del bot por conversación
+- Gestión de etiquetas con asignación y remoción
+- Módulo de contactos con alta, edición y baja
+- Endpoints `/api/*` para operaciones obligatorias y CRUD de contactos
+- Esquema SQL listo para Supabase en `supabase/schema.sql`
 
-## React Compiler
+## Variables de entorno
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Usa `.env.example` como referencia:
 
-## Expanding the ESLint configuration
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+- `SUPABASE_URL`
+- `SUPABASE_SERVICE_ROLE_KEY`
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Puesta en marcha
+
+1. Ejecuta `supabase/schema.sql` en tu proyecto.
+2. Carga las variables de entorno.
+3. Instala dependencias con `npm install`.
+4. Para frontend local usa `npm run dev`.
+5. Para probar también las funciones `/api/*`, ejecuta el proyecto con entorno compatible con Vercel Functions.
+
+## Endpoints principales
+
+- `POST /api/ingest-message`
+- `POST /api/send-message`
+- `GET /api/bot-status`
+- `POST /api/toggle-bot`
+- `POST /api/assign-tags`
+- `POST /api/remove-tags`
+- `POST /api/upload-image`
+- `POST /api/upload-media`
+- `POST /api/delete-chat`
+- `GET|POST|DELETE /api/contacts`

@@ -1,18 +1,18 @@
-import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { 
-  Users, 
-  Utensils, 
-  Leaf, 
-  Coffee, 
-  ListPlus, 
-  History, 
-  MessageSquare, 
-  Star,
-  Settings,
+import {
+  Bot,
+  ContactRound,
+  Coffee,
+  History,
+  Leaf,
+  ListPlus,
   LogOut,
-  Bot
+  MessageSquare,
+  Settings,
+  Star,
+  Users,
+  Utensils,
 } from 'lucide-react';
+import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
 const Sidebar = ({ isCollapsed, isOpen, onLogout }) => {
@@ -26,50 +26,34 @@ const Sidebar = ({ isCollapsed, isOpen, onLogout }) => {
     { name: 'Observaciones', path: '/observaciones', icon: <MessageSquare size={20} /> },
     { name: 'Clientes Preferenciales', path: '/clientes-preferenciales', icon: <Star size={20} /> },
     { name: 'Configuración', path: '/config', icon: <Settings size={20} /> },
-    { name: 'Panel de Agente', path: 'https://app.chatwoot.com/app/accounts/156508/conversations/11', icon: <Bot size={20} />, isExternal: true },
+    { name: 'Agente: Conversaciones', path: '/agente-conversaciones', icon: <Bot size={20} />, accent: true },
+    { name: 'Agente: Contactos', path: '/agente-contactos', icon: <ContactRound size={20} />, accent: true },
   ];
 
   return (
     <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isOpen ? 'open' : ''}`}>
       <div className="sidebar-header">
         <h2 className="brand-title">
-          <span className="brand-accent">B</span>{!isCollapsed && 'fit'}
+          <span className="brand-accent">B</span>
+          {!isCollapsed && 'fit'}
         </h2>
         {!isCollapsed && <p className="brand-subtitle">Panel Administrativo</p>}
       </div>
-      
+
       <nav className="sidebar-nav">
-        {menuItems.map((item) => {
-          if (item.isExternal) {
-            return (
-              <a 
-                key={item.path} 
-                href={item.path} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="nav-item"
-                title={isCollapsed ? item.name : undefined}
-                style={{ backgroundColor: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}
-              >
-                {item.icon}
-                {!isCollapsed && <span>{item.name}</span>}
-              </a>
-            );
-          }
-          return (
-            <NavLink 
-              key={item.path} 
-              to={item.path} 
-              className={({ isActive }) => isActive ? 'nav-item active' : 'nav-item'}
-              title={isCollapsed ? item.name : undefined}
-            >
-              {item.icon}
-              {!isCollapsed && <span>{item.name}</span>}
-            </NavLink>
-          );
-        })}
+        {menuItems.map((item) => (
+          <NavLink
+            key={item.path}
+            to={item.path}
+            className={({ isActive }) => `nav-item ${item.accent ? 'nav-item-accent' : ''} ${isActive ? 'active' : ''}`.trim()}
+            title={isCollapsed ? item.name : undefined}
+          >
+            {item.icon}
+            {!isCollapsed && <span>{item.name}</span>}
+          </NavLink>
+        ))}
       </nav>
-      
+
       <div className="sidebar-footer">
         {!isCollapsed && <p className="footer-copy">© 2026 Bfit System</p>}
         <button className="sidebar-logout-btn" onClick={onLogout} title="Cerrar Sesión">

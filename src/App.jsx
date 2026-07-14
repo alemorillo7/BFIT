@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { useState } from 'react';
+import { BrowserRouter as Router, Navigate, Route, Routes } from 'react-router-dom';
 import Layout from './components/Layout';
-import Login from './pages/Login';
+import AgentPanel from './pages/AgentPanel';
 import DataView from './pages/DataView';
+import Login from './pages/Login';
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return localStorage.getItem('bfit_auth') === 'true';
-  });
+  const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('bfit_auth') === 'true');
 
   const handleLogin = () => {
     localStorage.setItem('bfit_auth', 'true');
@@ -19,7 +18,6 @@ function App() {
     setIsAuthenticated(false);
   };
 
-  // Column Configurations for different sheets
   const padresAlumnosCols = [
     { key: 'nombre_mama', label: 'Nombre Madre' },
     { key: 'telefono_wa_mama', label: 'Tel. Madre' },
@@ -28,8 +26,16 @@ function App() {
     { key: 'curso', label: 'Curso' },
     { key: 'tipo_menu', label: 'Tipo Menú' },
     { key: 'tipo_pago', label: 'Tipo Pago' },
-    { key: 'saldo_bs', label: 'Saldo', render: (val) => <span className={`font-medium ${parseFloat(val) < 0 ? 'text-danger' : 'text-success'}`}>{val} Bs</span> },
-    { key: 'activo', label: 'Estado', render: (val) => <span className={`badge ${val === 'TRUE' || val === 'Activo' ? 'badge-success' : 'badge-danger'}`}>{val === 'TRUE' ? 'Activo' : 'Inactivo'}</span> },
+    {
+      key: 'saldo_bs',
+      label: 'Saldo',
+      render: (val) => <span className={`font-medium ${parseFloat(val) < 0 ? 'text-danger' : 'text-success'}`}>{val} Bs</span>,
+    },
+    {
+      key: 'activo',
+      label: 'Estado',
+      render: (val) => <span className={`badge ${val === 'TRUE' || val === 'Activo' ? 'badge-success' : 'badge-danger'}`}>{val === 'TRUE' ? 'Activo' : 'Inactivo'}</span>,
+    },
     { key: 'observaciones', label: 'Observaciones' },
     { key: 'Registrado IA', label: 'Reg. IA' },
     { key: 'Ultima fecha de pago ', label: 'Últ. Pago' },
@@ -102,52 +108,23 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={
-          !isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/padres-alumnos" />
-        } />
-        
-        <Route path="/" element={
-          isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" />
-        }>
+        <Route path="/login" element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/padres-alumnos" />} />
+
+        <Route path="/" element={isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" />}>
           <Route index element={<Navigate to="/padres-alumnos" />} />
-          
-          <Route path="padres-alumnos" element={
-            <DataView title="Padres / Alumnos" sheetName="Padres_Alumnos" columns={padresAlumnosCols} />
-          } />
-          
-          <Route path="menu-tradicional" element={
-            <DataView title="Menú Tradicional" sheetName="Menu_Tradicional" columns={menuTradicionalCols} />
-          } />
-          
-          <Route path="menu-fit" element={
-            <DataView title="Menú Fit" sheetName="Menu_Fit" columns={menuFitCols} />
-          } />
-          
-          <Route path="merienditas" element={
-            <DataView title="Merienditas" sheetName="Merienditas" columns={merienditasCols} />
-          } />
-          
-          <Route path="platos-alternativos" element={
-            <DataView title="Platos Alternativos" sheetName="Platos_Alternativos" columns={platosAlternativosCols} />
-          } />
-          
-          <Route path="registros-cambios" element={
-            <DataView title="Registros de Cambios" sheetName="Registros_Cambios" columns={cambiosCols} />
-          } />
-          
-          <Route path="observaciones" element={
-            <DataView title="Observaciones Generales" sheetName="Observaciones" columns={observacionesCols} />
-          } />
-          
-          <Route path="clientes-preferenciales" element={
-            <DataView title="Clientes Preferenciales" sheetName="Clientes Preferenciales" columns={clientesPrefCols} />
-          } />
-          
-          <Route path="config" element={
-            <DataView title="Configuración" sheetName="Config" columns={configCols} />
-          } />
+          <Route path="padres-alumnos" element={<DataView title="Padres / Alumnos" sheetName="Padres_Alumnos" columns={padresAlumnosCols} />} />
+          <Route path="menu-tradicional" element={<DataView title="Menú Tradicional" sheetName="Menu_Tradicional" columns={menuTradicionalCols} />} />
+          <Route path="menu-fit" element={<DataView title="Menú Fit" sheetName="Menu_Fit" columns={menuFitCols} />} />
+          <Route path="merienditas" element={<DataView title="Merienditas" sheetName="Merienditas" columns={merienditasCols} />} />
+          <Route path="platos-alternativos" element={<DataView title="Platos Alternativos" sheetName="Platos_Alternativos" columns={platosAlternativosCols} />} />
+          <Route path="registros-cambios" element={<DataView title="Registros de Cambios" sheetName="Registros_Cambios" columns={cambiosCols} />} />
+          <Route path="observaciones" element={<DataView title="Observaciones Generales" sheetName="Observaciones" columns={observacionesCols} />} />
+          <Route path="clientes-preferenciales" element={<DataView title="Clientes Preferenciales" sheetName="Clientes Preferenciales" columns={clientesPrefCols} />} />
+          <Route path="config" element={<DataView title="Configuración" sheetName="Config" columns={configCols} />} />
+          <Route path="agente-conversaciones" element={<AgentPanel section="conversations" />} />
+          <Route path="agente-contactos" element={<AgentPanel section="contacts" />} />
         </Route>
-        
+
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </Router>

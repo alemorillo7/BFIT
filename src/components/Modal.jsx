@@ -1,41 +1,35 @@
-import React, { useState, useEffect } from 'react';
+import { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import './Modal.css';
 
-const Modal = ({ isOpen, onClose, title, columns, initialData, onSubmit, isSubmitting }) => {
-  const [formData, setFormData] = useState({});
+const buildInitialData = (columns, initialData) => {
+  if (initialData) {
+    return initialData;
+  }
 
-  useEffect(() => {
-    if (isOpen) {
-      if (initialData) {
-        setFormData(initialData);
-      } else {
-        // Inicializar con campos vacíos
-        const emptyData = {};
-        columns.forEach(col => {
-          emptyData[col.key] = '';
-        });
-        setFormData(emptyData);
-      }
-    }
-  }, [isOpen, initialData, columns]);
+  return columns.reduce((accumulator, column) => {
+    accumulator[column.key] = '';
+    return accumulator;
+  }, {});
+};
 
-  if (!isOpen) return null;
+const ModalForm = ({ title, columns, initialData, onClose, onSubmit, isSubmitting }) => {
+  const [formData, setFormData] = useState(() => buildInitialData(columns, initialData));
 
-  const handleChange = (e, key) => {
-    setFormData({
-      ...formData,
-      [key]: e.target.value
-    });
+  const handleChange = (event, key) => {
+    setFormData((current) => ({
+      ...current,
+      [key]: event.target.value,
+    }));
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const handleSubmit = (event) => {
+    event.preventDefault();
     onSubmit(formData);
   };
 
-  const modalContent = (
+  return (
     <div className="modal-overlay">
       <div className="modal-content premium-card animate-fade-in">
         <div className="modal-header">
@@ -44,38 +38,29 @@ const Modal = ({ isOpen, onClose, title, columns, initialData, onSubmit, isSubmi
             <X size={20} />
           </button>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="modal-body">
           <div className="form-grid">
-            {columns.map(col => (
+            {columns.map((col) => (
               <div key={col.key} className="form-group">
                 <label className="label">{col.label}</label>
                 <input
                   type="text"
                   className="input"
                   value={formData[col.key] || ''}
-                  onChange={(e) => handleChange(e, col.key)}
+                  onChange={(event) => handleChange(event, col.key)}
                   placeholder={`Ingrese ${col.label.toLowerCase()}`}
                   disabled={isSubmitting}
                 />
               </div>
             ))}
           </div>
-          
+
           <div className="modal-footer">
-            <button 
-              type="button" 
-              className="btn btn-outline" 
-              onClick={onClose}
-              disabled={isSubmitting}
-            >
+            <button type="button" className="btn btn-outline" onClick={onClose} disabled={isSubmitting}>
               Cancelar
             </button>
-            <button 
-              type="submit" 
-              className="btn btn-primary"
-              disabled={isSubmitting}
-            >
+            <button type="submit" className="btn btn-primary" disabled={isSubmitting}>
               {isSubmitting ? 'Guardando...' : 'Guardar'}
             </button>
           </div>
@@ -83,8 +68,27 @@ const Modal = ({ isOpen, onClose, title, columns, initialData, onSubmit, isSubmi
       </div>
     </div>
   );
+};
 
-  return createPortal(modalContent, document.body);
+const Modal = ({ isOpen, onClose, title, columns, initialData, onSubmit, isSubmitting }) => {
+  const modalKey = useMemo(() => JSON.stringify({ initialData, columns: columns.map((column) => column.key) }), [columns, initialData]);
+
+  if (!isOpen) {
+    return null;
+  }
+
+  return createPortal(
+    <ModalForm
+      key={modalKey}
+      title={title}
+      columns={columns}
+      initialData={initialData}
+      onClose={onClose}
+      onSubmit={onSubmit}
+      isSubmitting={isSubmitting}
+    />,
+    document.body,
+  );
 };
 
 export default Modal;

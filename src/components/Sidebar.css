@@ -117,6 +117,20 @@
   color: var(--color-primary-light);
   border-left-color: var(--color-primary);
 }
+
+.nav-item-accent {
+  background-color: rgba(139, 92, 246, 0.08);
+}
+
+.nav-item-accent.active {
+  background-color: rgba(139, 92, 246, 0.14);
+  color: #ddd6fe;
+  border-left-color: #8b5cf6;
+}
+
+.nav-item-accent:hover {
+  background-color: rgba(139, 92, 246, 0.12);
+}
 @media (max-width: 1024px) {
   .sidebar {
     transform: translateX(-100%);

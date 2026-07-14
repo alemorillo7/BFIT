@@ -1,27 +1,17 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Download, Edit2, Trash2, Plus, ArrowUpDown, ChevronLeft, ChevronRight, GraduationCap } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Edit2, GraduationCap, Plus, Search, Trash2 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import './DataTable.css';
 
-const DataTable = ({ 
-  title, 
-  data, 
-  columns, 
-  onEdit, 
-  onDelete, 
-  onCreate,
-  onPromote,
-  onBulkPromote,
-  isLoading 
-}) => {
+const DataTable = ({ title, data, columns, onEdit, onDelete, onCreate, onPromote, onBulkPromote, isLoading }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const [currentPage, setCurrentPage] = useState(1);
   const rowsPerPage = 20;
 
-  // Handle Sorting
   const sortedData = useMemo(() => {
-    let sortableItems = [...data];
+    const sortableItems = [...data];
+
     if (sortConfig.key !== null) {
       sortableItems.sort((a, b) => {
         if (a[sortConfig.key] < b[sortConfig.key]) {
@@ -33,25 +23,21 @@ const DataTable = ({
         return 0;
       });
     }
+
     return sortableItems;
   }, [data, sortConfig]);
 
-  // Handle Filtering
-  const filteredData = sortedData.filter((item) => {
-    return Object.values(item).some(val => 
-      String(val).toLowerCase().includes(searchTerm.toLowerCase())
-    );
-  });
+  const filteredData = useMemo(
+    () =>
+      sortedData.filter((item) =>
+        Object.values(item).some((value) => String(value).toLowerCase().includes(searchTerm.toLowerCase())),
+      ),
+    [searchTerm, sortedData],
+  );
 
-  // Handle Pagination
   const totalPages = Math.ceil(filteredData.length / rowsPerPage);
   const startIndex = (currentPage - 1) * rowsPerPage;
   const paginatedData = filteredData.slice(startIndex, startIndex + rowsPerPage);
-
-  // Reset page when search changes
-  useMemo(() => {
-    setCurrentPage(1);
-  }, [searchTerm]);
 
   const requestSort = (key) => {
     let direction = 'ascending';
@@ -78,24 +64,27 @@ const DataTable = ({
     <div className="datatable-wrapper premium-card">
       <div className="datatable-header">
         <h3 className="datatable-title">{title}</h3>
-        
+
         <div className="datatable-actions">
           <div className="search-box">
             <Search size={18} className="search-icon" />
-            <input 
-              type="text" 
-              placeholder="Buscar..." 
+            <input
+              type="text"
+              placeholder="Buscar..."
               className="input search-input"
               value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              onChange={(event) => {
+                setSearchTerm(event.target.value);
+                setCurrentPage(1);
+              }}
             />
           </div>
-          
+
           <button className="btn btn-outline" onClick={exportToCSV}>
             <Download size={18} />
             <span className="hide-mobile">Exportar</span>
           </button>
-          
+
           {onBulkPromote && (
             <button className="btn btn-primary" style={{ backgroundColor: '#8b5cf6', borderColor: '#8b5cf6' }} onClick={onBulkPromote}>
               <GraduationCap size={18} />
@@ -135,15 +124,18 @@ const DataTable = ({
                 paginatedData.map((row, index) => (
                   <tr key={index}>
                     {columns.map((col) => (
-                      <td key={col.key}>
-                        {col.render ? col.render(row[col.key], row) : row[col.key]}
-                      </td>
+                      <td key={col.key}>{col.render ? col.render(row[col.key], row) : row[col.key]}</td>
                     ))}
                     {(onEdit || onDelete || onPromote) && (
                       <td className="actions-cell">
                         <div className="action-buttons">
                           {onPromote && (
-                            <button className="icon-btn" style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }} onClick={() => onPromote(row)} title="Subir de Curso">
+                            <button
+                              className="icon-btn"
+                              style={{ color: '#8b5cf6', background: 'rgba(139, 92, 246, 0.1)' }}
+                              onClick={() => onPromote(row)}
+                              title="Subir de Curso"
+                            >
                               <GraduationCap size={16} />
                             </button>
                           )}
@@ -173,25 +165,19 @@ const DataTable = ({
           </table>
         )}
       </div>
-      
+
       <div className="datatable-footer">
         <span className="text-muted">
           Mostrando {filteredData.length === 0 ? 0 : startIndex + 1} - {Math.min(startIndex + rowsPerPage, filteredData.length)} de {filteredData.length} registros
         </span>
         <div className="pagination-controls">
-          <button 
-            className="icon-btn" 
-            onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-            disabled={currentPage === 1 || filteredData.length === 0}
-          >
+          <button className="icon-btn" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1 || filteredData.length === 0}>
             <ChevronLeft size={18} />
           </button>
-          <span className="page-info">
-            Página {currentPage} de {totalPages || 1}
-          </span>
-          <button 
-            className="icon-btn" 
-            onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+          <span className="page-info">Página {currentPage} de {totalPages || 1}</span>
+          <button
+            className="icon-btn"
+            onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
             disabled={currentPage === totalPages || filteredData.length === 0}
           >
             <ChevronRight size={18} />
