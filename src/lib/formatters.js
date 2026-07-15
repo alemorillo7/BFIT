@@ -18,6 +18,23 @@ export const formatTimestamp = (value) => {
   }).format(date);
 };
 
+export const formatTimeOnly = (value) => {
+  if (!value) {
+    return '';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+
+  return new Intl.DateTimeFormat('es-AR', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: false,
+  }).format(date);
+};
+
 export const formatRelativeTime = (value) => {
   if (!value) {
     return 'Sin actividad';
