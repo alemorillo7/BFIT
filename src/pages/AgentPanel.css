@@ -223,6 +223,7 @@
   background: rgba(16, 185, 129, 0.14);
   border: 1px solid var(--agent-accent-border);
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .search-input.agent-search-input input,
@@ -1199,6 +1200,36 @@
   line-height: 1.45;
   font-size: 0.76rem;
   color: var(--agent-text-muted);
+}
+
+.assigned-student-chip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 5px 8px;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.assigned-student-name {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--agent-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  flex: 1;
+}
+
+.assigned-student-meta {
+  font-size: 0.63rem;
+  font-weight: 600;
+  color: var(--agent-accent-strong, #059669);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .inspector-panel .detail-item,

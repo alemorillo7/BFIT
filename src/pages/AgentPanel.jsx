@@ -271,6 +271,8 @@ const AgentPanel = ({ section = 'conversations' }) => {
   const [loadingStudents, setLoadingStudents] = useState(false);
   const [assignRole, setAssignRole] = useState('madre'); // 'madre' | 'padre'
   const [selectedStudentForAssign, setSelectedStudentForAssign] = useState(null);
+  const [assignedStudents, setAssignedStudents] = useState([]);
+  const [loadingAssigned, setLoadingAssigned] = useState(false);
 
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -280,6 +282,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
   const selectedConversationIdRef = useRef(null);
   const messagesEndRef = useRef(null);
   const messagesScrollerRef = useRef(null);
+  const skipAutoScrollRef = useRef(false);
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === selectedConversationId) || null,
@@ -309,10 +312,12 @@ const AgentPanel = ({ section = 'conversations' }) => {
       setMessages(newMessages);
       
       if (preserveScroll && scrollElement) {
-        // Wait for React to render the new messages
+        skipAutoScrollRef.current = true;
+        // Restore scroll position after render
         setTimeout(() => {
           scrollElement.scrollTop = scrollElement.scrollHeight - prevScrollHeight;
-        }, 10);
+          skipAutoScrollRef.current = false;
+        }, 30);
       }
     } catch (error) {
       setErrorMessage(error.message || 'No se pudieron cargar los mensajes.');
@@ -397,6 +402,34 @@ const AgentPanel = ({ section = 'conversations' }) => {
     };
   }, [loadDashboardData, section]);
 
+  const loadAssignedStudents = useCallback(async (phoneNumber) => {
+    if (!phoneNumber) { setAssignedStudents([]); return; }
+    setLoadingAssigned(true);
+    try {
+      const data = await fetchSheetData('Padres_Alumnos');
+      // Normalize phone: strip leading '+' and spaces for comparison
+      const normalize = (p) => (p || '').replace(/[^\d]/g, '');
+      const normPhone = normalize(phoneNumber);
+      const matched = data.filter(s =>
+        (s.telefono_wa_mama && normalize(s.telefono_wa_mama).includes(normPhone)) ||
+        (s.telefono_wa_papa && normalize(s.telefono_wa_papa).includes(normPhone))
+      );
+      setAssignedStudents(matched);
+    } catch {
+      setAssignedStudents([]);
+    } finally {
+      setLoadingAssigned(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (selectedConversation?.phone_number) {
+      loadAssignedStudents(selectedConversation.phone_number);
+    } else {
+      setAssignedStudents([]);
+    }
+  }, [selectedConversation?.phone_number, loadAssignedStudents]);
+
   const filteredConversations = useMemo(() => {
     const term = conversationSearch.trim().toLowerCase();
 
@@ -460,6 +493,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
   }, [messages]);
 
   useEffect(() => {
+    if (skipAutoScrollRef.current) return;
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
   }, [groupedMessages, selectedConversationId]);
 
@@ -756,7 +790,8 @@ const AgentPanel = ({ section = 'conversations' }) => {
       setSelectedStudentForAssign(null);
       setAssignRole('madre');
       setStudentSearch('');
-      // Show success
+      // Refresh assigned students
+      await loadAssignedStudents(selectedConversation.phone_number);
       alert('¡Asignado exitosamente!');
     } catch (error) {
       setErrorMessage('Error al asignar el alumno.');
@@ -862,8 +897,25 @@ const AgentPanel = ({ section = 'conversations' }) => {
         </div>
         
         <div className="inspector-card">
-          <span className="inspector-label">Relación</span>
-          <p className="inspector-text-block">Asigna este contacto como Padre o Madre de un alumno.</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+            <span className="inspector-label">Alumnos Asignados</span>
+            <button className="icon-button" onClick={handleOpenStudentAssign} style={{ padding: '4px', minHeight: 'auto' }} title="Asignar a Alumno">
+              <Users size={14} />
+            </button>
+          </div>
+          {loadingAssigned ? (
+            <p className="inspector-text-block">Cargando...</p>
+          ) : assignedStudents.length > 0 ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              {assignedStudents.map(student => (
+                <div key={student.nombre_hijo + student.curso} className="assigned-student-chip">
+                  <span className="assigned-student-name">{student.nombre_hijo}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="inspector-text-block">Ningún alumno asignado aún.</p>
+          )}
           <button className="secondary-button" onClick={handleOpenStudentAssign} style={{ marginTop: '10px', width: '100%' }}>
             <Users size={16} />
             Asignar a Alumno
