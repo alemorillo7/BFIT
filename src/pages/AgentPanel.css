@@ -134,8 +134,8 @@
 }
 
 .conversation-list-panel {
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr);
+  display: flex;
+  flex-direction: column;
 }
 
 .inspector-panel {
@@ -342,6 +342,7 @@
   overflow: auto;
   min-height: 0;
   padding: 0;
+  flex: 1;
 }
 
 .conversation-list-panel .conversation-row {
@@ -370,7 +371,7 @@
 
 .conversation-row {
   display: grid;
-  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-columns: auto 36px minmax(0, 1fr);
   gap: 8px;
   padding: 8px 9px 8px;
   text-align: left;
@@ -421,6 +422,53 @@
 
 .conversation-list-panel .conversation-row:last-child {
   border-bottom: 0;
+}
+
+.bulk-action-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--agent-accent-soft);
+  border-bottom: 1px solid var(--agent-accent-border);
+}
+
+.bulk-counter {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--agent-accent-strong);
+}
+
+.bulk-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bulk-actions .small {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 0.72rem;
+}
+
+.conversation-row-select {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding-right: 4px;
+}
+
+.conversation-row-select input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--agent-accent);
+}
+
+.conversation-row.is-selected-bulk {
+  background: rgba(16, 185, 129, 0.08);
+  border-color: var(--agent-panel-border-strong);
 }
 
 .avatar-circle {

@@ -257,6 +257,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
   const [isEditingContact, setIsEditingContact] = useState(false);
   const [zoomedMessage, setZoomedMessage] = useState(null);
   const [isInspectorModalOpen, setIsInspectorModalOpen] = useState(false);
+  const [selectedForBulk, setSelectedForBulk] = useState([]);
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const actionMenuRef = useRef(null);
@@ -547,6 +548,40 @@ const AgentPanel = ({ section = 'conversations' }) => {
     }
   };
 
+  const handleToggleBulkSelection = (conversationId, event) => {
+    event.stopPropagation();
+    setSelectedForBulk((prev) =>
+      prev.includes(conversationId)
+        ? prev.filter((id) => id !== conversationId)
+        : [...prev, conversationId]
+    );
+  };
+
+  const handleBulkToggleBot = async (turnOn) => {
+    if (selectedForBulk.length === 0) return;
+    
+    setWorkingAction('bot');
+    setErrorMessage('');
+    
+    try {
+      const selectedConvos = conversations.filter((c) => selectedForBulk.includes(c.id));
+      await Promise.all(
+        selectedConvos.map((c) =>
+          toggleConversationBot({
+            phone_number: c.phone_number,
+            agent_active: turnOn,
+          })
+        )
+      );
+      setSelectedForBulk([]);
+      await loadDashboardData(selectedConversationIdRef.current, false);
+    } catch (error) {
+      setErrorMessage(error.message || 'No se pudo actualizar el bot de los chats seleccionados.');
+    } finally {
+      setWorkingAction('');
+    }
+  };
+
   const handleDeleteConversation = async () => {
     if (!selectedConversation) {
       return;
@@ -774,6 +809,23 @@ const AgentPanel = ({ section = 'conversations' }) => {
               </div>
             </div>
 
+            {selectedForBulk.length > 0 && (
+              <div className="bulk-action-bar">
+                <span className="bulk-counter">{selectedForBulk.length} seleccionados</span>
+                <div className="bulk-actions">
+                  <button className="primary-button small" onClick={() => handleBulkToggleBot(true)}>
+                    <Bot size={14} /> ON
+                  </button>
+                  <button className="secondary-button small" onClick={() => handleBulkToggleBot(false)}>
+                    <Bot size={14} /> OFF
+                  </button>
+                  <button className="icon-button" onClick={() => setSelectedForBulk([])} aria-label="Limpiar selección">
+                    <X size={14} />
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div className="conversation-list">
               {loadingDashboard ? <div className="empty-state">Cargando conversaciones...</div> : null}
               {!loadingDashboard && filteredConversations.length === 0 ? <div className="empty-state">No hay conversaciones para este filtro.</div> : null}
@@ -781,9 +833,12 @@ const AgentPanel = ({ section = 'conversations' }) => {
               {filteredConversations.map((conversation) => (
                 <button
                   key={conversation.id}
-                  className={`conversation-row ${selectedConversation?.id === conversation.id ? 'is-active' : ''}`}
+                  className={`conversation-row ${selectedConversation?.id === conversation.id ? 'is-active' : ''} ${selectedForBulk.includes(conversation.id) ? 'is-selected-bulk' : ''}`}
                   onClick={() => handleSelectConversation(conversation.id)}
                 >
+                  <div className="conversation-row-select" onClick={(e) => handleToggleBulkSelection(conversation.id, e)}>
+                    <input type="checkbox" checked={selectedForBulk.includes(conversation.id)} readOnly />
+                  </div>
                   <div className="avatar-circle conversation-avatar">{getInitials(conversation.contact?.name || conversation.user_name || conversation.phone_number)}</div>
                   <div className="conversation-row-body">
                     <div className="conversation-row-top">
