@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BadgePlus, Bot, ChevronDown, Clock3, ContactRound, ImageUp, Mail, MoreHorizontal, MessageSquareText, Paperclip, Pause, Phone, Play, Search, SendHorizontal, Tag, Trash2, UserRound, Volume2, X } from 'lucide-react';
+import { BadgePlus, Bot, ChevronDown, Clock3, ContactRound, ImageUp, Mail, MoreHorizontal, MessageSquareText, Paperclip, Pause, Phone, Play, Search, SendHorizontal, Tag, Trash2, UserRound, Volume2, X, Pencil, Save, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { formatPhoneForDisplay, formatRelativeTime, formatTimeOnly, formatTimestamp, getInitials, splitTextWithLinks } from '../lib/formatters';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
@@ -13,6 +13,7 @@ import {
   toggleConversationBot,
   uploadConversationFile,
 } from '../services/chatApi';
+import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
 import './AgentPanel.css';
 
 const fetchConversations = async () => {
@@ -258,6 +259,18 @@ const AgentPanel = ({ section = 'conversations' }) => {
   const [zoomedMessage, setZoomedMessage] = useState(null);
   const [isInspectorModalOpen, setIsInspectorModalOpen] = useState(false);
   const [selectedForBulk, setSelectedForBulk] = useState([]);
+  
+  // New states for inline edit and student assign
+  const [isEditingInspector, setIsEditingInspector] = useState(false);
+  const [inspectorNameDraft, setInspectorNameDraft] = useState('');
+  const [isStudentAssignModalOpen, setIsStudentAssignModalOpen] = useState(false);
+  const [studentsList, setStudentsList] = useState([]);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [visibleStudentsCount, setVisibleStudentsCount] = useState(50);
+  const [loadingStudents, setLoadingStudents] = useState(false);
+  const [assignRole, setAssignRole] = useState('madre'); // 'madre' | 'padre'
+  const [selectedStudentForAssign, setSelectedStudentForAssign] = useState(null);
+
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const actionMenuRef = useRef(null);
@@ -671,6 +684,68 @@ const AgentPanel = ({ section = 'conversations' }) => {
     }
   };
 
+  const handleSaveInspectorName = async () => {
+    if (!selectedConversation) return;
+    setWorkingAction('contact');
+    setErrorMessage('');
+    try {
+      await saveContact({
+        name: inspectorNameDraft,
+        phone_number: selectedConversation.phone_number,
+        email: selectedConversation.contact?.email || '',
+        notes: selectedConversation.contact?.notes || '',
+        bot_active: selectedConversation.contact?.bot_active ?? true,
+      });
+      setIsEditingInspector(false);
+      await loadDashboardData(selectedConversationIdRef.current, false);
+    } catch (error) {
+      setErrorMessage(error.message || 'No se pudo guardar el nombre.');
+    } finally {
+      setWorkingAction('');
+    }
+  };
+
+  const handleOpenStudentAssign = async () => {
+    setIsStudentAssignModalOpen(true);
+    setLoadingStudents(true);
+    setErrorMessage('');
+    try {
+      const data = await fetchSheetData('Padres_Alumnos');
+      setStudentsList(data);
+    } catch (error) {
+      setErrorMessage('No se pudieron cargar los alumnos.');
+    } finally {
+      setLoadingStudents(false);
+    }
+  };
+
+  const handleAssignStudent = async () => {
+    if (!selectedStudentForAssign) return;
+    setWorkingAction('assign-student');
+    setErrorMessage('');
+    try {
+      const payload = { ...selectedStudentForAssign };
+      if (assignRole === 'madre') {
+        payload.nombre_mama = selectedConversation.contact?.name || selectedConversation.user_name || '';
+        payload.telefono_wa_mama = selectedConversation.phone_number;
+      } else {
+        // Asignar telefono de padre
+        payload.telefono_wa_papa = selectedConversation.phone_number;
+      }
+      await sendWebhookMutation('Padres_Alumnos', 'MODIFICACION', payload);
+      setIsStudentAssignModalOpen(false);
+      setSelectedStudentForAssign(null);
+      setAssignRole('madre');
+      setStudentSearch('');
+      // Show success
+      alert('¡Asignado exitosamente!');
+    } catch (error) {
+      setErrorMessage('Error al asignar el alumno.');
+    } finally {
+      setWorkingAction('');
+    }
+  };
+
   const handleDeleteContact = async (phoneNumber) => {
     if (!window.confirm(`Se eliminará el contacto ${phoneNumber}.`)) {
       return;
@@ -697,8 +772,43 @@ const AgentPanel = ({ section = 'conversations' }) => {
     return (
       <div className="inspector-content">
         <div className="inspector-card">
-          <span className="inspector-label">Contacto</span>
-          <strong>{selectedConversation.contact?.name || selectedConversation.user_name || 'Sin nombre'}</strong>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span className="inspector-label">Contacto</span>
+            {!isEditingInspector && (
+              <button 
+                className="icon-button" 
+                onClick={() => {
+                  setInspectorNameDraft(selectedConversation.contact?.name || selectedConversation.user_name || '');
+                  setIsEditingInspector(true);
+                }}
+                style={{ padding: '4px', minHeight: 'auto' }}
+              >
+                <Pencil size={14} />
+              </button>
+            )}
+          </div>
+          
+          {isEditingInspector ? (
+            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+              <input 
+                type="text" 
+                value={inspectorNameDraft} 
+                onChange={e => setInspectorNameDraft(e.target.value)} 
+                className="modal-input" 
+                style={{ padding: '4px 8px', fontSize: '0.85rem' }} 
+                autoFocus 
+              />
+              <button className="primary-button" onClick={handleSaveInspectorName} disabled={workingAction === 'contact'} style={{ padding: '0 8px', minHeight: '28px' }}>
+                <Save size={14} />
+              </button>
+              <button className="secondary-button" onClick={() => setIsEditingInspector(false)} style={{ padding: '0 8px', minHeight: '28px' }}>
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <strong>{selectedConversation.contact?.name || selectedConversation.user_name || 'Sin nombre'}</strong>
+          )}
+          
           <div className="detail-list">
             <span className="detail-item">
               <Phone size={14} />
@@ -730,6 +840,15 @@ const AgentPanel = ({ section = 'conversations' }) => {
               </button>
             ))}
           </div>
+        </div>
+        
+        <div className="inspector-card">
+          <span className="inspector-label">Relación</span>
+          <p className="inspector-text-block">Asigna este contacto como Padre o Madre de un alumno.</p>
+          <button className="secondary-button" onClick={handleOpenStudentAssign} style={{ marginTop: '10px', width: '100%' }}>
+            <Users size={16} />
+            Asignar a Alumno
+          </button>
         </div>
       </div>
     );
@@ -1328,11 +1447,104 @@ const AgentPanel = ({ section = 'conversations' }) => {
                 <span className="agent-eyebrow">Detalle del chat</span>
                 <h3>Ficha rápida</h3>
               </div>
-              <button className="icon-button secondary-button" onClick={() => setIsInspectorModalOpen(false)}>
-                <X size={16} />
+              <button className="icon-button inspector-close" onClick={() => setIsInspectorModalOpen(false)}>
+                <X size={20} />
               </button>
             </div>
             {renderInspectorContent()}
+          </div>
+        </div>
+      ) : null}
+
+      {isStudentAssignModalOpen ? (
+        <div className="modal-overlay" style={{ zIndex: 200 }} onMouseDown={(e) => e.target === e.currentTarget && setIsStudentAssignModalOpen(false)}>
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h3>Asignar a Alumno</h3>
+              <button type="button" className="icon-button" onClick={() => setIsStudentAssignModalOpen(false)}>
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="modal-body" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+              <div className="agent-form-grid" style={{ marginBottom: '16px' }}>
+                <div className="form-group">
+                  <label>Asignar como:</label>
+                  <select className="modal-input" value={assignRole} onChange={(e) => setAssignRole(e.target.value)}>
+                    <option value="madre">Madre</option>
+                    <option value="padre">Padre</option>
+                  </select>
+                </div>
+                
+                <div className="form-group">
+                  <label>Buscar Alumno:</label>
+                  <div className="search-input agent-search-input">
+                    <Search size={16} />
+                    <input 
+                      type="text" 
+                      placeholder="Nombre del alumno..." 
+                      value={studentSearch}
+                      onChange={(e) => {
+                        setStudentSearch(e.target.value);
+                        setVisibleStudentsCount(50);
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              {loadingStudents ? (
+                <div className="empty-state">Cargando alumnos...</div>
+              ) : (
+                <div className="conversation-list" style={{ border: '1px solid var(--agent-panel-border)', borderRadius: '12px' }}>
+                  {studentsList
+                    .filter(s => s.nombre_hijo && s.nombre_hijo.toLowerCase().includes(studentSearch.toLowerCase()))
+                    .slice(0, visibleStudentsCount)
+                    .map(student => (
+                      <div 
+                        key={student.nombre_hijo + student.curso} 
+                        className={`conversation-row ${selectedStudentForAssign === student ? 'is-active' : ''}`}
+                        onClick={() => setSelectedStudentForAssign(student)}
+                        style={{ cursor: 'pointer', padding: '10px 14px' }}
+                      >
+                        <div className="conversation-row-body">
+                          <strong>{student.nombre_hijo}</strong>
+                          <p>Curso: {student.curso} | Madre: {student.nombre_mama || '-'} | Padre Tel: {student.telefono_wa_papa || '-'}</p>
+                        </div>
+                      </div>
+                  ))}
+                  
+                  {studentsList.filter(s => s.nombre_hijo && s.nombre_hijo.toLowerCase().includes(studentSearch.toLowerCase())).length > visibleStudentsCount && (
+                    <button 
+                      type="button"
+                      className="secondary-button" 
+                      onClick={() => setVisibleStudentsCount(v => v + 50)} 
+                      style={{ margin: '10px auto', display: 'flex', fontSize: '0.75rem' }}
+                    >
+                      Mostrar más alumnos
+                    </button>
+                  )}
+
+                  {studentsList.length > 0 && studentsList.filter(s => s.nombre_hijo && s.nombre_hijo.toLowerCase().includes(studentSearch.toLowerCase())).length === 0 && (
+                    <div className="empty-state">No se encontraron alumnos.</div>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="modal-actions">
+              <button type="button" className="secondary-button" onClick={() => setIsStudentAssignModalOpen(false)}>
+                Cancelar
+              </button>
+              <button 
+                type="button" 
+                className="primary-button" 
+                disabled={!selectedStudentForAssign || workingAction === 'assign-student'}
+                onClick={handleAssignStudent}
+              >
+                {workingAction === 'assign-student' ? 'Asignando...' : 'Asignar Contacto'}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}
