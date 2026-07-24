@@ -55,18 +55,19 @@ const fetchConversations = async () => {
   }));
 };
 
-const fetchMessages = async (conversationId) => {
+const fetchMessages = async (conversationId, limit = 50) => {
   const { data, error } = await supabase
     .from('messages')
     .select('id, conversation_id, sender, content, message_type, media_url, mime_type, metadata, created_at')
     .eq('conversation_id', conversationId)
-    .order('created_at', { ascending: true });
+    .order('created_at', { ascending: false })
+    .limit(limit);
 
   if (error) {
     throw error;
   }
 
-  return data || [];
+  return (data || []).reverse();
 };
 
 const fetchTags = async () => {
@@ -274,8 +275,11 @@ const AgentPanel = ({ section = 'conversations' }) => {
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const actionMenuRef = useRef(null);
+  const [messagesLimit, setMessagesLimit] = useState(50);
+  const messagesLimitRef = useRef(50);
   const selectedConversationIdRef = useRef(null);
   const messagesEndRef = useRef(null);
+  const messagesScrollerRef = useRef(null);
 
   const selectedConversation = useMemo(
     () => conversations.find((conversation) => conversation.id === selectedConversationId) || null,
@@ -283,10 +287,14 @@ const AgentPanel = ({ section = 'conversations' }) => {
   );
 
   useEffect(() => {
+    if (selectedConversationId !== selectedConversationIdRef.current) {
+      setMessagesLimit(50);
+      messagesLimitRef.current = 50;
+    }
     selectedConversationIdRef.current = selectedConversationId;
   }, [selectedConversationId]);
 
-  const loadMessages = useCallback(async (conversationId) => {
+  const loadMessages = useCallback(async (conversationId, preserveScroll = false) => {
     if (!conversationId || !supabase) {
       setMessages([]);
       return;
@@ -294,7 +302,18 @@ const AgentPanel = ({ section = 'conversations' }) => {
 
     setLoadingMessages(true);
     try {
-      setMessages(await fetchMessages(conversationId));
+      const scrollElement = messagesScrollerRef.current;
+      const prevScrollHeight = scrollElement ? scrollElement.scrollHeight : 0;
+      
+      const newMessages = await fetchMessages(conversationId, messagesLimitRef.current);
+      setMessages(newMessages);
+      
+      if (preserveScroll && scrollElement) {
+        // Wait for React to render the new messages
+        setTimeout(() => {
+          scrollElement.scrollTop = scrollElement.scrollHeight - prevScrollHeight;
+        }, 10);
+      }
     } catch (error) {
       setErrorMessage(error.message || 'No se pudieron cargar los mensajes.');
     } finally {
@@ -789,19 +808,19 @@ const AgentPanel = ({ section = 'conversations' }) => {
           </div>
           
           {isEditingInspector ? (
-            <div style={{ display: 'flex', gap: '8px', marginTop: '6px' }}>
+            <div style={{ display: 'flex', gap: '6px', marginTop: '6px', overflow: 'hidden', minWidth: 0 }}>
               <input 
                 type="text" 
                 value={inspectorNameDraft} 
                 onChange={e => setInspectorNameDraft(e.target.value)} 
                 className="modal-input" 
-                style={{ padding: '4px 8px', fontSize: '0.85rem' }} 
+                style={{ padding: '4px 8px', fontSize: '0.85rem', flex: 1, minWidth: 0, width: 0 }} 
                 autoFocus 
               />
-              <button className="primary-button" onClick={handleSaveInspectorName} disabled={workingAction === 'contact'} style={{ padding: '0 8px', minHeight: '28px' }}>
+              <button className="primary-button" onClick={handleSaveInspectorName} disabled={workingAction === 'contact'} style={{ padding: '0 8px', minHeight: '28px', flexShrink: 0 }}>
                 <Save size={14} />
               </button>
-              <button className="secondary-button" onClick={() => setIsEditingInspector(false)} style={{ padding: '0 8px', minHeight: '28px' }}>
+              <button className="secondary-button" onClick={() => setIsEditingInspector(false)} style={{ padding: '0 8px', minHeight: '28px', flexShrink: 0 }}>
                 <X size={14} />
               </button>
             </div>
@@ -1120,9 +1139,26 @@ const AgentPanel = ({ section = 'conversations' }) => {
                   </div>
                 </div>
 
-                <div className="messages-scroller">
+                <div className="messages-scroller" ref={messagesScrollerRef}>
                   {loadingMessages ? <div className="empty-state">Cargando mensajes...</div> : null}
                   {!loadingMessages && messages.length === 0 ? <div className="empty-state">No hay mensajes en esta conversación.</div> : null}
+                  
+                  {!loadingMessages && messages.length >= messagesLimit && (
+                    <div style={{ textAlign: 'center', margin: '16px 0' }}>
+                      <button 
+                        className="secondary-button" 
+                        onClick={() => {
+                          const newLimit = messagesLimitRef.current + 50;
+                          messagesLimitRef.current = newLimit;
+                          setMessagesLimit(newLimit);
+                          loadMessages(selectedConversationId, true);
+                        }}
+                        style={{ fontSize: '0.8rem', padding: '6px 16px' }}
+                      >
+                        Cargar mensajes anteriores
+                      </button>
+                    </div>
+                  )}
 
                   {groupedMessages.map((group) => (
                     <div key={group.key} className="message-group">
