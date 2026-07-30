@@ -124,6 +124,26 @@
   color: #9a3412;
 }
 
+.table tbody tr.data-row--verde,
+.table tbody tr.data-row--verde:hover {
+  background: #dcfce7;
+}
+
+.table tbody tr.data-row--azul,
+.table tbody tr.data-row--azul:hover {
+  background: #dbeafe;
+}
+
+.table tbody tr.data-row--amarillo,
+.table tbody tr.data-row--amarillo:hover {
+  background: #fef9c3;
+}
+
+.table tbody tr.data-row--naranja,
+.table tbody tr.data-row--naranja:hover {
+  background: #ffedd5;
+}
+
 .edit-btn {
   color: var(--color-primary);
   background-color: var(--color-primary-light);

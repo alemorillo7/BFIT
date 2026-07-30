@@ -136,7 +136,7 @@ const DataTable = ({
             <tbody>
               {paginatedData.length > 0 ? (
                 paginatedData.map((row, index) => (
-                  <tr key={index}>
+                  <tr key={index} className={`data-row data-row--${getSelectModifier(row.Color) || 'empty'}`}>
                     {columns.map((col) => (
                       <td key={col.key}>
                         {col.type === 'select' && onCellChange ? (
