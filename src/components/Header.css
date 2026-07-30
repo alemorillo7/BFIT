@@ -141,7 +141,7 @@
   margin-left: 0.5rem;
 }
 
-@media (max-width: 1366px) and (min-width: 1025px) {
+@media (max-width: 1500px) and (min-width: 1025px) {
   .header {
     height: 60px;
     padding: 0 1.25rem;
@@ -164,7 +164,7 @@
   }
 }
 
-@media (max-width: 1366px) {
+@media (max-width: 1500px) {
   .mobile-toggle {
     display: flex;
   }

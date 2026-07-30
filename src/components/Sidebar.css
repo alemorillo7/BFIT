@@ -132,7 +132,7 @@
   background-color: rgba(139, 92, 246, 0.12);
 }
 
-@media (max-width: 1366px) and (min-width: 1025px) {
+@media (max-width: 1500px) and (min-width: 1025px) {
   .sidebar-header {
     padding: 1.25rem 1rem;
   }
@@ -167,7 +167,7 @@
   }
 }
 
-@media (max-width: 1366px) {
+@media (max-width: 1500px) {
   .sidebar {
     width: 72px;
     transform: translateX(0);
