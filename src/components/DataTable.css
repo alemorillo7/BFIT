@@ -101,15 +101,15 @@
 }
 
 .color-select--verde {
-  background: #dcfce7;
-  border-color: #86efac;
-  color: #166534;
+  background: #bbf7d0;
+  border-color: #22c55e;
+  color: #14532d;
 }
 
 .color-select--azul {
-  background: #dbeafe;
-  border-color: #93c5fd;
-  color: #1e40af;
+  background: #bfdbfe;
+  border-color: #3b82f6;
+  color: #1e3a8a;
 }
 
 .color-select--amarillo {
@@ -126,12 +126,12 @@
 
 .table tbody tr.data-row--verde,
 .table tbody tr.data-row--verde:hover {
-  background: #dcfce7;
+  background: #bbf7d0;
 }
 
 .table tbody tr.data-row--azul,
 .table tbody tr.data-row--azul:hover {
-  background: #dbeafe;
+  background: #bfdbfe;
 }
 
 .table tbody tr.data-row--amarillo,
