@@ -44,14 +44,29 @@ const ModalForm = ({ title, columns, initialData, onClose, onSubmit, isSubmittin
             {columns.map((col) => (
               <div key={col.key} className="form-group">
                 <label className="label">{col.label}</label>
-                <input
-                  type="text"
-                  className="input"
-                  value={formData[col.key] || ''}
-                  onChange={(event) => handleChange(event, col.key)}
-                  placeholder={`Ingrese ${col.label.toLowerCase()}`}
-                  disabled={isSubmitting}
-                />
+                {col.type === 'select' ? (
+                  <select
+                    className="input"
+                    value={formData[col.key] || ''}
+                    onChange={(event) => handleChange(event, col.key)}
+                    disabled={isSubmitting}
+                  >
+                    {col.options.map((option) => (
+                      <option key={option.value || 'empty'} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className="input"
+                    value={formData[col.key] || ''}
+                    onChange={(event) => handleChange(event, col.key)}
+                    placeholder={`Ingrese ${col.label.toLowerCase()}`}
+                    disabled={isSubmitting}
+                  />
+                )}
               </div>
             ))}
           </div>

@@ -39,6 +39,18 @@ function App() {
     { key: 'observaciones', label: 'Observaciones' },
     { key: 'Registrado IA', label: 'Reg. IA' },
     { key: 'Ultima fecha de pago ', label: 'Últ. Pago' },
+    {
+      key: 'Color',
+      label: 'Color',
+      type: 'select',
+      options: [
+        { value: '', label: 'Sin color' },
+        { value: 'Verde', label: 'Verde' },
+        { value: 'Azul', label: 'Azul' },
+        { value: 'Amarillo', label: 'Amarillo' },
+        { value: 'Naranja', label: 'Naranja' },
+      ],
+    },
   ];
 
   const menuTradicionalCols = [

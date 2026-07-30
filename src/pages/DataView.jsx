@@ -75,8 +75,10 @@ const DataView = ({ title, sheetName, columns }) => {
   const [modalSheet, setModalSheet] = useState(sheetName);
   const [modalColumns, setModalColumns] = useState(columns);
   const [subData, setSubData] = useState([]);
+  const [updatingCells, setUpdatingCells] = useState(() => new Set());
 
   const isMerienditas = sheetName === 'Merienditas';
+  const isPadresAlumnos = sheetName === 'Padres_Alumnos';
 
   const loadData = useCallback(async () => {
     if (sheetCache[sheetName]) {
@@ -202,6 +204,31 @@ const DataView = ({ title, sheetName, columns }) => {
     }
   };
 
+  const getCellKey = (row, key) =>
+    `${row.telefono_wa_mama || ''}|${row.telefono_wa_papa || ''}|${row.nombre_hijo || ''}|${key}`;
+
+  const handleCellChange = async (row, key, value) => {
+    const cellKey = getCellKey(row, key);
+    const updatedRow = { ...row, [key]: value };
+
+    setUpdatingCells((current) => new Set(current).add(cellKey));
+
+    try {
+      await sendWebhookMutation(sheetName, 'MODIFICACION', updatedRow);
+      const updatedData = data.map((item) => (item === row ? updatedRow : item));
+      setData(updatedData);
+      sheetCache[sheetName] = updatedData;
+    } catch {
+      alert('Error al guardar el color. Intente nuevamente.');
+    } finally {
+      setUpdatingCells((current) => {
+        const next = new Set(current);
+        next.delete(cellKey);
+        return next;
+      });
+    }
+  };
+
   const handlePromote = async (row) => {
     const currentCourse = row.curso;
     const newCourse = promoteCourse(currentCourse);
@@ -262,6 +289,10 @@ const DataView = ({ title, sheetName, columns }) => {
         onCreate={() => handleCreate(sheetName, columns, mainData)}
         onPromote={sheetName === 'Padres_Alumnos' ? handlePromote : undefined}
         onBulkPromote={sheetName === 'Padres_Alumnos' ? handleBulkPromote : undefined}
+        onCellChange={isPadresAlumnos ? handleCellChange : undefined}
+        isCellUpdating={
+          isPadresAlumnos ? (row, key) => updatingCells.has(getCellKey(row, key)) : undefined
+        }
       />
 
       {isMerienditas && (

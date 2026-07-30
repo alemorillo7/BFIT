@@ -3,7 +3,21 @@ import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Edit2, GraduationCap,
 import * as Papa from 'papaparse';
 import './DataTable.css';
 
-const DataTable = ({ title, data, columns, onEdit, onDelete, onCreate, onPromote, onBulkPromote, isLoading }) => {
+const getSelectModifier = (value) => String(value || '').trim().toLowerCase();
+
+const DataTable = ({
+  title,
+  data,
+  columns,
+  onEdit,
+  onDelete,
+  onCreate,
+  onPromote,
+  onBulkPromote,
+  onCellChange,
+  isCellUpdating,
+  isLoading,
+}) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [sortConfig, setSortConfig] = useState({ key: null, direction: 'ascending' });
   const [currentPage, setCurrentPage] = useState(1);
@@ -124,7 +138,27 @@ const DataTable = ({ title, data, columns, onEdit, onDelete, onCreate, onPromote
                 paginatedData.map((row, index) => (
                   <tr key={index}>
                     {columns.map((col) => (
-                      <td key={col.key}>{col.render ? col.render(row[col.key], row) : row[col.key]}</td>
+                      <td key={col.key}>
+                        {col.type === 'select' && onCellChange ? (
+                          <select
+                            className={`table-select color-select color-select--${getSelectModifier(row[col.key]) || 'empty'}`}
+                            value={row[col.key] || ''}
+                            onChange={(event) => onCellChange(row, col.key, event.target.value)}
+                            disabled={isCellUpdating?.(row, col.key)}
+                            aria-label={`${col.label} de ${row.nombre_hijo || 'registro'}`}
+                          >
+                            {col.options.map((option) => (
+                              <option key={option.value || 'empty'} value={option.value}>
+                                {option.label}
+                              </option>
+                            ))}
+                          </select>
+                        ) : col.render ? (
+                          col.render(row[col.key], row)
+                        ) : (
+                          row[col.key]
+                        )}
+                      </td>
                     ))}
                     {(onEdit || onDelete || onPromote) && (
                       <td className="actions-cell">
