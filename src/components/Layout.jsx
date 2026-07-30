@@ -21,7 +21,12 @@ const Layout = ({ onLogout }) => {
       <div className={`sidebar-overlay ${sidebarOpen ? 'open' : ''}`} onClick={toggleSidebarMobile} />
 
       <div className={`sidebar-wrapper ${sidebarCollapsed ? 'collapsed' : ''}`}>
-        <Sidebar isCollapsed={sidebarCollapsed} isOpen={sidebarOpen} onLogout={onLogout} />
+        <Sidebar
+          isCollapsed={sidebarCollapsed}
+          isOpen={sidebarOpen}
+          onLogout={onLogout}
+          onNavigate={() => setSidebarOpen(false)}
+        />
       </div>
 
       <main className="main-content">

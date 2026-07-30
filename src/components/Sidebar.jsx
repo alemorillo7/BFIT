@@ -15,7 +15,7 @@ import {
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
-const Sidebar = ({ isCollapsed, isOpen, onLogout }) => {
+const Sidebar = ({ isCollapsed, isOpen, onLogout, onNavigate }) => {
   const menuItems = [
     { name: 'Padres / Alumnos', path: '/padres-alumnos', icon: <Users size={20} /> },
     { name: 'Menu Tradicional', path: '/menu-tradicional', icon: <Utensils size={20} /> },
@@ -46,7 +46,8 @@ const Sidebar = ({ isCollapsed, isOpen, onLogout }) => {
             key={item.path}
             to={item.path}
             className={({ isActive }) => `nav-item ${item.accent ? 'nav-item-accent' : ''} ${isActive ? 'active' : ''}`.trim()}
-            title={isCollapsed ? item.name : undefined}
+            title={item.name}
+            onClick={onNavigate}
           >
             {item.icon}
             {!isCollapsed && <span>{item.name}</span>}

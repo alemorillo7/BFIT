@@ -45,9 +45,20 @@
   transition: opacity var(--transition-normal);
 }
 
-@media (max-width: 1024px) {
-  .main-content {
-    margin-left: 0;
+@media (max-width: 1366px) and (min-width: 1025px) {
+  .layout-container {
+    --sidebar-width: 220px;
+  }
+
+  .content-area {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 1366px) {
+  .main-content,
+  .layout-container.sidebar-collapsed .main-content {
+    margin-left: 72px;
   }
   
   .content-area {
@@ -61,5 +72,12 @@
   .sidebar-overlay.open {
     opacity: 1;
     pointer-events: auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .main-content,
+  .layout-container.sidebar-collapsed .main-content {
+    margin-left: 0;
   }
 }

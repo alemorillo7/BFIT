@@ -123,7 +123,11 @@ const DataTable = ({
             <thead>
               <tr>
                 {columns.map((col) => (
-                  <th key={col.key} onClick={() => requestSort(col.key)} className="sortable-header">
+                  <th
+                    key={col.key}
+                    onClick={() => requestSort(col.key)}
+                    className={`sortable-header ${col.key === 'Color' ? 'color-th' : ''}`}
+                  >
                     <div className="th-content">
                       {col.label}
                       <ArrowUpDown size={14} className="sort-icon" />
@@ -138,7 +142,7 @@ const DataTable = ({
                 paginatedData.map((row, index) => (
                   <tr key={index} className={`data-row data-row--${getSelectModifier(row.Color) || 'empty'}`}>
                     {columns.map((col) => (
-                      <td key={col.key}>
+                      <td key={col.key} className={col.key === 'Color' ? 'color-cell' : undefined}>
                         {col.type === 'select' && onCellChange ? (
                           <select
                             className={`table-select color-select color-select--${getSelectModifier(row[col.key]) || 'empty'}`}
