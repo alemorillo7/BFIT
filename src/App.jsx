@@ -112,7 +112,7 @@ function App() {
   ];
 
   const clientesPrefCols = [
-    { key: 'ID', label: 'ID' },
+    { key: 'ID', label: 'ID', readOnly: true },
     { key: 'telefono (sin el +)', label: 'Teléfono' },
     { key: 'nombre', label: 'Nombre' },
   ];

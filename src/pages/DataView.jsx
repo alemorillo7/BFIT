@@ -76,9 +76,12 @@ const DataView = ({ title, sheetName, columns }) => {
   const [modalColumns, setModalColumns] = useState(columns);
   const [subData, setSubData] = useState([]);
   const [updatingCells, setUpdatingCells] = useState(() => new Set());
+  const [preferredStudents, setPreferredStudents] = useState([]);
+  const [preferredStudentsLoading, setPreferredStudentsLoading] = useState(false);
 
   const isMerienditas = sheetName === 'Merienditas';
   const isPadresAlumnos = sheetName === 'Padres_Alumnos';
+  const isClientesPreferenciales = sheetName === 'Clientes Preferenciales';
 
   const loadData = useCallback(async () => {
     if (sheetCache[sheetName]) {
@@ -117,6 +120,44 @@ const DataView = ({ title, sheetName, columns }) => {
 
     return () => window.clearTimeout(timer);
   }, [loadData]);
+
+  useEffect(() => {
+    if (!isClientesPreferenciales) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadPreferredStudents = async () => {
+      if (sheetCache.Padres_Alumnos) {
+        setPreferredStudents(sheetCache.Padres_Alumnos);
+        return;
+      }
+
+      setPreferredStudentsLoading(true);
+
+      try {
+        const result = await fetchSheetData('Padres_Alumnos');
+        sheetCache.Padres_Alumnos = result;
+
+        if (!cancelled) {
+          setPreferredStudents(result);
+        }
+      } catch (error) {
+        console.error('Error loading students for preferred clients:', error);
+      } finally {
+        if (!cancelled) {
+          setPreferredStudentsLoading(false);
+        }
+      }
+    };
+
+    loadPreferredStudents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isClientesPreferenciales]);
 
   const mainData = useMemo(() => data, [data]);
 
@@ -317,6 +358,20 @@ const DataView = ({ title, sheetName, columns }) => {
         initialData={selectedRecord}
         onSubmit={handleModalSubmit}
         isSubmitting={isSubmitting}
+        studentSearch={
+          isClientesPreferenciales && modalType === 'create'
+            ? {
+                options: preferredStudents,
+                isLoading: preferredStudentsLoading,
+                childKey: 'nombre_hijo',
+                courseKey: 'curso',
+                onSelect: (student) => ({
+                  'telefono (sin el +)': String(student.telefono_wa_mama || '').replace(/\D/g, ''),
+                  nombre: student.nombre_mama || '',
+                }),
+              }
+            : undefined
+        }
       />
     </div>
   );
