@@ -21,6 +21,7 @@ function App() {
   const padresAlumnosCols = [
     { key: 'nombre_mama', label: 'Nombre Madre' },
     { key: 'telefono_wa_mama', label: 'Tel. Madre' },
+    { key: 'nombre_papa', label: 'Nombre Padre' },
     { key: 'telefono_wa_papa', label: 'Tel. Padre' },
     { key: 'nombre_hijo', label: 'Nombre Alumno' },
     { key: 'curso', label: 'Curso' },
