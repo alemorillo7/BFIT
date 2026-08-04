@@ -402,6 +402,32 @@ const AgentPanel = ({ section = 'conversations' }) => {
     };
   }, [loadDashboardData, section]);
 
+  useEffect(() => {
+    if (section !== 'conversations') {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadConversationStudents = async () => {
+      try {
+        const data = await fetchSheetData('Padres_Alumnos');
+
+        if (!cancelled) {
+          setStudentsList(data);
+        }
+      } catch (error) {
+        console.error('No se pudieron cargar los alumnos para la búsqueda de conversaciones:', error);
+      }
+    };
+
+    loadConversationStudents();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [section]);
+
   const loadAssignedStudents = useCallback(async (phoneNumber) => {
     if (!phoneNumber) { setAssignedStudents([]); return; }
     setLoadingAssigned(true);
@@ -430,11 +456,53 @@ const AgentPanel = ({ section = 'conversations' }) => {
     }
   }, [selectedConversation?.phone_number, loadAssignedStudents]);
 
+  const studentNamesByPhone = useMemo(() => {
+    const namesByPhone = new Map();
+    const addStudentName = (phoneNumber, studentName) => {
+      const normalizedPhone = String(phoneNumber || '').replace(/\D/g, '');
+
+      if (!normalizedPhone || !studentName) {
+        return;
+      }
+
+      const phoneKeys = new Set([normalizedPhone, normalizedPhone.slice(-8)]);
+
+      phoneKeys.forEach((phoneKey) => {
+        if (!phoneKey) {
+          return;
+        }
+
+        const currentNames = namesByPhone.get(phoneKey) || [];
+        if (!currentNames.includes(studentName)) {
+          namesByPhone.set(phoneKey, [...currentNames, studentName]);
+        }
+      });
+    };
+
+    studentsList.forEach((student) => {
+      addStudentName(student.telefono_wa_mama, student.nombre_hijo);
+      addStudentName(student.telefono_wa_papa, student.nombre_hijo);
+    });
+
+    return namesByPhone;
+  }, [studentsList]);
+
   const filteredConversations = useMemo(() => {
     const term = conversationSearch.trim().toLowerCase();
 
     return conversations.filter((conversation) => {
-      const haystack = [conversation.user_name, conversation.contact?.name, conversation.phone_number, conversation.last_message_preview]
+      const normalizedPhone = String(conversation.phone_number || '').replace(/\D/g, '');
+      const studentNames = [
+        ...(studentNamesByPhone.get(normalizedPhone) || []),
+        ...(studentNamesByPhone.get(normalizedPhone.slice(-8)) || []),
+      ];
+      const haystack = [
+        conversation.user_name,
+        conversation.contact?.name,
+        conversation.phone_number,
+        conversation.last_message_preview,
+        ...studentNames,
+      ]
         .join(' ')
         .toLowerCase();
 
@@ -443,7 +511,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
 
       return matchesSearch && matchesTag;
     });
-  }, [conversations, conversationSearch, selectedTagFilter]);
+  }, [conversations, conversationSearch, selectedTagFilter, studentNamesByPhone]);
 
   const filteredContacts = useMemo(() => {
     const term = contactSearch.trim().toLowerCase();
@@ -976,7 +1044,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
 
               <div className="search-input agent-search-input">
                 <Search size={16} />
-                <input value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder="Buscar por nombre, teléfono o contenido" />
+                <input value={conversationSearch} onChange={(event) => setConversationSearch(event.target.value)} placeholder="Buscar por nombre, hijo, teléfono o contenido" />
               </div>
             </div>
 
