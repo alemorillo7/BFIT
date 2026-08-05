@@ -731,12 +731,16 @@
   border-radius: 9px;
 }
 
-.action-menu-wrapper.is-open .action-menu-trigger svg {
+.action-menu-wrapper.is-open .action-menu-chevron {
   transform: rotate(180deg);
 }
 
-.action-menu-trigger svg {
+.action-menu-chevron {
   transition: transform 160ms ease;
+}
+
+.action-menu-mobile-icon {
+  display: none;
 }
 
 .action-menu-dropdown {
@@ -1819,6 +1823,21 @@
   .agent-page--conversations .mobile-chat-open .mobile-chat-back {
     display: inline-flex;
     flex: 0 0 32px;
+  }
+
+  .agent-page--conversations .action-menu-trigger {
+    width: 32px;
+    min-width: 32px;
+    padding: 0;
+  }
+
+  .agent-page--conversations .action-menu-chevron,
+  .agent-page--conversations .action-menu-label {
+    display: none;
+  }
+
+  .agent-page--conversations .action-menu-mobile-icon {
+    display: block;
   }
 
   .contacts-layout {

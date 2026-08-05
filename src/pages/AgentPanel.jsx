@@ -1229,9 +1229,11 @@ const AgentPanel = ({ section = 'conversations' }) => {
                           setIsTagPopoverOpen(false);
                         }}
                         aria-expanded={isActionMenuOpen}
+                        aria-label="Acciones"
                       >
-                        <ChevronDown size={16} />
-                        Acciones
+                        <ChevronDown className="action-menu-chevron" size={16} />
+                        <span className="action-menu-label">Acciones</span>
+                        <MoreHorizontal className="action-menu-mobile-icon" size={20} />
                       </button>
 
                       {isActionMenuOpen ? (
