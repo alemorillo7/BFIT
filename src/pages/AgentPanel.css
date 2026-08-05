@@ -715,6 +715,10 @@
   display: none;
 }
 
+.mobile-chat-back {
+  display: none;
+}
+
 .action-menu-wrapper {
   position: relative;
 }
@@ -1760,11 +1764,61 @@
     overflow: visible;
   }
 
+  .agent-page--conversations {
+    height: 100%;
+    min-height: 0;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  .agent-page--conversations .agent-page-topbar {
+    display: none;
+  }
+
   .conversation-layout {
     display: flex;
     flex-direction: column;
     height: auto;
     min-height: auto;
+  }
+
+  .agent-page--conversations .conversation-layout {
+    display: block;
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .agent-page--conversations .conversation-list-panel,
+  .agent-page--conversations .chat-panel {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .agent-page--conversations .mobile-list-open .conversation-list-panel {
+    display: flex;
+  }
+
+  .agent-page--conversations .mobile-list-open .chat-panel {
+    display: none;
+  }
+
+  .agent-page--conversations .mobile-chat-open .conversation-list-panel {
+    display: none;
+  }
+
+  .agent-page--conversations .mobile-chat-open .chat-panel {
+    display: grid;
+  }
+
+  .agent-page--conversations .mobile-chat-open .mobile-chat-back {
+    display: inline-flex;
+    flex: 0 0 32px;
   }
 
   .contacts-layout {

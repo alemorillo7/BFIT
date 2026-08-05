@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { BadgePlus, Bot, ChevronDown, Clock3, ContactRound, ImageUp, Mail, MoreHorizontal, MessageSquareText, Paperclip, Pause, Phone, Play, Search, SendHorizontal, Tag, Trash2, UserRound, Volume2, X, Pencil, Save, Users } from 'lucide-react';
+import { ArrowLeft, BadgePlus, Bot, ChevronDown, Clock3, ContactRound, ImageUp, Mail, MoreHorizontal, MessageSquareText, Paperclip, Pause, Phone, Play, Search, SendHorizontal, Tag, Trash2, UserRound, Volume2, X, Pencil, Save, Users } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { formatPhoneForDisplay, formatRelativeTime, formatTimeOnly, formatTimestamp, getInitials, splitTextWithLinks } from '../lib/formatters';
 import { isSupabaseConfigured, supabase } from '../lib/supabaseClient';
@@ -273,10 +273,12 @@ const AgentPanel = ({ section = 'conversations' }) => {
   const [selectedStudentForAssign, setSelectedStudentForAssign] = useState(null);
   const [assignedStudents, setAssignedStudents] = useState([]);
   const [loadingAssigned, setLoadingAssigned] = useState(false);
+  const [isMobileChatOpen, setIsMobileChatOpen] = useState(false);
 
   const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const actionMenuRef = useRef(null);
+  const mobileChatHistoryActiveRef = useRef(false);
   const [messagesLimit, setMessagesLimit] = useState(50);
   const messagesLimitRef = useRef(50);
   const selectedConversationIdRef = useRef(null);
@@ -296,6 +298,26 @@ const AgentPanel = ({ section = 'conversations' }) => {
     }
     selectedConversationIdRef.current = selectedConversationId;
   }, [selectedConversationId]);
+
+  useEffect(() => {
+    const handleMobileHistoryBack = () => {
+      if (!mobileChatHistoryActiveRef.current) {
+        return;
+      }
+
+      mobileChatHistoryActiveRef.current = false;
+      setIsMobileChatOpen(false);
+      setIsTagPopoverOpen(false);
+      setIsActionMenuOpen(false);
+      setIsInspectorModalOpen(false);
+    };
+
+    window.addEventListener('popstate', handleMobileHistoryBack);
+
+    return () => {
+      window.removeEventListener('popstate', handleMobileHistoryBack);
+    };
+  }, []);
 
   const loadMessages = useCallback(async (conversationId, preserveScroll = false) => {
     if (!conversationId || !supabase) {
@@ -607,11 +629,32 @@ const AgentPanel = ({ section = 'conversations' }) => {
   }, [openContactActionId]);
 
   const handleSelectConversation = async (conversationId) => {
+    const isMobileViewport = window.matchMedia('(max-width: 720px)').matches;
+
+    if (isMobileViewport && !isMobileChatOpen && !mobileChatHistoryActiveRef.current) {
+      const currentHistoryState = window.history.state && typeof window.history.state === 'object' ? window.history.state : {};
+      window.history.pushState({ ...currentHistoryState, bfitMobileChat: true }, '', window.location.href);
+      mobileChatHistoryActiveRef.current = true;
+    }
+
     setSelectedConversationId(conversationId);
+    setIsMobileChatOpen(true);
     setIsTagPopoverOpen(false);
     setIsActionMenuOpen(false);
     setIsInspectorModalOpen(false);
     await loadMessages(conversationId);
+  };
+
+  const handleBackToConversations = () => {
+    if (mobileChatHistoryActiveRef.current && window.matchMedia('(max-width: 720px)').matches) {
+      window.history.back();
+      return;
+    }
+
+    setIsMobileChatOpen(false);
+    setIsTagPopoverOpen(false);
+    setIsActionMenuOpen(false);
+    setIsInspectorModalOpen(false);
   };
 
   const handleSendMessage = async () => {
@@ -732,6 +775,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
       await deleteConversation({
         phone_number: selectedConversation.phone_number,
       });
+      handleBackToConversations();
       await loadDashboardData(null, true);
     } catch (error) {
       setErrorMessage(error.message || 'No se pudo borrar el chat.');
@@ -1009,7 +1053,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
   }
 
   return (
-    <div className="agent-page">
+    <div className={`agent-page agent-page--${section}`}>
       <div className="agent-page-topbar premium-card">
         <div>
           <span className="agent-eyebrow">{section === 'conversations' ? 'Operación en vivo' : 'Base de contactos'}</span>
@@ -1031,7 +1075,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
       {errorMessage ? <div className="error-banner">{errorMessage}</div> : null}
 
       {section === 'conversations' ? (
-        <section className="conversation-layout">
+        <section className={`conversation-layout ${isMobileChatOpen ? 'mobile-chat-open' : 'mobile-list-open'}`}>
           <div className="panel conversation-list-panel">
             <div className="panel-header">
               <div className="panel-heading-row">
@@ -1131,6 +1175,14 @@ const AgentPanel = ({ section = 'conversations' }) => {
               <>
                 <div className="chat-header">
                   <div className="chat-header-main">
+                    <button
+                      type="button"
+                      className="icon-button mobile-chat-back"
+                      onClick={handleBackToConversations}
+                      aria-label="Volver a conversaciones"
+                    >
+                      <ArrowLeft size={20} />
+                    </button>
                     <div className="avatar-circle chat-avatar">{getInitials(selectedConversation.contact?.name || selectedConversation.user_name || selectedConversation.phone_number)}</div>
                     <div>
                       <div className="chat-contact-title">
