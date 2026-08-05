@@ -540,6 +540,17 @@
   font-size: 0.84rem;
 }
 
+.conversation-row-top strong.student-contact-label {
+  -webkit-line-clamp: 2;
+}
+
+.chat-contact-title h3.student-contact-label {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: normal;
+}
+
 .conversation-row-top span {
   flex: 0 0 auto;
   font-size: 0.64rem;
@@ -1195,6 +1206,14 @@
   margin: 8px 0 4px;
   font-size: 0.84rem;
   line-height: 1.25;
+}
+
+.contact-parent-name {
+  display: block;
+  margin-top: 2px;
+  color: var(--agent-text-muted);
+  font-size: 0.7rem;
+  line-height: 1.35;
 }
 
 .detail-list {

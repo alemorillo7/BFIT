@@ -478,9 +478,9 @@ const AgentPanel = ({ section = 'conversations' }) => {
     }
   }, [selectedConversation?.phone_number, loadAssignedStudents]);
 
-  const studentNamesByPhone = useMemo(() => {
-    const namesByPhone = new Map();
-    const addStudentName = (phoneNumber, studentName) => {
+  const studentRelationsByPhone = useMemo(() => {
+    const relationsByPhone = new Map();
+    const addStudentRelation = (phoneNumber, studentName, role) => {
       const normalizedPhone = String(phoneNumber || '').replace(/\D/g, '');
 
       if (!normalizedPhone || !studentName) {
@@ -494,30 +494,54 @@ const AgentPanel = ({ section = 'conversations' }) => {
           return;
         }
 
-        const currentNames = namesByPhone.get(phoneKey) || [];
-        if (!currentNames.includes(studentName)) {
-          namesByPhone.set(phoneKey, [...currentNames, studentName]);
-        }
+        const currentRelation = relationsByPhone.get(phoneKey) || { names: [], roles: [] };
+        relationsByPhone.set(phoneKey, {
+          names: currentRelation.names.includes(studentName) ? currentRelation.names : [...currentRelation.names, studentName],
+          roles: currentRelation.roles.includes(role) ? currentRelation.roles : [...currentRelation.roles, role],
+        });
       });
     };
 
     studentsList.forEach((student) => {
-      addStudentName(student.telefono_wa_mama, student.nombre_hijo);
-      addStudentName(student.telefono_wa_papa, student.nombre_hijo);
+      addStudentRelation(student.telefono_wa_mama, student.nombre_hijo, 'madre');
+      addStudentRelation(student.telefono_wa_papa, student.nombre_hijo, 'padre');
     });
 
-    return namesByPhone;
+    return relationsByPhone;
   }, [studentsList]);
+
+  const getStudentRelationship = useCallback((phoneNumber) => {
+    const normalizedPhone = String(phoneNumber || '').replace(/\D/g, '');
+    const matchingRelations = [
+      studentRelationsByPhone.get(normalizedPhone),
+      studentRelationsByPhone.get(normalizedPhone.slice(-8)),
+    ].filter(Boolean);
+    const names = [...new Set(matchingRelations.flatMap((relation) => relation.names))];
+    const roles = [...new Set(matchingRelations.flatMap((relation) => relation.roles))];
+
+    if (!names.length) {
+      return null;
+    }
+
+    const linkedNames = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} y ${names.at(-1)}`;
+    const prefix = roles.length === 1 ? (roles[0] === 'madre' ? 'Mamá de' : 'Papá de') : 'Familia de';
+
+    return {
+      label: `${prefix} ${linkedNames}`,
+      names,
+    };
+  }, [studentRelationsByPhone]);
+
+  const getConversationDisplayName = useCallback((conversation) => {
+    const relationship = getStudentRelationship(conversation?.phone_number);
+    return relationship?.label || conversation?.contact?.name || conversation?.user_name || 'Sin nombre';
+  }, [getStudentRelationship]);
 
   const filteredConversations = useMemo(() => {
     const term = conversationSearch.trim().toLowerCase();
 
     return conversations.filter((conversation) => {
-      const normalizedPhone = String(conversation.phone_number || '').replace(/\D/g, '');
-      const studentNames = [
-        ...(studentNamesByPhone.get(normalizedPhone) || []),
-        ...(studentNamesByPhone.get(normalizedPhone.slice(-8)) || []),
-      ];
+      const studentNames = getStudentRelationship(conversation.phone_number)?.names || [];
       const haystack = [
         conversation.user_name,
         conversation.contact?.name,
@@ -533,7 +557,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
 
       return matchesSearch && matchesTag;
     });
-  }, [conversations, conversationSearch, selectedTagFilter, studentNamesByPhone]);
+  }, [conversations, conversationSearch, selectedTagFilter, getStudentRelationship]);
 
   const filteredContacts = useMemo(() => {
     const term = contactSearch.trim().toLowerCase();
@@ -898,6 +922,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
         payload.telefono_wa_papa = selectedConversation.phone_number;
       }
       await sendWebhookMutation('Padres_Alumnos', 'MODIFICACION', payload);
+      setStudentsList((current) => current.map((student) => (student === selectedStudentForAssign ? payload : student)));
       setIsStudentAssignModalOpen(false);
       setSelectedStudentForAssign(null);
       setAssignRole('madre');
@@ -972,7 +997,14 @@ const AgentPanel = ({ section = 'conversations' }) => {
               </button>
             </div>
           ) : (
-            <strong>{selectedConversation.contact?.name || selectedConversation.user_name || 'Sin nombre'}</strong>
+            <>
+              <strong>{getConversationDisplayName(selectedConversation)}</strong>
+              {getStudentRelationship(selectedConversation.phone_number) ? (
+                <span className="contact-parent-name">
+                  Contacto: {selectedConversation.contact?.name || selectedConversation.user_name || 'Sin nombre'}
+                </span>
+              ) : null}
+            </>
           )}
           
           <div className="detail-list">
@@ -1144,7 +1176,9 @@ const AgentPanel = ({ section = 'conversations' }) => {
                   <div className="avatar-circle conversation-avatar">{getInitials(conversation.contact?.name || conversation.user_name || conversation.phone_number)}</div>
                   <div className="conversation-row-body">
                     <div className="conversation-row-top">
-                      <strong>{conversation.contact?.name || conversation.user_name || 'Sin nombre'}</strong>
+                      <strong className={getStudentRelationship(conversation.phone_number) ? 'student-contact-label' : ''}>
+                        {getConversationDisplayName(conversation)}
+                      </strong>
                       <span>{formatTimeOnly(conversation.last_message_at)}</span>
                     </div>
                     <div className="conversation-meta-line">
@@ -1186,7 +1220,9 @@ const AgentPanel = ({ section = 'conversations' }) => {
                     <div className="avatar-circle chat-avatar">{getInitials(selectedConversation.contact?.name || selectedConversation.user_name || selectedConversation.phone_number)}</div>
                     <div>
                       <div className="chat-contact-title">
-                        <h3>{selectedConversation.contact?.name || selectedConversation.user_name || 'Sin nombre'}</h3>
+                        <h3 className={getStudentRelationship(selectedConversation.phone_number) ? 'student-contact-label' : ''}>
+                          {getConversationDisplayName(selectedConversation)}
+                        </h3>
                       </div>
                       <div className="chat-header-meta">
                         <span className={`bot-pill ${selectedConversation.agent_active ? 'is-on' : 'is-off'}`}>
