@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Edit2, GraduationCap, Plus, Search, Trash2 } from 'lucide-react';
+import { ArrowUpDown, ChevronLeft, ChevronRight, Download, Edit2, GraduationCap, Plus, Search, Star, Trash2 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import './DataTable.css';
 
@@ -16,6 +16,9 @@ const DataTable = ({
   onBulkPromote,
   onCellChange,
   isCellUpdating,
+  onToggleFavorite,
+  isFavorite,
+  isFavoriteUpdating,
   isLoading,
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -122,6 +125,7 @@ const DataTable = ({
           <table className="table">
             <thead>
               <tr>
+                {onToggleFavorite && <th className="favorite-th" aria-label="Preferencial">Pref.</th>}
                 {columns.map((col) => (
                   <th
                     key={col.key}
@@ -141,6 +145,20 @@ const DataTable = ({
               {paginatedData.length > 0 ? (
                 paginatedData.map((row, index) => (
                   <tr key={index} className={`data-row data-row--${getSelectModifier(row.Color) || 'empty'}`}>
+                    {onToggleFavorite && (
+                      <td className="favorite-cell">
+                        <button
+                          type="button"
+                          className={`favorite-toggle ${isFavorite?.(row) ? 'is-active' : ''}`}
+                          onClick={() => onToggleFavorite(row)}
+                          disabled={isFavoriteUpdating?.(row)}
+                          aria-label={`${isFavorite?.(row) ? 'Quitar de' : 'Agregar a'} Clientes Preferenciales: ${row.nombre_hijo || 'alumno'}`}
+                          title={isFavorite?.(row) ? 'Quitar de Clientes Preferenciales' : 'Agregar a Clientes Preferenciales'}
+                        >
+                          <Star size={19} fill={isFavorite?.(row) ? 'currentColor' : 'none'} />
+                        </button>
+                      </td>
+                    )}
                     {columns.map((col) => (
                       <td key={col.key} className={col.key === 'Color' ? 'color-cell' : undefined}>
                         {col.type === 'select' && onCellChange ? (
@@ -194,7 +212,7 @@ const DataTable = ({
                 ))
               ) : (
                 <tr>
-                  <td colSpan={columns.length + (onEdit || onDelete || onPromote ? 1 : 0)} className="empty-state">
+                  <td colSpan={columns.length + (onToggleFavorite ? 1 : 0) + (onEdit || onDelete || onPromote ? 1 : 0)} className="empty-state">
                     No se encontraron registros.
                   </td>
                 </tr>

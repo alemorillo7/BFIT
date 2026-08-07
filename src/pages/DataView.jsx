@@ -4,6 +4,20 @@ import Modal from '../components/Modal';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
 
 const sheetCache = {};
+const PREFERRED_PHONE_KEY = 'telefono (sin el +)';
+
+const normalizePhone = (value) => String(value || '').replace(/\D/g, '');
+
+const phonesMatch = (firstPhone, secondPhone) => {
+  const first = normalizePhone(firstPhone);
+  const second = normalizePhone(secondPhone);
+
+  if (!first || !second) {
+    return false;
+  }
+
+  return first === second || (first.length >= 8 && second.length >= 8 && first.slice(-8) === second.slice(-8));
+};
 
 const courseProgression = [
   '1 PREK',
@@ -78,6 +92,8 @@ const DataView = ({ title, sheetName, columns }) => {
   const [updatingCells, setUpdatingCells] = useState(() => new Set());
   const [preferredStudents, setPreferredStudents] = useState([]);
   const [preferredStudentsLoading, setPreferredStudentsLoading] = useState(false);
+  const [preferredClients, setPreferredClients] = useState([]);
+  const [preferredClientsLoading, setPreferredClientsLoading] = useState(false);
 
   const isMerienditas = sheetName === 'Merienditas';
   const isPadresAlumnos = sheetName === 'Padres_Alumnos';
@@ -159,7 +175,83 @@ const DataView = ({ title, sheetName, columns }) => {
     };
   }, [isClientesPreferenciales]);
 
-  const mainData = useMemo(() => data, [data]);
+  useEffect(() => {
+    if (!isPadresAlumnos) {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadPreferredClients = async () => {
+      if (sheetCache['Clientes Preferenciales']) {
+        setPreferredClients(sheetCache['Clientes Preferenciales']);
+        return;
+      }
+
+      setPreferredClientsLoading(true);
+
+      try {
+        const result = await fetchSheetData('Clientes Preferenciales');
+        sheetCache['Clientes Preferenciales'] = result;
+
+        if (!cancelled) {
+          setPreferredClients(result);
+        }
+      } catch (error) {
+        console.error('Error loading preferred clients for students:', error);
+      } finally {
+        if (!cancelled) {
+          setPreferredClientsLoading(false);
+        }
+      }
+    };
+
+    loadPreferredClients();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isPadresAlumnos]);
+
+  const mainData = useMemo(() => {
+    if (!isClientesPreferenciales) {
+      return data;
+    }
+
+    return data.map((preferredClient) => {
+      const studentNames = preferredStudents
+        .filter(
+          (student) =>
+            phonesMatch(preferredClient[PREFERRED_PHONE_KEY], student.telefono_wa_mama) ||
+            phonesMatch(preferredClient[PREFERRED_PHONE_KEY], student.telefono_wa_papa),
+        )
+        .map((student) => student.nombre_hijo)
+        .filter(Boolean);
+
+      return {
+        ...preferredClient,
+        Alumnos: [...new Set(studentNames)].join(', '),
+      };
+    });
+  }, [data, isClientesPreferenciales, preferredStudents]);
+
+  const isSameRecord = (item, row, targetSheet) => {
+    if (targetSheet !== 'Clientes Preferenciales') {
+      return item === row;
+    }
+
+    if (item.ID && row.ID) {
+      return String(item.ID) === String(row.ID);
+    }
+
+    return phonesMatch(item[PREFERRED_PHONE_KEY], row[PREFERRED_PHONE_KEY]);
+  };
+
+  const withoutDerivedFields = (row) => {
+    const cleanRow = { ...row };
+    delete cleanRow.Alumnos;
+    return cleanRow;
+  };
 
   const handleEdit = (row, targetSheet = sheetName, cols = columns) => {
     setModalType('edit');
@@ -201,10 +293,10 @@ const DataView = ({ title, sheetName, columns }) => {
 
     try {
       setLoading(true);
-      await sendWebhookMutation(targetSheet, 'BAJA', row);
+      await sendWebhookMutation(targetSheet, 'BAJA', withoutDerivedFields(row));
 
       if (targetSheet === sheetName) {
-        const updatedData = data.filter((item) => item !== row);
+        const updatedData = data.filter((item) => !isSameRecord(item, row, targetSheet));
         setData(updatedData);
         sheetCache[sheetName] = updatedData;
       } else if (targetSheet === 'Alternativas_Merienditas') {
@@ -229,7 +321,9 @@ const DataView = ({ title, sheetName, columns }) => {
 
       if ((modalSheet || sheetName) === sheetName) {
         const updatedData =
-          modalType === 'create' ? [...data, formData] : data.map((item) => (item === selectedRecord ? formData : item));
+          modalType === 'create'
+            ? [...data, formData]
+            : data.map((item) => (isSameRecord(item, selectedRecord, modalSheet || sheetName) ? formData : item));
         setData(updatedData);
         sheetCache[sheetName] = updatedData;
       } else if ((modalSheet || sheetName) === 'Alternativas_Merienditas') {
@@ -247,6 +341,61 @@ const DataView = ({ title, sheetName, columns }) => {
 
   const getCellKey = (row, key) =>
     `${row.telefono_wa_mama || ''}|${row.telefono_wa_papa || ''}|${row.nombre_hijo || ''}|${key}`;
+
+  const isPreferredClient = (row) =>
+    preferredClients.some((client) => phonesMatch(client[PREFERRED_PHONE_KEY], row.telefono_wa_mama));
+
+  const handleTogglePreferred = async (row) => {
+    const phone = normalizePhone(row.telefono_wa_mama);
+
+    if (!phone) {
+      alert('Este alumno no tiene teléfono de madre cargado. Agregalo antes de marcarlo como preferencial.');
+      return;
+    }
+
+    const cellKey = getCellKey(row, 'Preferencial');
+    const matchingClients = preferredClients.filter((client) => phonesMatch(client[PREFERRED_PHONE_KEY], phone));
+    setUpdatingCells((current) => new Set(current).add(cellKey));
+
+    try {
+      let updatedPreferredClients;
+
+      if (matchingClients.length > 0) {
+        await Promise.all(
+          matchingClients.map((client) =>
+            sendWebhookMutation('Clientes Preferenciales', 'BAJA', withoutDerivedFields(client)),
+          ),
+        );
+        updatedPreferredClients = preferredClients.filter(
+          (client) => !phonesMatch(client[PREFERRED_PHONE_KEY], phone),
+        );
+      } else {
+        const maxId = preferredClients.reduce((max, client) => {
+          const clientId = parseInt(client.ID, 10);
+          return !Number.isNaN(clientId) && clientId > max ? clientId : max;
+        }, 0);
+        const newPreferredClient = {
+          ID: String(maxId + 1),
+          [PREFERRED_PHONE_KEY]: phone,
+          nombre: row.nombre_mama || '',
+        };
+
+        await sendWebhookMutation('Clientes Preferenciales', 'ALTA', newPreferredClient);
+        updatedPreferredClients = [...preferredClients, newPreferredClient];
+      }
+
+      setPreferredClients(updatedPreferredClients);
+      sheetCache['Clientes Preferenciales'] = updatedPreferredClients;
+    } catch {
+      alert('Error al actualizar Clientes Preferenciales. Intente nuevamente.');
+    } finally {
+      setUpdatingCells((current) => {
+        const next = new Set(current);
+        next.delete(cellKey);
+        return next;
+      });
+    }
+  };
 
   const handleCellChange = async (row, key, value) => {
     const cellKey = getCellKey(row, key);
@@ -333,6 +482,13 @@ const DataView = ({ title, sheetName, columns }) => {
         onCellChange={isPadresAlumnos ? handleCellChange : undefined}
         isCellUpdating={
           isPadresAlumnos ? (row, key) => updatingCells.has(getCellKey(row, key)) : undefined
+        }
+        onToggleFavorite={isPadresAlumnos ? handleTogglePreferred : undefined}
+        isFavorite={isPadresAlumnos ? isPreferredClient : undefined}
+        isFavoriteUpdating={
+          isPadresAlumnos
+            ? (row) => preferredClientsLoading || updatingCells.has(getCellKey(row, 'Preferencial'))
+            : undefined
         }
       />
 

@@ -116,6 +116,7 @@ function App() {
     { key: 'ID', label: 'ID', readOnly: true },
     { key: 'telefono (sin el +)', label: 'Teléfono' },
     { key: 'nombre', label: 'Nombre' },
+    { key: 'Alumnos', label: 'Alumno(s)', formHidden: true },
   ];
 
   return (

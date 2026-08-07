@@ -46,7 +46,9 @@ const ModalForm = ({ title, columns, initialData, onClose, onSubmit, isSubmittin
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    onSubmit(formData);
+    const submittedData = { ...formData };
+    columns.filter((column) => column.formHidden).forEach((column) => delete submittedData[column.key]);
+    onSubmit(submittedData);
   };
 
   const handleStudentSelect = (student) => {
@@ -117,7 +119,7 @@ const ModalForm = ({ title, columns, initialData, onClose, onSubmit, isSubmittin
               </div>
             )}
 
-            {columns.map((col) => (
+            {columns.filter((col) => !col.formHidden).map((col) => (
               <div key={col.key} className="form-group">
                 <label className="label">{col.label}</label>
                 {col.type === 'select' ? (
