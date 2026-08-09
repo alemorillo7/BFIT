@@ -147,6 +147,39 @@
   cursor: wait;
 }
 
+.sheet-date,
+.sheet-time {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  white-space: nowrap;
+  font-weight: 600;
+}
+
+.sheet-date {
+  color: #1e3a8a;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  text-transform: capitalize;
+}
+
+.sheet-time {
+  color: #475569;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  font-variant-numeric: tabular-nums;
+}
+
+.observation-reason {
+  display: inline-block;
+  max-width: 38rem;
+  color: #334155;
+  font-weight: 500;
+  line-height: 1.45;
+}
+
 .color-th,
 .color-cell {
   min-width: 116px;

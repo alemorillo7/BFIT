@@ -5,6 +5,46 @@ import AgentPanel from './pages/AgentPanel';
 import DataView from './pages/DataView';
 import Login from './pages/Login';
 
+const formatSheetDate = (value) => {
+  const rawValue = String(value || '').trim();
+  const isoDate = rawValue.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+  if (!isoDate) {
+    return rawValue || 'Sin fecha';
+  }
+
+  const [, year, month, day] = isoDate;
+  const date = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+
+  return new Intl.DateTimeFormat('es-BO', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    timeZone: 'UTC',
+  })
+    .format(date)
+    .replace('.', '');
+};
+
+const formatSheetTime = (value) => {
+  const rawValue = String(value || '').trim();
+  const time = rawValue.match(/(?:^|T)(\d{1,2}):(\d{2})/);
+
+  return time ? `${time[1].padStart(2, '0')}:${time[2]} hs` : rawValue || 'Sin hora';
+};
+
+const renderDate = (value) => (
+  <time className="sheet-date" dateTime={String(value || '')} title={String(value || '')}>
+    {formatSheetDate(value)}
+  </time>
+);
+
+const renderTime = (value) => (
+  <time className="sheet-time" title={String(value || '')}>
+    {formatSheetTime(value)}
+  </time>
+);
+
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(() => localStorage.getItem('bfit_auth') === 'true');
 
@@ -96,20 +136,24 @@ function App() {
   ];
 
   const cambiosCols = [
-    { key: 'fecha', label: 'Fecha' },
+    { key: 'fecha', label: 'Fecha', render: renderDate },
     { key: 'nombre_padre', label: 'Nombre Padre' },
     { key: 'nombre_hijo', label: 'Nombre Hijo' },
     { key: 'curso', label: 'Curso' },
     { key: 'plato_original', label: 'Plato Original' },
     { key: 'plato_elegido', label: 'Plato Elegido' },
-    { key: 'hora_registro', label: 'Hora Registro' },
+    { key: 'hora_registro', label: 'Hora Registro', render: renderTime },
   ];
 
   const observacionesCols = [
     { key: 'alumno', label: 'Alumno' },
-    { key: 'fecha', label: 'Fecha' },
-    { key: 'motivo_de_falta', label: 'Motivo de Falta' },
-    { key: 'hora_registro', label: 'Hora Registro' },
+    { key: 'fecha', label: 'Fecha', render: renderDate },
+    {
+      key: 'motivo_de_falta',
+      label: 'Motivo de Falta',
+      render: (value) => <span className="observation-reason">{value || 'Sin motivo informado'}</span>,
+    },
+    { key: 'hora_registro', label: 'Hora Registro', render: renderTime },
   ];
 
   const clientesPrefCols = [

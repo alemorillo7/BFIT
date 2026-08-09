@@ -343,18 +343,27 @@ const DataView = ({ title, sheetName, columns }) => {
     `${row.telefono_wa_mama || ''}|${row.telefono_wa_papa || ''}|${row.nombre_hijo || ''}|${key}`;
 
   const isPreferredClient = (row) =>
-    preferredClients.some((client) => phonesMatch(client[PREFERRED_PHONE_KEY], row.telefono_wa_mama));
+    preferredClients.some(
+      (client) =>
+        phonesMatch(client[PREFERRED_PHONE_KEY], row.telefono_wa_mama) ||
+        phonesMatch(client[PREFERRED_PHONE_KEY], row.telefono_wa_papa),
+    );
 
   const handleTogglePreferred = async (row) => {
-    const phone = normalizePhone(row.telefono_wa_mama);
+    const motherPhone = normalizePhone(row.telefono_wa_mama);
+    const fatherPhone = normalizePhone(row.telefono_wa_papa);
+    const phone = motherPhone || fatherPhone;
 
     if (!phone) {
-      alert('Este alumno no tiene teléfono de madre cargado. Agregalo antes de marcarlo como preferencial.');
+      alert('Este alumno no tiene teléfono de madre ni de padre cargado. Agregá uno antes de marcarlo como preferencial.');
       return;
     }
 
     const cellKey = getCellKey(row, 'Preferencial');
-    const matchingClients = preferredClients.filter((client) => phonesMatch(client[PREFERRED_PHONE_KEY], phone));
+    const matchesStudentContact = (client) =>
+      phonesMatch(client[PREFERRED_PHONE_KEY], motherPhone) ||
+      phonesMatch(client[PREFERRED_PHONE_KEY], fatherPhone);
+    const matchingClients = preferredClients.filter(matchesStudentContact);
     setUpdatingCells((current) => new Set(current).add(cellKey));
 
     try {
@@ -366,9 +375,7 @@ const DataView = ({ title, sheetName, columns }) => {
             sendWebhookMutation('Clientes Preferenciales', 'BAJA', withoutDerivedFields(client)),
           ),
         );
-        updatedPreferredClients = preferredClients.filter(
-          (client) => !phonesMatch(client[PREFERRED_PHONE_KEY], phone),
-        );
+        updatedPreferredClients = preferredClients.filter((client) => !matchesStudentContact(client));
       } else {
         const maxId = preferredClients.reduce((max, client) => {
           const clientId = parseInt(client.ID, 10);
@@ -377,7 +384,7 @@ const DataView = ({ title, sheetName, columns }) => {
         const newPreferredClient = {
           ID: String(maxId + 1),
           [PREFERRED_PHONE_KEY]: phone,
-          nombre: row.nombre_mama || '',
+          nombre: motherPhone ? row.nombre_mama || '' : row.nombre_papa || '',
         };
 
         await sendWebhookMutation('Clientes Preferenciales', 'ALTA', newPreferredClient);
