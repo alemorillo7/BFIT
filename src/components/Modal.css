@@ -47,6 +47,16 @@
   grid-column: 1 / -1;
 }
 
+.form-group--full {
+  grid-column: 1 / -1;
+}
+
+.form-textarea {
+  min-height: 108px;
+  resize: vertical;
+  line-height: 1.5;
+}
+
 .student-search-control {
   position: relative;
 }

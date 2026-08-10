@@ -385,6 +385,7 @@ const DataView = ({ title, sheetName, columns }) => {
           ID: String(maxId + 1),
           [PREFERRED_PHONE_KEY]: phone,
           nombre: motherPhone ? row.nombre_mama || '' : row.nombre_papa || '',
+          Detalle: '',
         };
 
         await sendWebhookMutation('Clientes Preferenciales', 'ALTA', newPreferredClient);
@@ -529,8 +530,8 @@ const DataView = ({ title, sheetName, columns }) => {
                 childKey: 'nombre_hijo',
                 courseKey: 'curso',
                 onSelect: (student) => ({
-                  'telefono (sin el +)': String(student.telefono_wa_mama || '').replace(/\D/g, ''),
-                  nombre: student.nombre_mama || '',
+                  'telefono (sin el +)': String(student.telefono_wa_mama || student.telefono_wa_papa || '').replace(/\D/g, ''),
+                  nombre: student.telefono_wa_mama ? student.nombre_mama || '' : student.nombre_papa || '',
                 }),
               }
             : undefined

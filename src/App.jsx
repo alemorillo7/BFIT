@@ -160,6 +160,17 @@ function App() {
     { key: 'ID', label: 'ID', readOnly: true },
     { key: 'telefono (sin el +)', label: 'Teléfono' },
     { key: 'nombre', label: 'Nombre' },
+    {
+      key: 'Detalle',
+      label: 'Detalle',
+      type: 'textarea',
+      fullWidth: true,
+      render: (value) => (
+        <span className={`client-detail ${value ? '' : 'client-detail--empty'}`}>
+          {value || 'Sin detalle'}
+        </span>
+      ),
+    },
     { key: 'Alumnos', label: 'Alumno(s)', formHidden: true },
   ];
 

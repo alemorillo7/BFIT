@@ -120,7 +120,7 @@ const ModalForm = ({ title, columns, initialData, onClose, onSubmit, isSubmittin
             )}
 
             {columns.filter((col) => !col.formHidden).map((col) => (
-              <div key={col.key} className="form-group">
+              <div key={col.key} className={`form-group ${col.fullWidth ? 'form-group--full' : ''}`}>
                 <label className="label">{col.label}</label>
                 {col.type === 'select' ? (
                   <select
@@ -135,6 +135,16 @@ const ModalForm = ({ title, columns, initialData, onClose, onSubmit, isSubmittin
                       </option>
                     ))}
                   </select>
+                ) : col.type === 'textarea' ? (
+                  <textarea
+                    className="input form-textarea"
+                    value={formData[col.key] || ''}
+                    onChange={(event) => handleChange(event, col.key)}
+                    placeholder={`Ingrese ${col.label.toLowerCase()}`}
+                    disabled={isSubmitting || col.readOnly}
+                    readOnly={col.readOnly}
+                    rows={col.rows || 4}
+                  />
                 ) : (
                   <input
                     type="text"

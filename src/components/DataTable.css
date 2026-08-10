@@ -180,6 +180,19 @@
   line-height: 1.45;
 }
 
+.client-detail {
+  display: block;
+  min-width: 180px;
+  max-width: 360px;
+  white-space: pre-wrap;
+  line-height: 1.45;
+}
+
+.client-detail--empty {
+  color: var(--color-text-muted);
+  font-style: italic;
+}
+
 .color-th,
 .color-cell {
   min-width: 116px;
