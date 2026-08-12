@@ -163,7 +163,11 @@ const DataTable = ({
                       <td key={col.key} className={col.key === 'Color' ? 'color-cell' : undefined}>
                         {col.type === 'select' && onCellChange ? (
                           <select
-                            className={`table-select color-select color-select--${getSelectModifier(row[col.key]) || 'empty'}`}
+                            className={`table-select ${
+                              col.key === 'Color'
+                                ? `color-select color-select--${getSelectModifier(row[col.key]) || 'empty'}`
+                                : `boolean-select boolean-select--${getSelectModifier(row[col.key]) || 'empty'}`
+                            }`}
                             value={row[col.key] || ''}
                             onChange={(event) => onCellChange(row, col.key, event.target.value)}
                             disabled={isCellUpdating?.(row, col.key)}

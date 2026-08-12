@@ -81,6 +81,15 @@ function App() {
     { key: 'Registrado IA', label: 'Reg. IA' },
     { key: 'Ultima fecha de pago ', label: 'Últ. Pago' },
     {
+      key: 'Consume merienda?',
+      label: 'Consume merienda',
+      type: 'select',
+      options: [
+        { value: '', label: 'No' },
+        { value: 'Si', label: 'Sí' },
+      ],
+    },
+    {
       key: 'Color',
       label: 'Color',
       type: 'select',

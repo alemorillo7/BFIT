@@ -417,7 +417,7 @@ const DataView = ({ title, sheetName, columns }) => {
       setData(updatedData);
       sheetCache[sheetName] = updatedData;
     } catch {
-      alert('Error al guardar el color. Intente nuevamente.');
+      alert('Error al guardar el cambio. Intente nuevamente.');
     } finally {
       setUpdatingCells((current) => {
         const next = new Set(current);

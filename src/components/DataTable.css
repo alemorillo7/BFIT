@@ -274,6 +274,21 @@
   color: #9a3412;
 }
 
+.boolean-select {
+  min-width: 86px;
+}
+
+.boolean-select--empty {
+  color: #64748b;
+  background: #f8fafc;
+}
+
+.boolean-select--si {
+  color: #166534;
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
 .table tbody tr.data-row--verde,
 .table tbody tr.data-row--verde:hover {
   background: #bbf7d0;
