@@ -31,6 +31,12 @@ export const toggleConversationBot = (body) =>
     body: JSON.stringify(body),
   });
 
+export const toggleConversationBotsBulk = (body) =>
+  jsonRequest('/api/toggle-bot-bulk', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
+
 export const assignConversationTags = (body) =>
   jsonRequest('/api/assign-tags', {
     method: 'POST',

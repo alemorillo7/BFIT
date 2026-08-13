@@ -434,6 +434,49 @@
   border-bottom: 1px solid var(--agent-accent-border);
 }
 
+.bulk-selection-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 9px 12px;
+  background: rgba(248, 250, 252, 0.82);
+  border-bottom: 1px solid var(--agent-panel-border);
+}
+
+.bulk-selection-summary,
+.bulk-selection-buttons {
+  display: flex;
+  align-items: center;
+}
+
+.bulk-selection-summary {
+  gap: 5px;
+  color: var(--agent-text-muted);
+  font-size: 0.7rem;
+}
+
+.bulk-selection-summary strong {
+  color: var(--agent-text);
+}
+
+.bulk-selection-buttons {
+  gap: 6px;
+}
+
+.bulk-selection-buttons .small {
+  flex: 1;
+  min-width: 0;
+  min-height: 30px;
+  padding: 0 8px;
+  font-size: 0.68rem;
+}
+
+.bot-off-selection-button {
+  color: #b42318;
+  border-color: rgba(220, 38, 38, 0.2);
+  background: #fff7f7;
+}
+
 .bulk-counter {
   font-size: 0.8rem;
   font-weight: 700;

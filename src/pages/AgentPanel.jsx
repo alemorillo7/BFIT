@@ -11,6 +11,7 @@ import {
   saveContact,
   sendAgentMessage,
   toggleConversationBot,
+  toggleConversationBotsBulk,
   uploadConversationFile,
 } from '../services/chatApi';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
@@ -471,11 +472,15 @@ const AgentPanel = ({ section = 'conversations' }) => {
   }, []);
 
   useEffect(() => {
-    if (selectedConversation?.phone_number) {
-      loadAssignedStudents(selectedConversation.phone_number);
-    } else {
-      setAssignedStudents([]);
-    }
+    const timer = window.setTimeout(() => {
+      if (selectedConversation?.phone_number) {
+        loadAssignedStudents(selectedConversation.phone_number);
+      } else {
+        setAssignedStudents([]);
+      }
+    }, 0);
+
+    return () => window.clearTimeout(timer);
   }, [selectedConversation?.phone_number, loadAssignedStudents]);
 
   const studentRelationsByPhone = useMemo(() => {
@@ -558,6 +563,16 @@ const AgentPanel = ({ section = 'conversations' }) => {
       return matchesSearch && matchesTag;
     });
   }, [conversations, conversationSearch, selectedTagFilter, getStudentRelationship]);
+
+  const filteredBotOffConversations = useMemo(
+    () => filteredConversations.filter((conversation) => !conversation.agent_active),
+    [filteredConversations],
+  );
+
+  const areAllFilteredSelected = useMemo(
+    () => filteredConversations.length > 0 && filteredConversations.every((conversation) => selectedForBulk.includes(conversation.id)),
+    [filteredConversations, selectedForBulk],
+  );
 
   const filteredContacts = useMemo(() => {
     const term = contactSearch.trim().toLowerCase();
@@ -758,21 +773,51 @@ const AgentPanel = ({ section = 'conversations' }) => {
     );
   };
 
+  const handleSelectAllFiltered = () => {
+    const filteredIds = filteredConversations.map((conversation) => conversation.id);
+    const filteredIdSet = new Set(filteredIds);
+
+    setSelectedForBulk((current) =>
+      areAllFilteredSelected
+        ? current.filter((conversationId) => !filteredIdSet.has(conversationId))
+        : Array.from(new Set([...current, ...filteredIds])),
+    );
+  };
+
+  const handleSelectBotOff = () => {
+    setSelectedForBulk(filteredBotOffConversations.map((conversation) => conversation.id));
+  };
+
   const handleBulkToggleBot = async (turnOn) => {
     if (selectedForBulk.length === 0) return;
-    
-    setWorkingAction('bot');
+
+    const selectedConversations = conversations.filter((conversation) => selectedForBulk.includes(conversation.id));
+    const conversationsToUpdate = selectedConversations.filter((conversation) => conversation.agent_active !== turnOn);
+
+    if (conversationsToUpdate.length === 0) {
+      setSelectedForBulk([]);
+      return;
+    }
+
+    const action = turnOn ? 'encender' : 'apagar';
+    if (!window.confirm(`Se va a ${action} el bot de ${conversationsToUpdate.length} conversación(es). ¿Continuar?`)) {
+      return;
+    }
+
+    setWorkingAction('bulk-bot');
     setErrorMessage('');
-    
+
     try {
-      const selectedConvos = conversations.filter((c) => selectedForBulk.includes(c.id));
-      await Promise.all(
-        selectedConvos.map((c) =>
-          toggleConversationBot({
-            phone_number: c.phone_number,
-            agent_active: turnOn,
-          })
-        )
+      await toggleConversationBotsBulk({
+        phone_numbers: conversationsToUpdate.map((conversation) => conversation.phone_number),
+        agent_active: turnOn,
+      });
+
+      const updatedIds = new Set(conversationsToUpdate.map((conversation) => conversation.id));
+      setConversations((current) =>
+        current.map((conversation) =>
+          updatedIds.has(conversation.id) ? { ...conversation, agent_active: turnOn } : conversation,
+        ),
       );
       setSelectedForBulk([]);
       await loadDashboardData(selectedConversationIdRef.current, false);
@@ -901,7 +946,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
     try {
       const data = await fetchSheetData('Padres_Alumnos');
       setStudentsList(data);
-    } catch (error) {
+    } catch {
       setErrorMessage('No se pudieron cargar los alumnos.');
     } finally {
       setLoadingStudents(false);
@@ -930,7 +975,7 @@ const AgentPanel = ({ section = 'conversations' }) => {
       // Refresh assigned students
       await loadAssignedStudents(selectedConversation.phone_number);
       alert('¡Asignado exitosamente!');
-    } catch (error) {
+    } catch {
       setErrorMessage('Error al asignar el alumno.');
     } finally {
       setWorkingAction('');
@@ -1143,17 +1188,44 @@ const AgentPanel = ({ section = 'conversations' }) => {
               </div>
             </div>
 
+            <div className="bulk-selection-toolbar">
+              <div className="bulk-selection-summary">
+                <strong>{filteredConversations.length}</strong> visibles
+                <span>·</span>
+                <strong>{filteredBotOffConversations.length}</strong> con Bot OFF
+              </div>
+              <div className="bulk-selection-buttons">
+                <button
+                  type="button"
+                  className="secondary-button small"
+                  onClick={handleSelectAllFiltered}
+                  disabled={filteredConversations.length === 0 || workingAction === 'bulk-bot'}
+                >
+                  <Users size={14} />
+                  {areAllFilteredSelected ? 'Deseleccionar todos' : 'Seleccionar todos'}
+                </button>
+                <button
+                  type="button"
+                  className="secondary-button small bot-off-selection-button"
+                  onClick={handleSelectBotOff}
+                  disabled={filteredBotOffConversations.length === 0 || workingAction === 'bulk-bot'}
+                >
+                  <Pause size={14} /> Solo Bot OFF
+                </button>
+              </div>
+            </div>
+
             {selectedForBulk.length > 0 && (
               <div className="bulk-action-bar">
                 <span className="bulk-counter">{selectedForBulk.length} seleccionados</span>
                 <div className="bulk-actions">
-                  <button className="primary-button small" onClick={() => handleBulkToggleBot(true)}>
-                    <Bot size={14} /> ON
+                  <button className="primary-button small" onClick={() => handleBulkToggleBot(true)} disabled={workingAction === 'bulk-bot'}>
+                    <Bot size={14} /> {workingAction === 'bulk-bot' ? 'Procesando...' : 'ON'}
                   </button>
-                  <button className="secondary-button small" onClick={() => handleBulkToggleBot(false)}>
+                  <button className="secondary-button small" onClick={() => handleBulkToggleBot(false)} disabled={workingAction === 'bulk-bot'}>
                     <Bot size={14} /> OFF
                   </button>
-                  <button className="icon-button" onClick={() => setSelectedForBulk([])} aria-label="Limpiar selección">
+                  <button className="icon-button" onClick={() => setSelectedForBulk([])} aria-label="Limpiar selección" disabled={workingAction === 'bulk-bot'}>
                     <X size={14} />
                   </button>
                 </div>

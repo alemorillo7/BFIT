@@ -228,6 +228,45 @@ export const setBotStatus = async (phoneNumber, agentActive) => {
   };
 };
 
+export const setBotStatusBulk = async (phoneNumbers, agentActive) => {
+  const normalizedPhones = Array.from(new Set((phoneNumbers || []).map(normalizePhoneNumber).filter(Boolean)));
+
+  if (!normalizedPhones.length) {
+    throw new Error('Debes enviar al menos un teléfono válido.');
+  }
+
+  if (normalizedPhones.length > 1000) {
+    throw new Error('No se pueden actualizar más de 1000 conversaciones por operación.');
+  }
+
+  const safeStatus = Boolean(agentActive);
+  const updatedAt = new Date().toISOString();
+
+  const { error: contactError } = await supabaseAdmin
+    .from('contacts')
+    .update({ bot_active: safeStatus, updated_at: updatedAt })
+    .in('phone_number', normalizedPhones);
+
+  if (contactError) {
+    throw contactError;
+  }
+
+  const { error: conversationError } = await supabaseAdmin
+    .from('conversations')
+    .update({ agent_active: safeStatus, updated_at: updatedAt })
+    .in('phone_number', normalizedPhones);
+
+  if (conversationError) {
+    throw conversationError;
+  }
+
+  return {
+    updated: normalizedPhones.length,
+    phone_numbers: normalizedPhones,
+    agent_active: safeStatus,
+  };
+};
+
 const upsertTags = async (tags = []) => {
   const cleanTags = Array.from(
     new Set(
