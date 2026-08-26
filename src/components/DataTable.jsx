@@ -78,7 +78,7 @@ const DataTable = ({
   };
 
   return (
-    <div className="datatable-wrapper premium-card">
+    <div className={`datatable-wrapper premium-card ${onToggleFavorite ? 'datatable-wrapper--students' : ''}`}>
       <div className="datatable-header">
         <h3 className="datatable-title">{title}</h3>
 

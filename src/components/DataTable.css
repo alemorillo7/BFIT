@@ -212,6 +212,18 @@
   padding-right: 0.35rem;
 }
 
+/* En Padres / Alumnos toda la fila se desplaza junta. Evita que Color y
+   Acciones se superpongan visualmente sobre las demás columnas. */
+.datatable-wrapper--students .actions-th,
+.datatable-wrapper--students .actions-cell,
+.datatable-wrapper--students .color-th,
+.datatable-wrapper--students .color-cell {
+  position: static;
+  right: auto;
+  z-index: auto;
+  box-shadow: none;
+}
+
 .action-buttons {
   display: flex;
   justify-content: flex-end;
