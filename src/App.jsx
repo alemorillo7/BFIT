@@ -90,6 +90,21 @@ function App() {
       ],
     },
     {
+      key: 'Saldo Merienditas',
+      label: 'Saldo Merienditas',
+      render: (val) => {
+        const saldo = String(val ?? '').trim();
+        const numero = Number.parseFloat(saldo.replace(',', '.'));
+        const esNegativo = Number.isFinite(numero) && numero < 0;
+
+        return (
+          <span className={`font-medium ${esNegativo ? 'text-danger' : 'text-success'}`}>
+            {saldo || '0'} Bs
+          </span>
+        );
+      },
+    },
+    {
       key: 'Color',
       label: 'Color',
       type: 'select',
