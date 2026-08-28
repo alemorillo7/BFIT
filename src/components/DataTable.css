@@ -523,3 +523,93 @@
     right: var(--actions-column-width);
   }
 }
+
+/* --- Sticky Columns Optimizations for Parents/Students and general datatables --- */
+
+/* Enable sticky columns on first column of all tables */
+.table th:first-child,
+.table td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background-color: var(--color-surface);
+  box-shadow: inset -1px 0 0 var(--color-border);
+}
+
+/* For Padres/Alumnos (datatable-wrapper--students), make the next column (Nombre Madre) sticky too! */
+.datatable-wrapper--students .table th:nth-child(2),
+.datatable-wrapper--students .table td:nth-child(2) {
+  position: sticky;
+  left: 54px; /* Width of favorite toggle column */
+  z-index: 5;
+  background-color: var(--color-surface);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05), inset -1px 0 0 var(--color-border);
+  border-right: 2px solid var(--color-border) !important;
+}
+
+/* Ensure correct z-index and background for table headers when sticky */
+.table thead th:first-child {
+  z-index: 6;
+  background-color: #f8fafc;
+}
+.datatable-wrapper--students .table thead th:nth-child(2) {
+  z-index: 6;
+  background-color: #f8fafc;
+}
+
+/* Ensure row hover and color overrides apply properly to sticky cells */
+.table tbody tr:hover td:first-child,
+.datatable-wrapper--students .table tbody tr:hover td:nth-child(2) {
+  background-color: #f1f5f9 !important;
+}
+
+/* Override sticky background colors for rows with custom background colors */
+.data-row--verde td:first-child,
+.datatable-wrapper--students .data-row--verde td:nth-child(2) {
+  background-color: #f0fdf4 !important;
+}
+.data-row--verde:hover td:first-child,
+.datatable-wrapper--students .data-row--verde:hover td:nth-child(2) {
+  background-color: #dcfce7 !important;
+}
+
+.data-row--azul td:first-child,
+.datatable-wrapper--students .data-row--azul td:nth-child(2) {
+  background-color: #eff6ff !important;
+}
+.data-row--azul:hover td:first-child,
+.datatable-wrapper--students .data-row--azul:hover td:nth-child(2) {
+  background-color: #dbeafe !important;
+}
+
+.data-row--amarillo td:first-child,
+.datatable-wrapper--students .data-row--amarillo td:nth-child(2) {
+  background-color: #fefbeb !important;
+}
+.data-row--amarillo:hover td:first-child,
+.datatable-wrapper--students .data-row--amarillo:hover td:nth-child(2) {
+  background-color: #fef3c7 !important;
+}
+
+.data-row--naranja td:first-child,
+.datatable-wrapper--students .data-row--naranja td:nth-child(2) {
+  background-color: #fff7ed !important;
+}
+.data-row--naranja:hover td:first-child,
+.datatable-wrapper--students .data-row--naranja:hover td:nth-child(2) {
+  background-color: #ffedd5 !important;
+}
+
+/* Mobile optimizations for small screens (max-width: 768px) */
+@media (max-width: 768px) {
+  .table-container::after {
+    content: '← Desliza horizontalmente para ver todas las columnas →';
+    display: block;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    padding: 0.5rem;
+    background-color: var(--color-background);
+    border-top: 1px solid var(--color-border);
+  }
+}

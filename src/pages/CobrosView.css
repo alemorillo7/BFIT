@@ -1,0 +1,407 @@
+.cobros-container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  max-width: 100%;
+  overflow-x: hidden;
+  animation: fadeIn 0.4s ease;
+}
+
+.cobros-header {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+}
+
+@media (min-width: 768px) {
+  .cobros-header {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: center;
+  }
+}
+
+.cobros-header .title-section h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin: 0 0 0.25rem 0;
+  color: var(--text-color);
+}
+
+.cobros-header .title-section .subtitle {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.cobros-header .controls-section {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.cobros-header .search-box, 
+.cobros-header .filter-box {
+  position: relative;
+  min-width: 200px;
+}
+
+.cobros-header .search-icon, 
+.cobros-header .filter-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-muted);
+}
+
+.cobros-header .search-input {
+  padding-left: 2.25rem;
+}
+
+.cobros-header .select-filter {
+  padding-left: 2.25rem;
+  appearance: none;
+  cursor: pointer;
+}
+
+.error-alert {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  background-color: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-radius: 8px;
+}
+
+.error-alert button {
+  margin-left: auto;
+}
+
+/* Excel Table Container */
+.excel-table-container {
+  overflow-x: auto;
+  max-width: 100%;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+}
+
+.excel-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  text-align: left;
+}
+
+.excel-table th, 
+.excel-table td {
+  border: 1px solid var(--border-color);
+  padding: 0.25rem 0.5rem;
+  vertical-align: middle;
+}
+
+/* Header Cells */
+.excel-table th {
+  background-color: var(--bg-card);
+  color: var(--text-color);
+  font-weight: 600;
+  text-align: center;
+}
+
+.excel-table tr.main-header-row th {
+  padding: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.excel-table tr.days-header-row th {
+  padding: 0.25rem;
+  font-size: 0.75rem;
+  background-color: var(--bg-body);
+}
+
+/* Column Widths */
+.col-nro { width: 40px; }
+.col-alumno { width: 220px; min-width: 200px; }
+.col-curso { width: 100px; }
+.col-date { width: 90px; }
+.col-obs { width: 180px; min-width: 150px; }
+.col-day { width: 35px; min-width: 35px; text-align: center; }
+.col-total { width: 90px; text-align: center; }
+.col-color { width: 110px; }
+.col-actions { width: 60px; }
+
+/* Cell Inputs */
+.cell-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-color);
+  padding: 0.25rem 0.4rem;
+  border-radius: 4px;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.cell-input:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color);
+}
+
+.cell-input:focus {
+  background-color: var(--bg-body);
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.cell-day-input {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-color);
+  padding: 0.25rem 0.1rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  transition: all 0.2s ease;
+}
+
+.cell-day-input:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  border-color: var(--border-color);
+}
+
+.cell-day-input:focus {
+  background-color: var(--bg-body);
+  border-color: var(--primary-color);
+  outline: none;
+}
+
+/* Highlighting values */
+.cell-day-input[value="1"],
+.cell-day-input[value="MENU FIT"],
+.cell-day-input[value="menu fit"] {
+  font-weight: bold;
+  color: var(--primary-color);
+}
+
+/* Backgrounds */
+.bg-light {
+  background-color: var(--bg-body);
+}
+
+.text-bold {
+  font-weight: 600;
+}
+
+.text-center {
+  text-align: center;
+}
+
+/* Select Color Dropdown */
+.cell-color-select {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-color);
+  padding: 0.2rem;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.cell-color-select:hover {
+  border-color: var(--border-color);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Row Color Classes (mapped to Excel styles & App theme) */
+.row-color--fff2cc {
+  background-color: rgba(255, 242, 204, 0.08) !important;
+}
+.row-color--fff2cc td {
+  border-color: rgba(255, 242, 204, 0.2) !important;
+}
+.row-color--fff2cc .cell-input,
+.row-color--fff2cc .cell-day-input {
+  color: #ffe082 !important;
+}
+
+.row-color--verde {
+  background-color: rgba(16, 185, 129, 0.08) !important;
+}
+.row-color--verde td {
+  border-color: rgba(16, 185, 129, 0.2) !important;
+}
+.row-color--verde .cell-input,
+.row-color--verde .cell-day-input {
+  color: #34d399 !important;
+}
+
+.row-color--azul {
+  background-color: rgba(59, 130, 246, 0.08) !important;
+}
+.row-color--azul td {
+  border-color: rgba(59, 130, 246, 0.2) !important;
+}
+.row-color--azul .cell-input,
+.row-color--azul .cell-day-input {
+  color: #60a5fa !important;
+}
+
+.row-color--amarillo {
+  background-color: rgba(245, 158, 11, 0.08) !important;
+}
+.row-color--amarillo td {
+  border-color: rgba(245, 158, 11, 0.2) !important;
+}
+.row-color--amarillo .cell-input,
+.row-color--amarillo .cell-day-input {
+  color: #fbbf24 !important;
+}
+
+.row-color--naranja {
+  background-color: rgba(249, 115, 22, 0.08) !important;
+}
+.row-color--naranja td {
+  border-color: rgba(249, 115, 22, 0.2) !important;
+}
+.row-color--naranja .cell-input,
+.row-color--naranja .cell-day-input {
+  color: #ff7849 !important;
+}
+
+/* Spinner and Saving effects */
+.row-saving {
+  opacity: 0.7;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+.spinner-small {
+  animation: spin 1s linear infinite;
+  display: inline-block;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Actions cell alignment */
+.action-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* --- Mobile & Sticky Columns Optimizations --- */
+
+/* Enable sticky columns on Nro and Alumno */
+.excel-table th.col-nro,
+.excel-table td.cell-nro {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background-color: var(--color-surface);
+  box-shadow: inset -1px 0 0 var(--color-border);
+}
+
+.excel-table th.col-alumno,
+.excel-table td.cell-alumno {
+  position: sticky;
+  left: 40px; /* Width of Nro column */
+  z-index: 5;
+  background-color: var(--color-surface);
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05), inset -1px 0 0 var(--color-border);
+  border-right: 2px solid var(--color-border) !important;
+}
+
+/* Ensure row color overlay handles sticky cell backgrounds */
+.excel-table tr.excel-row td.cell-nro,
+.excel-table tr.excel-row td.cell-alumno {
+  transition: background-color 0.2s ease;
+}
+
+.excel-row.row-color--fff2cc td.cell-nro,
+.excel-row.row-color--fff2cc td.cell-alumno {
+  background-color: #fffbf0 !important;
+}
+.excel-row.row-color--verde td.cell-nro,
+.excel-row.row-color--verde td.cell-alumno {
+  background-color: #f0fdf4 !important;
+}
+.excel-row.row-color--azul td.cell-nro,
+.excel-row.row-color--azul td.cell-alumno {
+  background-color: #eff6ff !important;
+}
+.excel-row.row-color--amarillo td.cell-nro,
+.excel-row.row-color--amarillo td.cell-alumno {
+  background-color: #fefbeb !important;
+}
+.excel-row.row-color--naranja td.cell-nro,
+.excel-row.row-color--naranja td.cell-alumno {
+  background-color: #fff7ed !important;
+}
+
+/* Fix z-index for headers */
+.excel-table tr.main-header-row th.col-nro,
+.excel-table tr.main-header-row th.col-alumno {
+  z-index: 6;
+  background-color: var(--color-background);
+}
+
+/* Adjust row headers on scroll */
+.excel-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Mobile responsive styling for controls and headers */
+@media (max-width: 768px) {
+  .cobros-container {
+    padding: 0.75rem;
+    gap: 1rem;
+  }
+  
+  .cobros-header {
+    padding: 1rem;
+  }
+  
+  .cobros-header .controls-section {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  
+  .cobros-header .search-box,
+  .cobros-header .filter-box,
+  .cobros-header button {
+    width: 100%;
+    min-width: 0;
+  }
+  
+  /* Make horizontal scrolling obvious on mobile */
+  .excel-table-container::after {
+    content: '← Desliza horizontalmente para ver más días →';
+    display: block;
+    text-align: center;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    padding: 0.5rem;
+    background-color: var(--color-background);
+    border-top: 1px solid var(--color-border);
+  }
+}

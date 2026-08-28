@@ -11,12 +11,14 @@ import {
   Star,
   Users,
   Utensils,
+  DollarSign,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import './Sidebar.css';
 
 const Sidebar = ({ isCollapsed, isOpen, onLogout, onNavigate }) => {
   const menuItems = [
+    { name: 'Cobros', path: '/cobros', icon: <DollarSign size={20} /> },
     { name: 'Padres / Alumnos', path: '/padres-alumnos', icon: <Users size={20} /> },
     { name: 'Menu Tradicional', path: '/menu-tradicional', icon: <Utensils size={20} /> },
     { name: 'Menu Fit', path: '/menu-fit', icon: <Leaf size={20} /> },

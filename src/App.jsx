@@ -4,6 +4,7 @@ import Layout from './components/Layout';
 import AgentPanel from './pages/AgentPanel';
 import DataView from './pages/DataView';
 import Login from './pages/Login';
+import CobrosView from './pages/CobrosView';
 
 const formatSheetDate = (value) => {
   const rawValue = String(value || '').trim();
@@ -201,10 +202,11 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/padres-alumnos" />} />
+        <Route path="/login" element={!isAuthenticated ? <Login onLogin={handleLogin} /> : <Navigate to="/cobros" />} />
 
         <Route path="/" element={isAuthenticated ? <Layout onLogout={handleLogout} /> : <Navigate to="/login" />}>
-          <Route index element={<Navigate to="/padres-alumnos" />} />
+          <Route index element={<Navigate to="/cobros" />} />
+          <Route path="cobros" element={<CobrosView />} />
           <Route path="padres-alumnos" element={<DataView title="Padres / Alumnos" sheetName="Padres_Alumnos" columns={padresAlumnosCols} />} />
           <Route path="menu-tradicional" element={<DataView title="Menú Tradicional" sheetName="Menu_Tradicional" columns={menuTradicionalCols} />} />
           <Route path="menu-fit" element={<DataView title="Menú Fit" sheetName="Menu_Fit" columns={menuFitCols} />} />
