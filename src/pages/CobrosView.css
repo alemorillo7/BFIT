@@ -94,14 +94,14 @@
 .excel-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.74rem;
   text-align: left;
 }
 
 .excel-table th, 
 .excel-table td {
   border: 1px solid var(--border-color);
-  padding: 0.25rem 0.5rem;
+  padding: 0.15rem 0.2rem;
   vertical-align: middle;
 }
 
@@ -114,26 +114,26 @@
 }
 
 .excel-table tr.main-header-row th {
-  padding: 0.5rem;
-  font-size: 0.85rem;
+  padding: 0.3rem 0.4rem;
+  font-size: 0.74rem;
 }
 
 .excel-table tr.days-header-row th {
-  padding: 0.25rem;
-  font-size: 0.75rem;
+  padding: 0.15rem 0.1rem;
+  font-size: 0.68rem;
   background-color: var(--bg-body);
 }
 
 /* Column Widths */
-.col-nro { width: 40px; }
-.col-alumno { width: 220px; min-width: 200px; }
-.col-curso { width: 100px; }
-.col-date { width: 90px; }
-.col-obs { width: 180px; min-width: 150px; }
-.col-day { width: 35px; min-width: 35px; text-align: center; }
-.col-total { width: 90px; text-align: center; }
-.col-color { width: 110px; }
-.col-actions { width: 60px; }
+.col-nro { width: 30px; }
+.col-alumno { width: 140px; min-width: 130px; }
+.col-curso { width: 45px; }
+.col-date { width: 62px; }
+.col-obs { width: 100px; min-width: 80px; }
+.col-day { width: 22px; min-width: 22px; text-align: center; }
+.col-total { width: 55px; text-align: center; }
+.col-color { width: 85px; }
+.col-actions { width: 35px; }
 
 /* Cell Inputs */
 .cell-input {
@@ -141,9 +141,9 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-color);
-  padding: 0.25rem 0.4rem;
+  padding: 0.15rem 0.25rem;
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   transition: all 0.2s ease;
 }
 
@@ -164,9 +164,9 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-color);
-  padding: 0.25rem 0.1rem;
+  padding: 0.1rem 0;
   border-radius: 4px;
-  font-size: 0.8rem;
+  font-size: 0.72rem;
   transition: all 0.2s ease;
 }
 
@@ -208,9 +208,10 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--text-color);
-  padding: 0.2rem;
+  padding: 0.15rem;
   border-radius: 4px;
   cursor: pointer;
+  font-size: 0.72rem;
 }
 
 .cell-color-select:hover {
@@ -321,7 +322,7 @@
 .excel-table th.col-alumno,
 .excel-table td.cell-alumno {
   position: sticky;
-  left: 40px; /* Width of Nro column */
+  left: 30px; /* Width of Nro column */
   z-index: 5;
   background-color: var(--color-surface);
   box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05), inset -1px 0 0 var(--color-border);
