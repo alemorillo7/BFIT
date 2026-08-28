@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabaseCobros } from '../lib/supabaseCobrosClient';
 import { 
   Search, 
@@ -7,38 +7,25 @@ import {
   Download, 
   AlertCircle, 
   Loader2,
-  Filter
+  Filter,
+  Calendar,
+  RefreshCw
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import './CobrosView.css';
 
-const dayKeys = [
-  'd3', 'd4', 'd5', 'd10', 'd11', 'd12', 'd13', 'd14', 'd17', 'd18', 'd19', 'd20', 'd21', 'd24', 'd25', 'd26', 'd27', 'd28', 'd31'
+const monthsList = [
+  { value: '2026-08', label: 'Agosto 2026' },
+  { value: '2026-09', label: 'Septiembre 2026' },
+  { value: '2026-10', label: 'Octubre 2026' },
+  { value: '2026-11', label: 'Noviembre 2026' },
+  { value: '2026-12', label: 'Diciembre 2026' },
+  { value: '2027-01', label: 'Enero 2027' },
+  { value: '2027-02', label: 'Febrero 2027' },
+  { value: '2027-03', label: 'Marzo 2027' },
+  { value: '2027-04', label: 'Abril 2027' },
+  { value: '2027-05', label: 'Mayo 2027' }
 ];
-
-const dayLabels = [
-  { key: 'd3', label: 'L 3' },
-  { key: 'd4', label: 'M 4' },
-  { key: 'd5', label: 'M 5' },
-  { key: 'd10', label: 'L 10' },
-  { key: 'd11', label: 'M 11' },
-  { key: 'd12', label: 'M 12' },
-  { key: 'd13', label: 'J 13' },
-  { key: 'd14', label: 'V 14' },
-  { key: 'd17', label: 'L 17' },
-  { key: 'd18', label: 'M 18' },
-  { key: 'd19', label: 'M 19' },
-  { key: 'd20', label: 'J 20' },
-  { key: 'd21', label: 'V 21' },
-  { key: 'd24', label: 'L 24' },
-  { key: 'd25', label: 'M 25' },
-  { key: 'd26', label: 'M 26' },
-  { key: 'd27', label: 'J 27' },
-  { key: 'd28', label: 'V 28' },
-  { key: 'd31', label: 'L 31' }
-];
-
-
 
 const colorOptions = [
   { value: '', label: 'Sin color' },
@@ -49,15 +36,53 @@ const colorOptions = [
   { value: 'Naranja', label: 'Naranja' }
 ];
 
+// Helper to generate Monday-Friday weekdays for a given 'YYYY-MM'
+const getWorkingDaysOfMonth = (yearMonth) => {
+  const [yearStr, monthStr] = yearMonth.split('-');
+  const year = parseInt(yearStr, 10);
+  const month = parseInt(monthStr, 10);
+  
+  const date = new Date(year, month - 1, 1);
+  const days = [];
+  const dayNames = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
+  
+  while (date.getMonth() === month - 1) {
+    const dayOfWeek = date.getDay();
+    // Exclude weekends (Saturday = 6, Sunday = 0)
+    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+      const dayNum = date.getDate();
+      days.push({
+        key: String(dayNum), // e.g. "3"
+        label: `${dayNames[dayOfWeek]} ${dayNum}`, // e.g. "L 3"
+        dayNum: dayNum
+      });
+    }
+    date.setDate(date.getDate() + 1);
+  }
+  
+  // Specific override for August 2026 to skip Aug 6 & Aug 7 holidays, matching the original Excel layout
+  if (yearMonth === '2026-08') {
+    return days.filter(d => d.dayNum !== 6 && d.dayNum !== 7);
+  }
+  
+  return days;
+};
+
 export default function CobrosView() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
   const [savingRows, setSavingRows] = useState(new Set());
   const [errorMessage, setErrorMessage] = useState(null);
   
-  // Load data from Supabase
+  // Get active day columns for the selected month
+  const currentMonthDays = useMemo(() => {
+    return getWorkingDaysOfMonth(selectedMonth);
+  }, [selectedMonth]);
+
+  // Load data for the selected month
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -65,6 +90,7 @@ export default function CobrosView() {
       const { data: cobrosData, error } = await supabaseCobros
         .from('cobros')
         .select('*')
+        .eq('mes', selectedMonth)
         .order('id', { ascending: true });
         
       if (error) throw error;
@@ -75,7 +101,7 @@ export default function CobrosView() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [selectedMonth]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -95,41 +121,63 @@ export default function CobrosView() {
   };
 
   // Calculate totals for a row
-  const calculateRowTotals = (row) => {
+  const calculateRowTotals = (asistencias, course) => {
     let plates = 0;
-    dayKeys.forEach(key => {
-      const val = String(row[key] || '').trim();
-      // Count as plate if it is '1' or anything non-empty and not '0'
-      if (val && val !== '0') {
-        plates += 1;
+    const currentDaysKeys = currentMonthDays.map(d => d.key);
+    
+    Object.keys(asistencias || {}).forEach(dayKey => {
+      // Only count days that actually belong to the current month's columns
+      if (currentDaysKeys.includes(dayKey)) {
+        const val = String(asistencias[dayKey] || '').trim();
+        if (val && val !== '0') {
+          plates += 1;
+        }
       }
     });
-    const price = getPricePerPlate(row.curso);
+    
+    const price = getPricePerPlate(course);
     return {
       platos_vendidos: plates,
       platos_vendidos_bs: plates * price
     };
   };
 
-  // Handle cell change and auto-save to database
+  // Handle cell changes and auto-save
   const handleCellChange = async (rowId, key, value) => {
-    // Find row
     const rowIndex = data.findIndex(r => r.id === rowId);
     if (rowIndex === -1) return;
     
     const oldRow = data[rowIndex];
-    const newRow = { ...oldRow, [key]: value };
+    let updatedRow = { ...oldRow };
+
+    if (key === 'alumno' || key === 'curso' || key === 'fecha_inicio' || key === 'fecha_fin' || key === 'observaciones') {
+      updatedRow[key] = value;
+      // If course changes, recalculate pricing totals
+      if (key === 'curso') {
+        const totals = calculateRowTotals(updatedRow.asistencias, value);
+        updatedRow = { ...updatedRow, ...totals };
+      }
+    } else {
+      // It is a day cell change
+      const newAsistencias = { ...(oldRow.asistencias || {}) };
+      const cleanedVal = String(value || '').trim();
+      
+      if (cleanedVal === '') {
+        delete newAsistencias[key];
+      } else {
+        newAsistencias[key] = cleanedVal;
+      }
+      
+      updatedRow.asistencias = newAsistencias;
+      const totals = calculateRowTotals(newAsistencias, updatedRow.curso);
+      updatedRow = { ...updatedRow, ...totals };
+    }
     
-    // Recalculate totals
-    const totals = calculateRowTotals(newRow);
-    const updatedRow = { ...newRow, ...totals };
-    
-    // Update local state first for instant responsiveness
+    // Optimistic UI update
     const newData = [...data];
     newData[rowIndex] = updatedRow;
     setData(newData);
     
-    // Add to saving set
     setSavingRows(prev => {
       const next = new Set(prev);
       next.add(rowId);
@@ -140,7 +188,12 @@ export default function CobrosView() {
       const { error } = await supabaseCobros
         .from('cobros')
         .update({
-          [key]: value,
+          alumno: updatedRow.alumno,
+          curso: updatedRow.curso,
+          fecha_inicio: updatedRow.fecha_inicio,
+          fecha_fin: updatedRow.fecha_fin,
+          observaciones: updatedRow.observaciones,
+          asistencias: updatedRow.asistencias,
           platos_vendidos: updatedRow.platos_vendidos,
           platos_vendidos_bs: updatedRow.platos_vendidos_bs
         })
@@ -148,8 +201,7 @@ export default function CobrosView() {
         
       if (error) throw error;
     } catch (err) {
-      console.error('Error updating row in Supabase:', err);
-      // Revert to old row state on error
+      console.error('Error updating row:', err);
       const revertedData = [...data];
       revertedData[rowIndex] = oldRow;
       setData(revertedData);
@@ -203,7 +255,7 @@ export default function CobrosView() {
     }
   };
 
-  // Add new empty row
+  // Add new empty student row
   const handleAddRow = async () => {
     const newRecord = {
       alumno: 'NUEVO ALUMNO',
@@ -211,15 +263,12 @@ export default function CobrosView() {
       fecha_inicio: null,
       fecha_fin: null,
       observaciones: null,
-      color: null,
+      mes: selectedMonth,
+      asistencias: {},
       platos_vendidos: 0,
-      platos_vendidos_bs: 0
+      platos_vendidos_bs: 0,
+      color: null
     };
-    
-    // Initialize day fields to null
-    dayKeys.forEach(k => {
-      newRecord[k] = null;
-    });
 
     try {
       setLoading(true);
@@ -240,9 +289,76 @@ export default function CobrosView() {
     }
   };
 
+  // Initialize a new month with the previous month's students (blank records)
+  const handleInitializeMonth = async () => {
+    if (!window.confirm(`¿Deseas inicializar el mes de ${monthsList.find(m => m.value === selectedMonth)?.label} con la misma lista de alumnos del último mes registrado? Todos los días comenzarán vacíos.`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Query the database to retrieve all records and extract students list
+      const { data: allRecords, error: fetchErr } = await supabaseCobros
+        .from('cobros')
+        .select('alumno, curso, color, mes');
+        
+      if (fetchErr) throw fetchErr;
+      
+      let studentsToCopy = [];
+      if (allRecords && allRecords.length > 0) {
+        // Sort active months and pick the most recent one containing data
+        const uniqueMonths = [...new Set(allRecords.map(r => r.mes))].sort();
+        // Exclude the current selected month if it's in the list
+        const previousMonths = uniqueMonths.filter(m => m !== selectedMonth);
+        
+        if (previousMonths.length > 0) {
+          const latestMonthWithData = previousMonths[previousMonths.length - 1];
+          const latestRecords = allRecords.filter(r => r.mes === latestMonthWithData);
+          
+          studentsToCopy = latestRecords.map(r => ({
+            alumno: r.alumno,
+            curso: r.curso,
+            color: r.color
+          }));
+        }
+      }
+      
+      if (studentsToCopy.length === 0) {
+        alert("No se encontraron registros de meses anteriores en la base de datos. Agrega los alumnos manualmente o carga el script SQL inicial.");
+        return;
+      }
+      
+      // Create empty records for the selected month
+      const newRecords = studentsToCopy.map(s => ({
+        alumno: s.alumno,
+        curso: s.curso,
+        color: s.color,
+        mes: selectedMonth,
+        asistencias: {},
+        platos_vendidos: 0,
+        platos_vendidos_bs: 0
+      }));
+      
+      const { data: inserted, error: insertErr } = await supabaseCobros
+        .from('cobros')
+        .insert(newRecords)
+        .select();
+        
+      if (insertErr) throw insertErr;
+      setData(inserted || []);
+      alert(`¡Mes de ${monthsList.find(m => m.value === selectedMonth)?.label} inicializado correctamente con ${inserted.length} alumnos!`);
+    } catch (err) {
+      console.error('Error initializing month:', err);
+      alert('Error al inicializar el nuevo mes.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Delete row
   const handleDeleteRow = async (rowId, alumnoName) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el registro de Cobros de "${alumnoName}"?`)) {
+    if (!window.confirm(`¿Estás seguro de eliminar el registro de Cobros de "${alumnoName}" para el mes actual?`)) {
       return;
     }
 
@@ -284,8 +400,8 @@ export default function CobrosView() {
         'Observaciones': row.observaciones || '',
       };
       
-      dayLabels.forEach(d => {
-        exportRow[d.label] = row[d.key] || '';
+      currentMonthDays.forEach(d => {
+        exportRow[d.label] = row.asistencias?.[d.key] || '';
       });
       
       exportRow['Platos Vendidos'] = row.platos_vendidos;
@@ -299,7 +415,7 @@ export default function CobrosView() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'Cobros_Planilla_Agosto.csv');
+    link.setAttribute('download', `Cobros_Planilla_${selectedMonth}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -330,10 +446,24 @@ export default function CobrosView() {
       <div className="cobros-header premium-card">
         <div className="title-section">
           <h1>Planilla de Cobros</h1>
-          <p className="subtitle">Gestión e importes de comidas de alumnos (Agosto 2026)</p>
+          <p className="subtitle">Gestión e importes de comidas de alumnos</p>
         </div>
 
         <div className="controls-section">
+          {/* Month Selector */}
+          <div className="filter-box month-filter-box">
+            <Calendar size={18} className="filter-icon" />
+            <select
+              value={selectedMonth}
+              onChange={(e) => setSelectedMonth(e.target.value)}
+              className="input select-filter month-select"
+            >
+              {monthsList.map(m => (
+                <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
           <div className="search-box">
             <Search size={18} className="search-icon" />
             <input
@@ -359,7 +489,7 @@ export default function CobrosView() {
             </select>
           </div>
 
-          <button className="btn btn-outline" onClick={handleExport}>
+          <button className="btn btn-outline" onClick={handleExport} disabled={data.length === 0}>
             <Download size={18} />
             <span>Exportar CSV</span>
           </button>
@@ -379,7 +509,26 @@ export default function CobrosView() {
         </div>
       )}
 
-      <div className="table-wrapper premium-card">
+      {/* Empty month initialization message */}
+      {!loading && data.length === 0 && (
+        <div className="empty-state-card premium-card animate-fade-in">
+          <Calendar size={48} className="empty-calendar-icon" />
+          <h3>No hay alumnos registrados para este mes</h3>
+          <p>Puedes importar automáticamente los mismos alumnos registrados en meses anteriores para comenzar a cargar las comidas del mes seleccionado.</p>
+          <div className="empty-state-actions">
+            <button className="btn btn-primary" onClick={handleInitializeMonth}>
+              <RefreshCw size={18} />
+              <span>Inicializar Alumnos del Mes</span>
+            </button>
+            <button className="btn btn-outline" onClick={handleAddRow}>
+              <Plus size={18} />
+              <span>Agregar Alumno Manualmente</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="table-wrapper premium-card" style={{ display: data.length === 0 ? 'none' : 'block' }}>
         {loading ? (
           <div className="loading-state">
             <Loader2 className="spinner" size={40} />
@@ -396,14 +545,16 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-date">FECHA INICIO</th>
                   <th rowSpan={2} className="col-date">FECHA FIN</th>
                   <th rowSpan={2} className="col-obs">OBSERVACIONES</th>
-                  <th colSpan={19} className="col-month-header">AGOSTO 2026</th>
+                  <th colSpan={currentMonthDays.length} className="col-month-header">
+                    {monthsList.find(m => m.value === selectedMonth)?.label.toUpperCase()}
+                  </th>
                   <th rowSpan={2} className="col-total">PLATOS VENDIDOS</th>
                   <th rowSpan={2} className="col-total">PLATOS EN BS</th>
                   <th rowSpan={2} className="col-color">COLOR</th>
                   <th rowSpan={2} className="col-actions">ACCIONES</th>
                 </tr>
                 <tr className="days-header-row">
-                  {dayLabels.map(d => (
+                  {currentMonthDays.map(d => (
                     <th key={d.key} className="col-day" title={d.label}>{d.label}</th>
                   ))}
                 </tr>
@@ -494,19 +645,22 @@ export default function CobrosView() {
                           />
                         </td>
                         
-                        {/* 19 Day Columns */}
-                        {dayKeys.map(key => (
-                          <td key={key} className="cell-day">
+                        {/* Dynamic Day Columns */}
+                        {currentMonthDays.map(d => (
+                          <td key={d.key} className="cell-day">
                             <input
                               type="text"
-                              value={row[key] || ''}
+                              value={row.asistencias?.[d.key] || ''}
                               onChange={(e) => {
                                 const newData = [...data];
                                 const idx = newData.findIndex(r => r.id === row.id);
-                                newData[idx][key] = e.target.value;
+                                if (!newData[idx].asistencias) {
+                                  newData[idx].asistencias = {};
+                                }
+                                newData[idx].asistencias[d.key] = e.target.value;
                                 setData(newData);
                               }}
-                              onBlur={(e) => handleCellChange(row.id, key, e.target.value)}
+                              onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
                               className="cell-day-input text-center"
                               maxLength={10}
                             />
@@ -557,7 +711,7 @@ export default function CobrosView() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={28} className="empty-state">
+                    <td colSpan={28 + currentMonthDays.length} className="empty-state">
                       No se encontraron registros de cobros.
                     </td>
                   </tr>
@@ -570,6 +724,3 @@ export default function CobrosView() {
     </div>
   );
 }
-
-// Trigger Vercel rebuild 1
-

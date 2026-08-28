@@ -405,3 +405,65 @@
     border-top: 1px solid var(--color-border);
   }
 }
+
+/* Empty Month State Card */
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3rem 2rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  gap: 1rem;
+  max-width: 600px;
+  margin: 2rem auto;
+  box-shadow: var(--shadow-md);
+  animation: fadeIn 0.4s ease;
+}
+
+.empty-calendar-icon {
+  color: var(--color-primary);
+  opacity: 0.8;
+  margin-bottom: 0.5rem;
+}
+
+.empty-state-card h3 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.empty-state-card p {
+  font-size: 0.9rem;
+  color: var(--color-text-muted);
+  max-width: 420px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.empty-state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.month-filter-box {
+  min-width: 170px !important;
+}
+
+.month-select {
+  font-weight: 600;
+  color: var(--color-primary-dark) !important;
+  border-color: var(--color-primary-light) !important;
+  background-color: var(--color-primary-light) !important;
+}
+
+.month-select:hover {
+  background-color: rgba(16, 185, 129, 0.15) !important;
+}
