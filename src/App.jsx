@@ -69,54 +69,12 @@ function App() {
     { key: 'tipo_menu', label: 'Tipo Menú' },
     { key: 'tipo_pago', label: 'Tipo Pago' },
     {
-      key: 'saldo_bs',
-      label: 'Saldo',
-      render: (val) => <span className={`font-medium ${parseFloat(val) < 0 ? 'text-danger' : 'text-success'}`}>{val} Bs</span>,
-    },
-    {
       key: 'activo',
       label: 'Estado',
       render: (val) => <span className={`badge ${val === 'TRUE' || val === 'Activo' ? 'badge-success' : 'badge-danger'}`}>{val === 'TRUE' ? 'Activo' : 'Inactivo'}</span>,
     },
     { key: 'observaciones', label: 'Observaciones' },
     { key: 'Registrado IA', label: 'Reg. IA' },
-    { key: 'Ultima fecha de pago ', label: 'Últ. Pago' },
-    {
-      key: 'Consume merienda?',
-      label: 'Consume merienda',
-      type: 'select',
-      options: [
-        { value: '', label: 'No' },
-        { value: 'Si', label: 'Sí' },
-      ],
-    },
-    {
-      key: 'Saldo Merienditas',
-      label: 'Saldo Merienditas',
-      render: (val) => {
-        const saldo = String(val ?? '').trim();
-        const numero = Number.parseFloat(saldo.replace(',', '.'));
-        const esNegativo = Number.isFinite(numero) && numero < 0;
-
-        return (
-          <span className={`font-medium ${esNegativo ? 'text-danger' : 'text-success'}`}>
-            {saldo || '0'} Bs
-          </span>
-        );
-      },
-    },
-    {
-      key: 'Color',
-      label: 'Color',
-      type: 'select',
-      options: [
-        { value: '', label: 'Sin color' },
-        { value: 'Verde', label: 'Verde' },
-        { value: 'Azul', label: 'Azul' },
-        { value: 'Amarillo', label: 'Amarillo' },
-        { value: 'Naranja', label: 'Naranja' },
-      ],
-    },
   ];
 
   const menuTradicionalCols = [
