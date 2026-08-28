@@ -9,7 +9,8 @@ import {
   Loader2,
   Filter,
   Calendar,
-  RefreshCw
+  RefreshCw,
+  Clock
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import './CobrosView.css';
@@ -25,6 +26,14 @@ const monthsList = [
   { value: '2027-03', label: 'Marzo 2027' },
   { value: '2027-04', label: 'Abril 2027' },
   { value: '2027-05', label: 'Mayo 2027' }
+];
+
+const turnsList = [
+  { value: '11:50', label: 'Turno 11:50' },
+  { value: '11:25', label: 'Turno 11:25' },
+  { value: '12:00', label: 'Turno 12:00' },
+  { value: '12:40', label: 'Turno 12:40' },
+  { value: '13:05', label: 'Turno 13:05' }
 ];
 
 const colorOptions = [
@@ -72,6 +81,7 @@ export default function CobrosView() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
+  const [selectedTurn, setSelectedTurn] = useState('11:50');
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
   const [savingRows, setSavingRows] = useState(new Set());
@@ -82,7 +92,7 @@ export default function CobrosView() {
     return getWorkingDaysOfMonth(selectedMonth);
   }, [selectedMonth]);
 
-  // Load data for the selected month
+  // Load data for the selected month and turn
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -91,6 +101,7 @@ export default function CobrosView() {
         .from('cobros')
         .select('*')
         .eq('mes', selectedMonth)
+        .eq('turno', selectedTurn)
         .order('id', { ascending: true });
         
       if (error) throw error;
@@ -101,7 +112,7 @@ export default function CobrosView() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth]);
+  }, [selectedMonth, selectedTurn]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -264,6 +275,7 @@ export default function CobrosView() {
       fecha_fin: null,
       observaciones: null,
       mes: selectedMonth,
+      turno: selectedTurn,
       asistencias: {},
       platos_vendidos: 0,
       platos_vendidos_bs: 0,
@@ -289,19 +301,23 @@ export default function CobrosView() {
     }
   };
 
-  // Initialize a new month with the previous month's students (blank records)
+  // Initialize a new month for the current turn with previous month's student names
   const handleInitializeMonth = async () => {
-    if (!window.confirm(`¿Deseas inicializar el mes de ${monthsList.find(m => m.value === selectedMonth)?.label} con la misma lista de alumnos del último mes registrado? Todos los días comenzarán vacíos.`)) {
+    const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
+    const turnLabel = turnsList.find(t => t.value === selectedTurn)?.label;
+    
+    if (!window.confirm(`¿Deseas inicializar el mes de ${monthLabel} para el ${turnLabel} con los alumnos de este mismo turno del último mes registrado? Todos los días comenzarán vacíos.`)) {
       return;
     }
 
     try {
       setLoading(true);
       
-      // Query the database to retrieve all records and extract students list
+      // Query the database to retrieve students for the current turn across all months
       const { data: allRecords, error: fetchErr } = await supabaseCobros
         .from('cobros')
-        .select('alumno, curso, color, mes');
+        .select('alumno, curso, color, mes')
+        .eq('turno', selectedTurn);
         
       if (fetchErr) throw fetchErr;
       
@@ -325,16 +341,17 @@ export default function CobrosView() {
       }
       
       if (studentsToCopy.length === 0) {
-        alert("No se encontraron registros de meses anteriores en la base de datos. Agrega los alumnos manualmente o carga el script SQL inicial.");
+        alert("No se encontraron registros de meses anteriores para este turno en la base de datos. Agrega los alumnos manualmente o carga el script SQL inicial.");
         return;
       }
       
-      // Create empty records for the selected month
+      // Create empty records for the selected month and turn
       const newRecords = studentsToCopy.map(s => ({
         alumno: s.alumno,
         curso: s.curso,
         color: s.color,
         mes: selectedMonth,
+        turno: selectedTurn,
         asistencias: {},
         platos_vendidos: 0,
         platos_vendidos_bs: 0
@@ -347,7 +364,7 @@ export default function CobrosView() {
         
       if (insertErr) throw insertErr;
       setData(inserted || []);
-      alert(`¡Mes de ${monthsList.find(m => m.value === selectedMonth)?.label} inicializado correctamente con ${inserted.length} alumnos!`);
+      alert(`¡${turnLabel} para ${monthLabel} inicializado correctamente con ${inserted.length} alumnos!`);
     } catch (err) {
       console.error('Error initializing month:', err);
       alert('Error al inicializar el nuevo mes.');
@@ -358,7 +375,7 @@ export default function CobrosView() {
 
   // Delete row
   const handleDeleteRow = async (rowId, alumnoName) => {
-    if (!window.confirm(`¿Estás seguro de eliminar el registro de Cobros de "${alumnoName}" para el mes actual?`)) {
+    if (!window.confirm(`¿Estás seguro de eliminar el registro de Cobros de "${alumnoName}" para este mes y turno?`)) {
       return;
     }
 
@@ -415,7 +432,7 @@ export default function CobrosView() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Cobros_Planilla_${selectedMonth}.csv`);
+    link.setAttribute('download', `Cobros_Planilla_${selectedMonth}_Turno_${selectedTurn.replace(':', '_')}.csv`);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -436,10 +453,10 @@ export default function CobrosView() {
   });
 
   // Unique list of courses for filter dropdown
-  const uniqueCourses = (() => {
+  const uniqueCourses = useMemo(() => {
     const courses = data.map(r => String(r.curso || '').trim()).filter(Boolean);
     return [...new Set(courses)].sort();
-  })();
+  }, [data]);
 
   return (
     <div className="cobros-container">
@@ -460,6 +477,20 @@ export default function CobrosView() {
             >
               {monthsList.map(m => (
                 <option key={m.value} value={m.value}>{m.label}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Turn Selector */}
+          <div className="filter-box turn-filter-box">
+            <Clock size={18} className="filter-icon" />
+            <select
+              value={selectedTurn}
+              onChange={(e) => setSelectedTurn(e.target.value)}
+              className="input select-filter turn-select"
+            >
+              {turnsList.map(t => (
+                <option key={t.value} value={t.value}>{t.label}</option>
               ))}
             </select>
           </div>
@@ -513,12 +544,12 @@ export default function CobrosView() {
       {!loading && data.length === 0 && (
         <div className="empty-state-card premium-card animate-fade-in">
           <Calendar size={48} className="empty-calendar-icon" />
-          <h3>No hay alumnos registrados para este mes</h3>
-          <p>Puedes importar automáticamente los mismos alumnos registrados en meses anteriores para comenzar a cargar las comidas del mes seleccionado.</p>
+          <h3>No hay alumnos registrados para este turno en {monthsList.find(m => m.value === selectedMonth)?.label}</h3>
+          <p>Puedes importar automáticamente los mismos alumnos registrados en este turno en meses anteriores para comenzar a cargar las asistencias.</p>
           <div className="empty-state-actions">
             <button className="btn btn-primary" onClick={handleInitializeMonth}>
               <RefreshCw size={18} />
-              <span>Inicializar Alumnos del Mes</span>
+              <span>Inicializar Alumnos del Turno</span>
             </button>
             <button className="btn btn-outline" onClick={handleAddRow}>
               <Plus size={18} />
@@ -546,7 +577,7 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-date">FECHA FIN</th>
                   <th rowSpan={2} className="col-obs">OBSERVACIONES</th>
                   <th colSpan={currentMonthDays.length} className="col-month-header">
-                    {monthsList.find(m => m.value === selectedMonth)?.label.toUpperCase()}
+                    {monthsList.find(m => m.value === selectedMonth)?.label.toUpperCase()} - {turnsList.find(t => t.value === selectedTurn)?.label.toUpperCase()}
                   </th>
                   <th rowSpan={2} className="col-total">PLATOS VENDIDOS</th>
                   <th rowSpan={2} className="col-total">PLATOS EN BS</th>

@@ -467,3 +467,18 @@
 .month-select:hover {
   background-color: rgba(16, 185, 129, 0.15) !important;
 }
+
+.turn-filter-box {
+  min-width: 170px !important;
+}
+
+.turn-select {
+  font-weight: 600;
+  color: var(--color-secondary-dark) !important;
+  border-color: #fef3c7 !important;
+  background-color: #fef3c7 !important;
+}
+
+.turn-select:hover {
+  background-color: #fde68a !important;
+}
