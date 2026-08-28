@@ -706,19 +706,19 @@ export default function CobrosView() {
                           {row.platos_vendidos_bs} Bs
                         </td>
 
-                        {/* Row Color dropdown */}
+                        {/* Row Color dot picker */}
                         <td className="cell-color">
-                          <select
-                            value={row.color || ''}
-                            onChange={(e) => handleColorChange(row.id, e.target.value)}
-                            className="cell-color-select"
-                          >
+                          <div className="color-dots-picker">
                             {colorOptions.map(option => (
-                              <option key={option.value} value={option.value}>
-                                {option.label}
-                              </option>
+                              <button
+                                key={option.value}
+                                onClick={() => handleColorChange(row.id, option.value)}
+                                className={`color-dot dot-${option.value.toLowerCase() || 'none'} ${row.color === option.value ? 'active' : ''}`}
+                                title={option.label}
+                                type="button"
+                              />
                             ))}
-                          </select>
+                          </div>
                         </td>
 
                         {/* Actions */}
