@@ -17,32 +17,63 @@ export default withErrorHandling(async (request) => {
     return badRequest('Debe proporcionar el parámetro "nombre" o "alumno" para realizar la consulta.');
   }
 
-  // Create query to search for the student
-  let query = supabaseCobrosAdmin
+  // Retrieve all records to do fuzzy matching
+  const { data: allRecords, error } = await supabaseCobrosAdmin
     .from('cobros')
-    .select('*')
-    .ilike('alumno', `%${nombre.trim()}%`);
-
-  // Filter by month if provided
-  if (mes) {
-    query = query.eq('mes', mes);
-  } else {
-    // Sort by month descending so the caller gets the most recent records first
-    query = query.order('mes', { ascending: false });
-  }
-
-  const { data: records, error } = await query;
+    .select('*');
 
   if (error) {
     throw error;
   }
 
-  if (!records || records.length === 0) {
+  // Word-based tokenization for fuzzy matching
+  const getWords = (name) => {
+    return String(name || '')
+      .trim()
+      .toLowerCase()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // remove accents
+      .replace(/[^a-z0-9 ]/g, " ") // keep only alphanumeric and space
+      .split(/\s+/)
+      .filter(w => w.length >= 3 && !['del', 'las', 'los', 'pre', 'kin', 'kinder'].includes(w));
+  };
+
+  const targetMes = mes || '2026-08';
+  const filteredRecords = allRecords.filter(r => r.mes === targetMes);
+
+  const queryWords = getWords(nombre);
+  let bestMatch = null;
+  let maxMatches = 0;
+
+  filteredRecords.forEach(record => {
+    const dbWords = getWords(record.alumno);
+    let matches = 0;
+    queryWords.forEach(sWord => {
+      dbWords.forEach(dWord => {
+        if (sWord === dWord) {
+          matches++;
+        } else if (sWord.length >= 4 && dWord.length >= 4) {
+          if (sWord.startsWith(dWord) || dWord.startsWith(sWord)) {
+            matches++;
+          }
+        }
+      });
+    });
+
+    if (matches > maxMatches) {
+      maxMatches = matches;
+      bestMatch = record;
+    }
+  });
+
+  if (!bestMatch || maxMatches < 2) {
     return json({
       success: false,
-      message: `No se encontró ningún registro de cobros para "${nombre}"` + (mes ? ` en el mes ${mes}.` : '.')
+      message: `No se encontró ningún registro de cobros para "${nombre}" en el mes ${targetMes}.`
     }, 404);
   }
+
+  const records = [bestMatch];
 
   // Format the results dynamically from the JSONB asistencias object
   const formattedResults = records.map(record => {
