@@ -633,14 +633,6 @@ export default function CobrosView() {
     }
   }, [syncingAbsences, selectedTurn, calculateRowTotals]);
 
-  const handleSyncAbsences = async () => {
-    const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
-    if (!window.confirm(`¿Deseas sincronizar las faltas justificadas de TODOS los turnos del mes ${monthLabel}?`)) {
-      return;
-    }
-    await syncAbsencesGlobally(selectedMonth, false);
-  };
-
   // Sincronizar faltas en segundo plano de manera silenciosa cuando cambie el mes o los datos estén listos
   useEffect(() => {
     if (data.length > 0 && lastSyncedMonthRef.current !== selectedMonth) {
@@ -712,7 +704,15 @@ export default function CobrosView() {
     <div className="cobros-container">
       <div className="cobros-header premium-card">
         <div className="title-section">
-          <h1>Planilla de Cobros</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+            <h1>Planilla de Cobros</h1>
+            {syncingAbsences && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#6b7280' }}>
+                <Loader2 className="spinner" size={16} />
+                <span>Sincronizando faltas...</span>
+              </div>
+            )}
+          </div>
           <p className="subtitle">Gestión e importes de comidas de alumnos</p>
         </div>
 
@@ -773,16 +773,6 @@ export default function CobrosView() {
           <button className="btn btn-outline" onClick={handleExport} disabled={data.length === 0}>
             <Download size={18} />
             <span>Exportar CSV</span>
-          </button>
-
-          <button 
-            className="btn btn-outline" 
-            onClick={handleSyncAbsences} 
-            disabled={syncingAbsences || data.length === 0}
-            title="Sincronizar faltas justificadas desde Observaciones"
-          >
-            {syncingAbsences ? <Loader2 className="spinner" size={18} /> : <AlertCircle size={18} />}
-            <span>Sincronizar Faltas</span>
           </button>
 
           <button className="btn btn-primary" onClick={handleAddRow}>
