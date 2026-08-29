@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { supabaseCobros } from '../lib/supabaseCobrosClient';
 import { 
   Search, 
@@ -13,7 +13,7 @@ import {
   Clock
 } from 'lucide-react';
 import * as Papa from 'papaparse';
-import { fetchSheetData } from '../services/dataService';
+import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
 import './CobrosView.css';
 
 const monthsList = [
@@ -88,6 +88,7 @@ export default function CobrosView() {
   const [savingRows, setSavingRows] = useState(new Set());
   const [errorMessage, setErrorMessage] = useState(null);
   const [syncingAbsences, setSyncingAbsences] = useState(false);
+  const lastSyncedMonthRef = useRef('');
   
   // Get active day columns for the selected month
   const currentMonthDays = useMemo(() => {
@@ -124,6 +125,7 @@ export default function CobrosView() {
     return () => window.clearTimeout(timer);
   }, [loadData]);
 
+
   // Compute pricing based on course name
   const getPricePerPlate = (course) => {
     const norm = String(course || '').toUpperCase();
@@ -134,7 +136,7 @@ export default function CobrosView() {
   };
 
   // Calculate totals for a row
-  const calculateRowTotals = (asistencias, course) => {
+  const calculateRowTotals = useCallback((asistencias, course) => {
     let plates = 0;
     const currentDaysKeys = currentMonthDays.map(d => d.key);
     
@@ -153,7 +155,7 @@ export default function CobrosView() {
       platos_vendidos: plates,
       platos_vendidos_bs: plates * price
     };
-  };
+  }, [currentMonthDays]);
 
   // Handle cell changes and auto-save
   const handleCellChange = async (rowId, key, value) => {
@@ -184,6 +186,8 @@ export default function CobrosView() {
       // It is a day cell change
       const newAsistencias = { ...(oldRow.asistencias || {}) };
       const cleanedVal = String(value || '').trim();
+      const oldDayVal = String(newAsistencias[key] || '').trim().toUpperCase();
+      const newDayVal = cleanedVal.toUpperCase();
       
       if (cleanedVal === '') {
         delete newAsistencias[key];
@@ -196,6 +200,25 @@ export default function CobrosView() {
       updatedRow = { ...updatedRow, ...totals };
       const net = Number(updatedRow.pagos_bs || 0) - totals.platos_vendidos_bs;
       updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+
+      // Real-time two-way synchronization of absences (Faltas) with Google Sheets
+      const formattedDate = `${selectedMonth}-${String(key).padStart(2, '0')}`;
+      if (oldDayVal === 'F' && newDayVal !== 'F') {
+        // Removed a lack notice -> Trigger BAJA mutation to delete from Google Sheets
+        console.log(`Manually removed falta for ${updatedRow.alumno} on ${formattedDate}. Sending BAJA mutation to n8n webhook...`);
+        sendWebhookMutation('Observaciones', 'BAJA', {
+          alumno: updatedRow.alumno,
+          fecha: formattedDate
+        }).catch(err => console.error('Error sending mutation BAJA:', err));
+      } else if (oldDayVal !== 'F' && newDayVal === 'F') {
+        // Added a lack notice -> Trigger ALTA mutation to add to Google Sheets
+        console.log(`Manually added falta for ${updatedRow.alumno} on ${formattedDate}. Sending ALTA mutation to n8n webhook...`);
+        sendWebhookMutation('Observaciones', 'ALTA', {
+          alumno: updatedRow.alumno,
+          fecha: formattedDate,
+          motivo_de_falta: 'Falta registrada manualmente en panel de Cobros.'
+        }).catch(err => console.error('Error sending mutation ALTA:', err));
+      }
     }
     
     // Optimistic UI update
@@ -424,20 +447,28 @@ export default function CobrosView() {
     }
   };
 
-  // Sincronizar faltas desde el sistema (Google Sheets: Observaciones)
-  const handleSyncAbsences = async () => {
-    const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
-    if (!window.confirm(`¿Deseas sincronizar las faltas justificadas del mes ${monthLabel} para este turno? Las comidas consumidas en esas fechas no se cobrarán.`)) {
-      return;
-    }
-
+  // Sincronizar faltas desde el sistema (Google Sheets: Observaciones) para todos los turnos
+  const syncAbsencesGlobally = useCallback(async (targetMonth, isSilent = true) => {
     try {
+      if (syncingAbsences) return;
       setSyncingAbsences(true);
-      
+
       // 1. Fetch Observaciones sheet
       const rawAbsences = await fetchSheetData('Observaciones');
       if (!rawAbsences || rawAbsences.length === 0) {
-        alert("No se encontraron registros de faltas en la planilla de Observaciones.");
+        if (!isSilent) alert("No se encontraron registros de faltas en la planilla de Observaciones.");
+        return;
+      }
+
+      // 2. Fetch ALL students for the target month from Supabase across ALL turns
+      const { data: dbRecords, error: fetchErr } = await supabaseCobros
+        .from('cobros')
+        .select('*')
+        .eq('mes', targetMonth);
+
+      if (fetchErr) throw fetchErr;
+      if (!dbRecords || dbRecords.length === 0) {
+        if (!isSilent) alert("No se encontraron registros de alumnos en la base de datos.");
         return;
       }
 
@@ -480,14 +511,15 @@ export default function CobrosView() {
           .filter(w => w.length >= 3 && !['del', 'las', 'los', 'pre', 'kin', 'kinder'].includes(w));
       };
 
-      const findStudentMatch = (excelName) => {
+      const findStudentMatch = (excelName, turn) => {
         const excelWords = getWords(excelName);
         if (excelWords.length === 0) return null;
 
         let bestDb = null;
         let maxOverlap = 0;
 
-        for (const dbRec of data) {
+        const turnRecords = dbRecords.filter(r => r.turno === turn);
+        for (const dbRec of turnRecords) {
           const dbWords = getWords(dbRec.alumno);
           let overlap = 0;
           excelWords.forEach(ew => {
@@ -507,25 +539,29 @@ export default function CobrosView() {
         return maxOverlap >= 2.0 ? bestDb : null;
       };
 
-      // 2. Filter absences belonging to the current month and valid reason
+      // 3. Filter absences belonging to the current month and valid reason
       const currentMonthAbsences = rawAbsences.filter(obs => {
         const dateInfo = parseAbsenceDate(obs.fecha);
-        return dateInfo && dateInfo.yearMonth === selectedMonth && isAbsenceReason(obs.motivo_de_falta);
+        return dateInfo && dateInfo.yearMonth === targetMonth && isAbsenceReason(obs.motivo_de_falta);
       });
 
-      console.log(`Found ${currentMonthAbsences.length} absences for ${selectedMonth} in Google Sheets.`);
-
-      // 3. Match and group updates
+      // 4. Match and group updates
       let importedCount = 0;
       const studentsToUpdate = [];
 
       for (const obs of currentMonthAbsences) {
-        const match = findStudentMatch(obs.alumno);
+        // Find match in any turn
+        const turns = ['11:50', '11:25', '12:00', '12:40', '13:05'];
+        let match = null;
+        for (const turn of turns) {
+          match = findStudentMatch(obs.alumno, turn);
+          if (match) break;
+        }
+
         if (match) {
           const dateInfo = parseAbsenceDate(obs.fecha);
           const dayKey = dateInfo.dayNum;
           
-          // Check if day cell isn't already 'F' or 'f'
           const currentAsistencias = match.asistencias || {};
           if (currentAsistencias[dayKey] !== 'F' && currentAsistencias[dayKey] !== 'f') {
             const updatedAsistencias = { ...currentAsistencias, [dayKey]: 'F' };
@@ -555,11 +591,11 @@ export default function CobrosView() {
       }
 
       if (studentsToUpdate.length === 0) {
-        alert("Todas las faltas de Google Sheets ya se encuentran sincronizadas o no se encontraron coincidencias.");
+        if (!isSilent) alert("Todas las faltas de Google Sheets ya se encuentran sincronizadas.");
         return;
       }
 
-      // 4. Save to Supabase and update state
+      // 5. Save updates to Supabase
       for (const updatedStudent of studentsToUpdate) {
         const { error: saveErr } = await supabaseCobros
           .from('cobros')
@@ -574,22 +610,47 @@ export default function CobrosView() {
         if (saveErr) throw saveErr;
       }
 
-      // Update React state
-      setData(prev => {
-        return prev.map(student => {
-          const matchUpdated = studentsToUpdate.find(u => u.id === student.id);
-          return matchUpdated ? matchUpdated : student;
+      // 6. Refresh state of the current view if any student of the current turn was updated
+      const updatedInCurrentView = studentsToUpdate.filter(s => s.turno === selectedTurn);
+      if (updatedInCurrentView.length > 0) {
+        // Optimistically update React view state
+        setData(prev => {
+          return prev.map(student => {
+            const matchUpdated = updatedInCurrentView.find(u => u.id === student.id);
+            return matchUpdated ? matchUpdated : student;
+          });
         });
-      });
+      }
 
-      alert(`Sincronización completada con éxito. Se importaron e invalidaron ${importedCount} faltas de asistencia.`);
+      if (!isSilent) {
+        alert(`Sincronización completada con éxito. Se importaron ${importedCount} faltas de asistencia en todos los turnos.`);
+      }
     } catch (err) {
-      console.error('Error syncing absences:', err);
-      alert('Ocurrió un error al sincronizar las faltas desde Google Sheets.');
+      console.error('Error in global absence sync:', err);
+      if (!isSilent) alert('Ocurrió un error al sincronizar las faltas desde Google Sheets.');
     } finally {
       setSyncingAbsences(false);
     }
+  }, [syncingAbsences, selectedTurn, calculateRowTotals]);
+
+  const handleSyncAbsences = async () => {
+    const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
+    if (!window.confirm(`¿Deseas sincronizar las faltas justificadas de TODOS los turnos del mes ${monthLabel}?`)) {
+      return;
+    }
+    await syncAbsencesGlobally(selectedMonth, false);
   };
+
+  // Sincronizar faltas en segundo plano de manera silenciosa cuando cambie el mes o los datos estén listos
+  useEffect(() => {
+    if (data.length > 0 && lastSyncedMonthRef.current !== selectedMonth) {
+      lastSyncedMonthRef.current = selectedMonth;
+      const timer = window.setTimeout(() => {
+        syncAbsencesGlobally(selectedMonth, true);
+      }, 1000); // 1s delay to run smoothly in background after initial load
+      return () => window.clearTimeout(timer);
+    }
+  }, [selectedMonth, data.length, syncAbsencesGlobally]);
 
   // Export to CSV
   const handleExport = () => {
