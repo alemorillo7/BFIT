@@ -95,7 +95,7 @@ export default function CobrosView() {
     return getWorkingDaysOfMonth(selectedMonth);
   }, [selectedMonth]);
 
-  // Load data for the selected month and turn
+  // Load data for the selected month
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
@@ -104,8 +104,7 @@ export default function CobrosView() {
         .from('cobros')
         .select('*')
         .eq('mes', selectedMonth)
-        .eq('turno', selectedTurn)
-        .order('id', { ascending: true });
+        .order('alumno', { ascending: true });
         
       if (error) throw error;
       setData(cobrosData || []);
@@ -115,7 +114,7 @@ export default function CobrosView() {
     } finally {
       setLoading(false);
     }
-  }, [selectedMonth, selectedTurn]);
+  }, [selectedMonth]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -165,7 +164,7 @@ export default function CobrosView() {
     const oldRow = data[rowIndex];
     let updatedRow = { ...oldRow };
 
-    if (key === 'alumno' || key === 'curso' || key === 'fecha_inicio' || key === 'fecha_fin' || key === 'observaciones' || key === 'pagos_bs' || key === 'saldo_merienditas') {
+    if (key === 'alumno' || key === 'curso' || key === 'turno' || key === 'fecha_inicio' || key === 'fecha_fin' || key === 'observaciones' || key === 'pagos_bs' || key === 'saldo_merienditas') {
       if (key === 'pagos_bs' || key === 'saldo_merienditas') {
         const numVal = Number(value || 0);
         updatedRow[key] = numVal;
@@ -238,6 +237,7 @@ export default function CobrosView() {
         .update({
           alumno: updatedRow.alumno,
           curso: updatedRow.curso,
+          turno: updatedRow.turno,
           fecha_inicio: updatedRow.fecha_inicio,
           fecha_fin: updatedRow.fecha_fin,
           observaciones: updatedRow.observaciones,
@@ -651,6 +651,7 @@ export default function CobrosView() {
         'Nro.': index + 1,
         'Alumno': row.alumno,
         'Curso': row.curso,
+        'Turno': row.turno,
         'Fecha Inicio': row.fecha_inicio || '',
         'Fecha Fin': row.fecha_fin || '',
         'Observaciones': row.observaciones || '',
@@ -681,17 +682,22 @@ export default function CobrosView() {
     document.body.removeChild(link);
   };
 
-  // Filtering data
+  // Filtering data (Global search across all turns when searching, local turn when empty)
   const filteredData = data.filter(row => {
+    const isSearching = searchTerm.trim() !== '';
+    
     const matchSearch = 
       String(row.alumno).toLowerCase().includes(searchTerm.toLowerCase()) ||
       String(row.curso).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(row.observaciones || '').toLowerCase().includes(searchTerm.toLowerCase());
+      String(row.observaciones || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(row.turno || '').toLowerCase().includes(searchTerm.toLowerCase());
       
     const matchCourse = courseFilter === '' || 
       String(row.curso).toLowerCase().includes(courseFilter.toLowerCase());
       
-    return matchSearch && matchCourse;
+    const matchTurn = isSearching || row.turno === selectedTurn;
+      
+    return matchSearch && matchCourse && matchTurn;
   });
 
   // Unique list of courses for filter dropdown
@@ -823,6 +829,7 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-nro">Nro.</th>
                   <th rowSpan={2} className="col-alumno">ALUMNO</th>
                   <th rowSpan={2} className="col-curso">CURSO</th>
+                  <th rowSpan={2} className="col-turno">TURNO</th>
                   <th rowSpan={2} className="col-date">FECHA INICIO</th>
                   <th rowSpan={2} className="col-date">FECHA FIN</th>
                   <th rowSpan={2} className="col-obs">OBSERVACIONES</th>
@@ -880,6 +887,20 @@ export default function CobrosView() {
                               setData(newData);
                             }}
                             onBlur={(e) => handleCellChange(row.id, 'curso', e.target.value)}
+                            className="cell-input text-center"
+                          />
+                        </td>
+                        <td className="cell-turno">
+                          <input
+                            type="text"
+                            value={row.turno || ''}
+                            onChange={(e) => {
+                              const newData = [...data];
+                              const idx = newData.findIndex(r => r.id === row.id);
+                              newData[idx].turno = e.target.value;
+                              setData(newData);
+                            }}
+                            onBlur={(e) => handleCellChange(row.id, 'turno', e.target.value)}
                             className="cell-input text-center"
                           />
                         </td>

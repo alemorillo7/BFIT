@@ -128,6 +128,7 @@
 .col-nro { width: 30px; }
 .col-alumno { width: 140px; min-width: 130px; }
 .col-curso { width: 45px; }
+.col-turno { width: 50px; text-align: center; }
 .col-date { width: 62px; }
 .col-obs { width: 100px; min-width: 80px; }
 .col-day { width: 26px; min-width: 26px; text-align: center; }
