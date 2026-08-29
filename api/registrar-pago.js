@@ -24,12 +24,14 @@ export default withErrorHandling(async (request) => {
   let nombre;
   let mes;
   let saldoPara;
+  let monto;
 
   if (request.method === 'GET') {
     const url = new URL(request.url);
     nombre = url.searchParams.get('nombre') || url.searchParams.get('alumno');
     mes = url.searchParams.get('mes');
     saldoPara = url.searchParams.get('saldo_para') || 'Almuerzo';
+    monto = url.searchParams.get('monto') || url.searchParams.get('monto_declarado') || '0';
   } else {
     // POST request
     try {
@@ -37,6 +39,7 @@ export default withErrorHandling(async (request) => {
       nombre = body.nombre || body.alumno;
       mes = body.mes;
       saldoPara = body.saldo_para || 'Almuerzo';
+      monto = body.monto || body.monto_declarado || 0;
     } catch {
       return badRequest('Cuerpo de petición JSON inválido.');
     }
@@ -91,18 +94,21 @@ export default withErrorHandling(async (request) => {
     }, 404);
   }
 
-  // Update logic:
-  // - If paying for Almuerzo, we set row color to 'Verde' (prepaid/credit in favor)
-  // - If paying for Merienditas, we can also mark it or set color to Verde
+  const montoNum = Number(monto || 0);
   const updateData = {
     updated_at: new Date().toISOString()
   };
 
   if (String(saldoPara).toLowerCase() === 'almuerzo') {
-    updateData.color = 'Verde';
+    const nuevosPagos = Number(bestMatch.pagos_bs || 0) + montoNum;
+    const nuevoSaldo = nuevosPagos - Number(bestMatch.platos_vendidos_bs || 0);
+
+    updateData.pagos_bs = nuevosPagos;
+    // Set color dynamically: Green (Verde) if balance is >= 0, otherwise Blue (Azul)
+    updateData.color = nuevoSaldo >= 0 ? 'Verde' : 'Azul';
   } else {
-    // If it is merienda, you can optionally set color or handle differently
-    updateData.color = 'Verde'; // default to Verde as it represents paid state
+    const nuevoSaldoMerienda = Number(bestMatch.saldo_merienditas || 0) + montoNum;
+    updateData.saldo_merienditas = nuevoSaldoMerienda;
   }
 
   const { data: updated, error: updateErr } = await supabaseCobrosAdmin
@@ -117,7 +123,7 @@ export default withErrorHandling(async (request) => {
 
   return json({
     success: true,
-    message: `Pago registrado con éxito. Alumno marcado en Verde (Pagado) en Cobros para el mes ${targetMes}.`,
+    message: `Pago registrado con éxito en Cobros para el mes ${targetMes}.`,
     original_query: nombre,
     match: {
       id: bestMatch.id,
@@ -125,6 +131,8 @@ export default withErrorHandling(async (request) => {
       curso: bestMatch.curso,
       turno: bestMatch.turno,
       mes: bestMatch.mes,
+      pagos_bs: updated[0].pagos_bs,
+      saldo_merienditas: updated[0].saldo_merienditas,
       nuevo_color: updated[0].color
     }
   });

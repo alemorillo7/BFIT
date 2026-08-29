@@ -161,12 +161,22 @@ export default function CobrosView() {
     const oldRow = data[rowIndex];
     let updatedRow = { ...oldRow };
 
-    if (key === 'alumno' || key === 'curso' || key === 'fecha_inicio' || key === 'fecha_fin' || key === 'observaciones') {
-      updatedRow[key] = value;
-      // If course changes, recalculate pricing totals
-      if (key === 'curso') {
-        const totals = calculateRowTotals(updatedRow.asistencias, value);
-        updatedRow = { ...updatedRow, ...totals };
+    if (key === 'alumno' || key === 'curso' || key === 'fecha_inicio' || key === 'fecha_fin' || key === 'observaciones' || key === 'pagos_bs' || key === 'saldo_merienditas') {
+      if (key === 'pagos_bs' || key === 'saldo_merienditas') {
+        const numVal = Number(value || 0);
+        updatedRow[key] = numVal;
+        if (key === 'pagos_bs') {
+          const net = numVal - Number(updatedRow.platos_vendidos_bs || 0);
+          updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+        }
+      } else {
+        updatedRow[key] = value;
+        if (key === 'curso') {
+          const totals = calculateRowTotals(updatedRow.asistencias, value);
+          updatedRow = { ...updatedRow, ...totals };
+          const net = Number(updatedRow.pagos_bs || 0) - totals.platos_vendidos_bs;
+          updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+        }
       }
     } else {
       // It is a day cell change
@@ -182,6 +192,8 @@ export default function CobrosView() {
       updatedRow.asistencias = newAsistencias;
       const totals = calculateRowTotals(newAsistencias, updatedRow.curso);
       updatedRow = { ...updatedRow, ...totals };
+      const net = Number(updatedRow.pagos_bs || 0) - totals.platos_vendidos_bs;
+      updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
     }
     
     // Optimistic UI update
@@ -206,7 +218,10 @@ export default function CobrosView() {
           observaciones: updatedRow.observaciones,
           asistencias: updatedRow.asistencias,
           platos_vendidos: updatedRow.platos_vendidos,
-          platos_vendidos_bs: updatedRow.platos_vendidos_bs
+          platos_vendidos_bs: updatedRow.platos_vendidos_bs,
+          pagos_bs: updatedRow.pagos_bs,
+          saldo_merienditas: updatedRow.saldo_merienditas,
+          color: updatedRow.color
         })
         .eq('id', rowId);
         
@@ -354,7 +369,9 @@ export default function CobrosView() {
         turno: selectedTurn,
         asistencias: {},
         platos_vendidos: 0,
-        platos_vendidos_bs: 0
+        platos_vendidos_bs: 0,
+        pagos_bs: 0,
+        saldo_merienditas: 0
       }));
       
       const { data: inserted, error: insertErr } = await supabaseCobros
@@ -423,6 +440,9 @@ export default function CobrosView() {
       
       exportRow['Platos Vendidos'] = row.platos_vendidos;
       exportRow['Importe Total (Bs)'] = row.platos_vendidos_bs;
+      exportRow['Pago Almuerzo (Bs)'] = row.pagos_bs || 0;
+      exportRow['Saldo Almuerzo (Bs)'] = Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0);
+      exportRow['Saldo Merienda (Bs)'] = row.saldo_merienditas || 0;
       
       return exportRow;
     });
@@ -581,6 +601,9 @@ export default function CobrosView() {
                   </th>
                   <th rowSpan={2} className="col-total">PLATOS VENDIDOS</th>
                   <th rowSpan={2} className="col-total">PLATOS EN BS</th>
+                  <th rowSpan={2} className="col-balance-input">CARGAR PAGO (BS)</th>
+                  <th rowSpan={2} className="col-balance">SALDO ALMUERZO</th>
+                  <th rowSpan={2} className="col-balance-input">SALDO MERIENDA (BS)</th>
                   <th rowSpan={2} className="col-color">COLOR</th>
                   <th rowSpan={2} className="col-actions">ACCIONES</th>
                 </tr>
@@ -697,13 +720,57 @@ export default function CobrosView() {
                             />
                           </td>
                         ))}
-
                         {/* Calculated fields */}
                         <td className="cell-total text-center text-bold bg-light">
                           {row.platos_vendidos}
                         </td>
                         <td className="cell-total text-center text-bold bg-light text-success">
                           {row.platos_vendidos_bs} Bs
+                        </td>
+
+                        {/* Cargar Pago (Bs) */}
+                        <td className="cell-balance-input">
+                          <input
+                            type="number"
+                            value={row.pagos_bs || ''}
+                            placeholder="0"
+                            onChange={(e) => {
+                              const newData = [...data];
+                              const idx = newData.findIndex(r => r.id === row.id);
+                              newData[idx].pagos_bs = e.target.value;
+                              setData(newData);
+                            }}
+                            onBlur={(e) => handleCellChange(row.id, 'pagos_bs', e.target.value)}
+                            className="cell-balance-input-field text-center text-bold"
+                          />
+                        </td>
+
+                        {/* Saldo Almuerzo */}
+                        {(() => {
+                          const netBalance = Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0);
+                          const balanceClass = netBalance > 0 ? 'text-success' : netBalance < 0 ? 'text-danger' : 'text-muted';
+                          return (
+                            <td className={`cell-balance text-center text-bold bg-light ${balanceClass}`}>
+                              {netBalance} Bs
+                            </td>
+                          );
+                        })()}
+
+                        {/* Saldo Merienda */}
+                        <td className="cell-balance-input">
+                          <input
+                            type="number"
+                            value={row.saldo_merienditas || ''}
+                            placeholder="0"
+                            onChange={(e) => {
+                              const newData = [...data];
+                              const idx = newData.findIndex(r => r.id === row.id);
+                              newData[idx].saldo_merienditas = e.target.value;
+                              setData(newData);
+                            }}
+                            onBlur={(e) => handleCellChange(row.id, 'saldo_merienditas', e.target.value)}
+                            className="cell-balance-input-field text-center text-bold text-info"
+                          />
                         </td>
 
                         {/* Row Color dot picker */}
@@ -742,7 +809,7 @@ export default function CobrosView() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={28 + currentMonthDays.length} className="empty-state">
+                    <td colSpan={31 + currentMonthDays.length} className="empty-state">
                       No se encontraron registros de cobros.
                     </td>
                   </tr>

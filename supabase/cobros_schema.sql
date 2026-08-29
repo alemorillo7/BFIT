@@ -13,6 +13,8 @@ CREATE TABLE public.cobros (
   asistencias jsonb DEFAULT '{}'::jsonb, -- e.g., {"3": "1", "4": "1", "10": "1"}
   platos_vendidos integer DEFAULT 0,
   platos_vendidos_bs numeric DEFAULT 0,
+  pagos_bs numeric DEFAULT 0,
+  saldo_merienditas numeric DEFAULT 0,
   color text,
   created_at timestamptz DEFAULT timezone('utc', now()),
   updated_at timestamptz DEFAULT timezone('utc', now())

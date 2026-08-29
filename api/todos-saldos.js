@@ -53,30 +53,22 @@ export default withErrorHandling(async (request) => {
     // - Verde (Green): Prepaid / Credit in favor
     // - Amarillo (Yellow) / FFF2CC: Almuerzo + Merienda
     // - Other: Neutral (paid/no debt)
-    let saldoBs;
-    let infoSaldo;
-    const colorNorm = String(record.color || '').toUpperCase();
+    const pagosBs = Number(record.pagos_bs || 0);
+    const platosVendidosBs = Number(record.platos_vendidos_bs || 0);
+    const saldoBs = pagosBs - platosVendidosBs;
+    const saldoMerienditas = Number(record.saldo_merienditas || 0);
 
-    if (colorNorm === 'AZUL') {
-      saldoBs = -Number(record.platos_vendidos_bs || 0);
-      infoSaldo = record.platos_vendidos === 0
-        ? `Tiene saldo al día en ${record.mes}. (No registra consumos).`
-        : `Tiene un saldo en contra de ${Math.abs(saldoBs)} Bs. por comidas consumidas no pagadas en ${record.mes}.`;
-    } else if (colorNorm === 'VERDE') {
-      saldoBs = 0;
-      infoSaldo = record.platos_vendidos === 0
-        ? `Tiene crédito a favor (Al día) en ${record.mes}. (No registra consumos).`
-        : `Tiene crédito a favor (Todo pagado / Al día) en ${record.mes}.`;
-    } else if (colorNorm === 'AMARILLO' || colorNorm === 'FFF2CC') {
-      saldoBs = 0;
-      infoSaldo = record.platos_vendidos === 0
-        ? `Tiene saldo al día en ${record.mes} (Almuerzo + Merienda). No registra consumos.`
-        : `Tiene saldo al día en ${record.mes} (Consume almuerzo + merienda).`;
+    let infoSaldo;
+    if (saldoBs > 0) {
+      infoSaldo = `Tiene crédito a favor de ${saldoBs} Bs. para almuerzos en ${record.mes}.`;
+    } else if (saldoBs < 0) {
+      infoSaldo = `Tiene un saldo en contra de ${Math.abs(saldoBs)} Bs. por almuerzos no pagados en ${record.mes}.`;
     } else {
-      saldoBs = 0;
-      infoSaldo = record.platos_vendidos === 0
-        ? `Tiene saldo al día en ${record.mes}. (No registra consumos).`
-        : `Tiene saldo al día (Sin deudas pendientes) en ${record.mes}.`;
+      infoSaldo = `Tiene saldo al día en almuerzos (0 Bs) en ${record.mes}.`;
+    }
+
+    if (saldoMerienditas !== 0) {
+      infoSaldo += ` Saldo en meriendas: ${saldoMerienditas} Bs.`;
     }
 
     return {
@@ -87,6 +79,8 @@ export default withErrorHandling(async (request) => {
       turno: record.turno,
       platos_vendidos: record.platos_vendidos || 0,
       platos_vendidos_bs: record.platos_vendidos_bs || 0,
+      pagos_bs: pagosBs,
+      saldo_merienditas: saldoMerienditas,
       dias_consumidos: diasConsumidos,
       saldo_bs: saldoBs,
       color: record.color || null,
