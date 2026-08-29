@@ -67,16 +67,24 @@ export default withErrorHandling(async (request) => {
 
     if (colorNorm === 'AZUL') {
       saldoBs = -Number(record.platos_vendidos_bs || 0);
-      infoSaldo = `Tiene un saldo en contra de ${Math.abs(saldoBs)} Bs. por comidas consumidas no pagadas en ${record.mes}.`;
+      infoSaldo = record.platos_vendidos === 0
+        ? `Tiene saldo al día en ${record.mes}. (No registra consumos).`
+        : `Tiene un saldo en contra de ${Math.abs(saldoBs)} Bs. por comidas consumidas no pagadas en ${record.mes}.`;
     } else if (colorNorm === 'VERDE') {
       saldoBs = 0; // Prepaid/credit in favor
-      infoSaldo = `Tiene crédito a favor (Todo pagado / Al día) en ${record.mes}.`;
+      infoSaldo = record.platos_vendidos === 0
+        ? `Tiene crédito a favor (Al día) en ${record.mes}. (No registra consumos).`
+        : `Tiene crédito a favor (Todo pagado / Al día) en ${record.mes}.`;
     } else if (colorNorm === 'AMARILLO' || colorNorm === 'FFF2CC') {
       saldoBs = 0;
-      infoSaldo = `Tiene saldo al día en ${record.mes} (Consume almuerzo + merienda).`;
+      infoSaldo = record.platos_vendidos === 0
+        ? `Tiene saldo al día en ${record.mes} (Almuerzo + Merienda). No registra consumos.`
+        : `Tiene saldo al día en ${record.mes} (Consume almuerzo + merienda).`;
     } else {
       saldoBs = 0;
-      infoSaldo = `Tiene saldo al día (Sin deudas pendientes) en ${record.mes}.`;
+      infoSaldo = record.platos_vendidos === 0
+        ? `Tiene saldo al día en ${record.mes}. (No registra consumos).`
+        : `Tiene saldo al día (Sin deudas pendientes) en ${record.mes}.`;
     }
 
     return {
