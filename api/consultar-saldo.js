@@ -56,15 +56,35 @@ export default withErrorHandling(async (request) => {
       })
       .sort((a, b) => parseInt(a, 10) - parseInt(b, 10)); // Sort numerically
 
-    // Default balance calculation: negative of consumed plates (debt).
-    // Can be easily modified once the user provides their custom rules.
-    const saldoBs = -Number(record.platos_vendidos_bs || 0);
+    // Balance calculation based on color rules:
+    // - Azul (Blue): Pending debt (saldo en contra) = -platos_vendidos_bs
+    // - Verde (Green): Credit in favor (saldo a favor / prepaid)
+    // - Amarillo (Yellow) / FFF2CC: Almuerzo + Merienda (paid/neutral)
+    // - None/Other: Neutral (paid/no debt)
+    let saldoBs;
+    let infoSaldo;
+    const colorNorm = String(record.color || '').toUpperCase();
+
+    if (colorNorm === 'AZUL') {
+      saldoBs = -Number(record.platos_vendidos_bs || 0);
+      infoSaldo = `Tiene un saldo en contra de ${Math.abs(saldoBs)} Bs. por comidas consumidas no pagadas en ${record.mes}.`;
+    } else if (colorNorm === 'VERDE') {
+      saldoBs = 0; // Prepaid/credit in favor
+      infoSaldo = `Tiene crédito a favor (Todo pagado / Al día) en ${record.mes}.`;
+    } else if (colorNorm === 'AMARILLO' || colorNorm === 'FFF2CC') {
+      saldoBs = 0;
+      infoSaldo = `Tiene saldo al día en ${record.mes} (Consume almuerzo + merienda).`;
+    } else {
+      saldoBs = 0;
+      infoSaldo = `Tiene saldo al día (Sin deudas pendientes) en ${record.mes}.`;
+    }
 
     return {
       id: record.id,
       alumno: record.alumno,
       curso: record.curso,
       mes: record.mes,
+      turno: record.turno,
       fecha_inicio: record.fecha_inicio || null,
       fecha_fin: record.fecha_fin || null,
       observaciones: record.observaciones || null,
@@ -73,9 +93,7 @@ export default withErrorHandling(async (request) => {
       dias_consumidos: diasConsumidos, // e.g. ["3", "10", "13"]
       saldo_bs: saldoBs,
       color: record.color || null,
-      info_saldo: saldoBs < 0 
-        ? `Tiene un saldo en contra de ${Math.abs(saldoBs)} Bs. por comidas consumidas en ${record.mes}.`
-        : `Tiene un saldo a favor de ${saldoBs} Bs. en ${record.mes}.`
+      info_saldo: infoSaldo
     };
   });
 
