@@ -1,3 +1,4 @@
+/* global process */
 import xlsx from 'xlsx';
 import fs from 'fs';
 import { createClient } from '@supabase/supabase-js';
@@ -147,9 +148,33 @@ async function run() {
       const dbMatch = findMatch(excelName, turn);
 
       if (dbMatch) {
-        // Merge/Update: Keep their payments, calculate new balance color
+        // Merge/Update: Keep their payments, preserve existing Faltas (F)
+        const dbAsistencias = dbMatch.asistencias || {};
+        const mergedAsistencias = { ...asistencias };
+        Object.keys(dbAsistencias).forEach(day => {
+          if (String(dbAsistencias[day]).toUpperCase() === 'F') {
+            mergedAsistencias[day] = 'F';
+          }
+        });
+
+        // Recalculate plates count and cost excluding F
+        const getPricePerPlate = (courseName) => {
+          const norm = String(courseName || '').toUpperCase();
+          if (norm.endsWith('S') || norm.includes('SECUNDARIA')) return 35;
+          return 32;
+        };
+
+        let finalPlatosVendidos = 0;
+        Object.keys(mergedAsistencias).forEach(day => {
+          const val = String(mergedAsistencias[day]).trim().toUpperCase();
+          if (val && val !== '0' && val !== 'F') {
+            finalPlatosVendidos++;
+          }
+        });
+        const finalPlatosVendidosBs = finalPlatosVendidos * getPricePerPlate(curso);
+
         const pagosBs = Number(dbMatch.pagos_bs || 0);
-        const newSaldo = pagosBs - platosVendidosBs;
+        const newSaldo = pagosBs - finalPlatosVendidosBs;
 
         let newColor = dbMatch.color;
         if (!dbMatch.color || dbMatch.color === 'Verde' || dbMatch.color === 'Azul') {
@@ -163,9 +188,9 @@ async function run() {
           fecha_inicio: fechaInicio || dbMatch.fecha_inicio,
           fecha_fin: fechaFin || dbMatch.fecha_fin,
           observaciones: observaciones || dbMatch.observaciones,
-          asistencias,
-          platos_vendidos: platosVendidos,
-          platos_vendidos_bs: platosVendidosBs,
+          asistencias: mergedAsistencias,
+          platos_vendidos: finalPlatosVendidos,
+          platos_vendidos_bs: finalPlatosVendidosBs,
           color: newColor,
           updated_at: new Date().toISOString()
         };

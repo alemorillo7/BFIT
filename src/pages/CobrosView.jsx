@@ -13,6 +13,7 @@ import {
   Clock
 } from 'lucide-react';
 import * as Papa from 'papaparse';
+import { fetchSheetData } from '../services/dataService';
 import './CobrosView.css';
 
 const monthsList = [
@@ -86,6 +87,7 @@ export default function CobrosView() {
   const [courseFilter, setCourseFilter] = useState('');
   const [savingRows, setSavingRows] = useState(new Set());
   const [errorMessage, setErrorMessage] = useState(null);
+  const [syncingAbsences, setSyncingAbsences] = useState(false);
   
   // Get active day columns for the selected month
   const currentMonthDays = useMemo(() => {
@@ -139,8 +141,8 @@ export default function CobrosView() {
     Object.keys(asistencias || {}).forEach(dayKey => {
       // Only count days that actually belong to the current month's columns
       if (currentDaysKeys.includes(dayKey)) {
-        const val = String(asistencias[dayKey] || '').trim();
-        if (val && val !== '0') {
+        const val = String(asistencias[dayKey] || '').trim().toUpperCase();
+        if (val && val !== '0' && val !== 'F') {
           plates += 1;
         }
       }
@@ -422,6 +424,173 @@ export default function CobrosView() {
     }
   };
 
+  // Sincronizar faltas desde el sistema (Google Sheets: Observaciones)
+  const handleSyncAbsences = async () => {
+    const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
+    if (!window.confirm(`¿Deseas sincronizar las faltas justificadas del mes ${monthLabel} para este turno? Las comidas consumidas en esas fechas no se cobrarán.`)) {
+      return;
+    }
+
+    try {
+      setSyncingAbsences(true);
+      
+      // 1. Fetch Observaciones sheet
+      const rawAbsences = await fetchSheetData('Observaciones');
+      if (!rawAbsences || rawAbsences.length === 0) {
+        alert("No se encontraron registros de faltas en la planilla de Observaciones.");
+        return;
+      }
+
+      // Helper to parse dates like "2026-08-14" or "14/08/2026"
+      const parseAbsenceDate = (dateStr) => {
+        if (!dateStr) return null;
+        const isoMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (isoMatch) {
+          return {
+            yearMonth: `${isoMatch[1]}-${isoMatch[2]}`,
+            dayNum: String(parseInt(isoMatch[3], 10))
+          };
+        }
+        const slashesMatch = String(dateStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (slashesMatch) {
+          return {
+            yearMonth: `${slashesMatch[3]}-${slashesMatch[2].padStart(2, '0')}`,
+            dayNum: String(parseInt(slashesMatch[1], 10))
+          };
+        }
+        return null;
+      };
+
+      // Helper to check if a reason is an absence notice
+      const isAbsenceReason = (reason) => {
+        const norm = String(reason || '').trim().toLowerCase()
+          .normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        return /(no almuer|no asistir|no ira|no va|enferm|ausen|falta)/.test(norm);
+      };
+
+      // Helper for fuzzy word overlap comparison
+      const getWords = (name) => {
+        return String(name || '')
+          .trim()
+          .toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/[^a-z0-9 ]/g, " ")
+          .split(/\s+/)
+          .filter(w => w.length >= 3 && !['del', 'las', 'los', 'pre', 'kin', 'kinder'].includes(w));
+      };
+
+      const findStudentMatch = (excelName) => {
+        const excelWords = getWords(excelName);
+        if (excelWords.length === 0) return null;
+
+        let bestDb = null;
+        let maxOverlap = 0;
+
+        for (const dbRec of data) {
+          const dbWords = getWords(dbRec.alumno);
+          let overlap = 0;
+          excelWords.forEach(ew => {
+            dbWords.forEach(dw => {
+              if (ew === dw) {
+                overlap += 2.0;
+              } else if (ew.length >= 4 && dw.length >= 4 && (ew.startsWith(dw) || dw.startsWith(ew))) {
+                overlap += 1.0;
+              }
+            });
+          });
+          if (overlap > maxOverlap) {
+            maxOverlap = overlap;
+            bestDb = dbRec;
+          }
+        }
+        return maxOverlap >= 2.0 ? bestDb : null;
+      };
+
+      // 2. Filter absences belonging to the current month and valid reason
+      const currentMonthAbsences = rawAbsences.filter(obs => {
+        const dateInfo = parseAbsenceDate(obs.fecha);
+        return dateInfo && dateInfo.yearMonth === selectedMonth && isAbsenceReason(obs.motivo_de_falta);
+      });
+
+      console.log(`Found ${currentMonthAbsences.length} absences for ${selectedMonth} in Google Sheets.`);
+
+      // 3. Match and group updates
+      let importedCount = 0;
+      const studentsToUpdate = [];
+
+      for (const obs of currentMonthAbsences) {
+        const match = findStudentMatch(obs.alumno);
+        if (match) {
+          const dateInfo = parseAbsenceDate(obs.fecha);
+          const dayKey = dateInfo.dayNum;
+          
+          // Check if day cell isn't already 'F' or 'f'
+          const currentAsistencias = match.asistencias || {};
+          if (currentAsistencias[dayKey] !== 'F' && currentAsistencias[dayKey] !== 'f') {
+            const updatedAsistencias = { ...currentAsistencias, [dayKey]: 'F' };
+            const rowTotals = calculateRowTotals(updatedAsistencias, match.curso);
+            const netBalance = Number(match.pagos_bs || 0) - rowTotals.platos_vendidos_bs;
+            
+            // Check if this student is already queued for update in this transaction
+            const queuedIdx = studentsToUpdate.findIndex(s => s.id === match.id);
+            if (queuedIdx !== -1) {
+              studentsToUpdate[queuedIdx].asistencias[dayKey] = 'F';
+              const accumTotals = calculateRowTotals(studentsToUpdate[queuedIdx].asistencias, match.curso);
+              studentsToUpdate[queuedIdx].platos_vendidos = accumTotals.platos_vendidos;
+              studentsToUpdate[queuedIdx].platos_vendidos_bs = accumTotals.platos_vendidos_bs;
+              studentsToUpdate[queuedIdx].color = (Number(match.pagos_bs || 0) - accumTotals.platos_vendidos_bs) >= 0 ? 'Verde' : 'Azul';
+            } else {
+              studentsToUpdate.push({
+                ...match,
+                asistencias: updatedAsistencias,
+                platos_vendidos: rowTotals.platos_vendidos,
+                platos_vendidos_bs: rowTotals.platos_vendidos_bs,
+                color: netBalance >= 0 ? 'Verde' : 'Azul'
+              });
+            }
+            importedCount++;
+          }
+        }
+      }
+
+      if (studentsToUpdate.length === 0) {
+        alert("Todas las faltas de Google Sheets ya se encuentran sincronizadas o no se encontraron coincidencias.");
+        return;
+      }
+
+      // 4. Save to Supabase and update state
+      for (const updatedStudent of studentsToUpdate) {
+        const { error: saveErr } = await supabaseCobros
+          .from('cobros')
+          .update({
+            asistencias: updatedStudent.asistencias,
+            platos_vendidos: updatedStudent.platos_vendidos,
+            platos_vendidos_bs: updatedStudent.platos_vendidos_bs,
+            color: updatedStudent.color
+          })
+          .eq('id', updatedStudent.id);
+
+        if (saveErr) throw saveErr;
+      }
+
+      // Update React state
+      setData(prev => {
+        return prev.map(student => {
+          const matchUpdated = studentsToUpdate.find(u => u.id === student.id);
+          return matchUpdated ? matchUpdated : student;
+        });
+      });
+
+      alert(`Sincronización completada con éxito. Se importaron e invalidaron ${importedCount} faltas de asistencia.`);
+    } catch (err) {
+      console.error('Error syncing absences:', err);
+      alert('Ocurrió un error al sincronizar las faltas desde Google Sheets.');
+    } finally {
+      setSyncingAbsences(false);
+    }
+  };
+
   // Export to CSV
   const handleExport = () => {
     const csvData = filteredData.map((row, index) => {
@@ -543,6 +712,16 @@ export default function CobrosView() {
           <button className="btn btn-outline" onClick={handleExport} disabled={data.length === 0}>
             <Download size={18} />
             <span>Exportar CSV</span>
+          </button>
+
+          <button 
+            className="btn btn-outline" 
+            onClick={handleSyncAbsences} 
+            disabled={syncingAbsences || data.length === 0}
+            title="Sincronizar faltas justificadas desde Observaciones"
+          >
+            {syncingAbsences ? <Loader2 className="spinner" size={18} /> : <AlertCircle size={18} />}
+            <span>Sincronizar Faltas</span>
           </button>
 
           <button className="btn btn-primary" onClick={handleAddRow}>
@@ -700,26 +879,30 @@ export default function CobrosView() {
                         </td>
                         
                         {/* Dynamic Day Columns */}
-                        {currentMonthDays.map(d => (
-                          <td key={d.key} className="cell-day">
-                            <input
-                              type="text"
-                              value={row.asistencias?.[d.key] || ''}
-                              onChange={(e) => {
-                                const newData = [...data];
-                                const idx = newData.findIndex(r => r.id === row.id);
-                                if (!newData[idx].asistencias) {
-                                  newData[idx].asistencias = {};
-                                }
-                                newData[idx].asistencias[d.key] = e.target.value;
-                                setData(newData);
-                              }}
-                              onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
-                              className="cell-day-input text-center"
-                              maxLength={10}
-                            />
-                          </td>
-                        ))}
+                        {currentMonthDays.map(d => {
+                          const val = row.asistencias?.[d.key] || '';
+                          const isFalta = val.toUpperCase() === 'F';
+                          return (
+                            <td key={d.key} className="cell-day">
+                              <input
+                                type="text"
+                                value={val}
+                                onChange={(e) => {
+                                  const newData = [...data];
+                                  const idx = newData.findIndex(r => r.id === row.id);
+                                  if (!newData[idx].asistencias) {
+                                    newData[idx].asistencias = {};
+                                  }
+                                  newData[idx].asistencias[d.key] = e.target.value;
+                                  setData(newData);
+                                }}
+                                onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
+                                className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''}`}
+                                maxLength={10}
+                              />
+                            </td>
+                          );
+                        })}
                         {/* Calculated fields */}
                         <td className="cell-total text-center text-bold bg-light">
                           {row.platos_vendidos}

@@ -82,8 +82,8 @@ export default withErrorHandling(async (request) => {
     // Extract the calendar days that have active meals (value is not '0')
     const diasConsumidos = Object.keys(asistencias)
       .filter(dayKey => {
-        const val = String(asistencias[dayKey]).trim();
-        return val && val !== '0';
+        const val = String(asistencias[dayKey]).trim().toUpperCase();
+        return val && val !== '0' && val !== 'F';
       })
       .sort((a, b) => parseInt(a, 10) - parseInt(b, 10)); // Sort numerically
 

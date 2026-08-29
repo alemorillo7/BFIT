@@ -549,3 +549,10 @@
 .text-success {
   color: #10b981 !important;
 }
+
+.cell-day-input--falta {
+  font-weight: bold !important;
+  color: #ef4444 !important; /* soft red */
+  background-color: rgba(239, 68, 68, 0.12) !important;
+  border-color: rgba(239, 68, 68, 0.25) !important;
+}

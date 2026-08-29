@@ -43,8 +43,8 @@ export default withErrorHandling(async (request) => {
     // Extract calendar days consumed
     const diasConsumidos = Object.keys(asistencias)
       .filter(dayKey => {
-        const val = String(asistencias[dayKey]).trim();
-        return val && val !== '0';
+        const val = String(asistencias[dayKey]).trim().toUpperCase();
+        return val && val !== '0' && val !== 'F';
       })
       .sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
 
