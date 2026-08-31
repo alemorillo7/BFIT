@@ -551,26 +551,24 @@ export default function CobrosView() {
     }
   };
 
-  // Initialize a new month for the current turn with previous month's student names
+  // Initialize all turns for a new month with previous month's student records
   const handleInitializeMonth = async () => {
     const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
-    const turnLabel = turnsList.find(t => t.value === selectedTurn)?.label;
     const workingDaysCount = currentMonthDays.length;
     
-    if (!window.confirm(`¿Deseas inicializar el mes de ${monthLabel} para el ${turnLabel} con los alumnos de este mismo turno del último mes registrado?`)) {
+    if (!window.confirm(`¿Deseas inicializar el mes de ${monthLabel} para TODOS LOS TURNOS (11:50, 11:25, 12:00, 12:40 y 13:05) con los alumnos del último mes registrado?`)) {
       return;
     }
 
-    const prepayMonth = window.confirm(`¿Deseas que los alumnos inicien con el pago del MES COMPLETO (${workingDaysCount} días) precargado?\n\n- Aceptar (OK): Precargar pago de mes completo en Verde\n- Cancelar: Iniciar con pagos en 0 Bs`);
+    const prepayMonth = window.confirm(`¿Deseas que los alumnos inicien con el pago del MES COMPLETO (${workingDaysCount} días hábiles) precargado en Verde?\n\n- Aceptar (OK): Precargar pago del mes completo\n- Cancelar: Iniciar con pagos en 0 Bs`);
 
     try {
       setLoading(true);
       
-      // Query the database to retrieve students for the current turn across all months
+      // Query the database to retrieve students across ALL turns and months
       const { data: allRecords, error: fetchErr } = await supabaseCobros
         .from('cobros')
-        .select('alumno, curso, color, mes')
-        .eq('turno', selectedTurn);
+        .select('alumno, curso, turno, observaciones, color, mes');
         
       if (fetchErr) throw fetchErr;
       
@@ -578,36 +576,48 @@ export default function CobrosView() {
       if (allRecords && allRecords.length > 0) {
         // Sort active months and pick the most recent one containing data
         const uniqueMonths = [...new Set(allRecords.map(r => r.mes))].sort();
-        // Exclude the current selected month if it's in the list
+        // Exclude the current selected month
         const previousMonths = uniqueMonths.filter(m => m !== selectedMonth);
         
         if (previousMonths.length > 0) {
           const latestMonthWithData = previousMonths[previousMonths.length - 1];
           const latestRecords = allRecords.filter(r => r.mes === latestMonthWithData);
           
-          studentsToCopy = latestRecords.map(r => ({
-            alumno: r.alumno,
-            curso: r.curso,
-            color: prepayMonth ? 'Verde' : r.color
-          }));
+          // Exclude any student/turn that already exists in the selected month
+          const existingInSelectedMonth = allRecords.filter(r => r.mes === selectedMonth);
+          const existingKeys = new Set(existingInSelectedMonth.map(r => `${String(r.alumno).trim().toLowerCase()}_${r.turno}`));
+          
+          studentsToCopy = latestRecords
+            .filter(r => !existingKeys.has(`${String(r.alumno).trim().toLowerCase()}_${r.turno}`))
+            .map(r => ({
+              alumno: r.alumno,
+              curso: r.curso,
+              turno: r.turno,
+              observaciones: r.observaciones || null,
+              color: r.color
+            }));
         }
       }
       
       if (studentsToCopy.length === 0) {
-        alert("No se encontraron registros de meses anteriores para este turno en la base de datos. Agrega los alumnos manualmente o carga el script SQL inicial.");
+        alert("No se encontraron registros de meses anteriores en la base de datos o todos los alumnos ya fueron importados.");
         return;
       }
       
-      // Create empty records for the selected month and turn
+      // Create empty records for the selected month across all turns
       const newRecords = studentsToCopy.map(s => {
+        const isMerienda = String(s.observaciones || '').toLowerCase().includes('merienda');
         const price = getPricePerPlate(s.curso);
         const pagosBs = prepayMonth ? (workingDaysCount * price) : 0;
+        const color = isMerienda ? 'Amarillo' : (prepayMonth ? 'Verde' : null);
+        
         return {
           alumno: s.alumno,
           curso: s.curso,
-          color: prepayMonth ? 'Verde' : s.color,
+          turno: s.turno,
+          observaciones: s.observaciones,
+          color: color,
           mes: selectedMonth,
-          turno: selectedTurn,
           asistencias: {},
           platos_vendidos: 0,
           platos_vendidos_bs: 0,
@@ -622,8 +632,10 @@ export default function CobrosView() {
         .select();
         
       if (insertErr) throw insertErr;
-      setData(inserted || []);
-      alert(`¡${turnLabel} para ${monthLabel} inicializado correctamente con ${inserted.length} alumnos!`);
+      
+      // Reload current month data
+      await loadData();
+      alert(`¡Mes de ${monthLabel} inicializado exitosamente para TODOS LOS TURNOS (${inserted.length} alumnos importados en total)!`);
     } catch (err) {
       console.error('Error initializing month:', err);
       alert('Error al inicializar el nuevo mes.');
@@ -1083,12 +1095,12 @@ export default function CobrosView() {
       {!loading && data.length === 0 && (
         <div className="empty-state-card premium-card animate-fade-in">
           <Calendar size={48} className="empty-calendar-icon" />
-          <h3>No hay alumnos registrados para este turno en {monthsList.find(m => m.value === selectedMonth)?.label}</h3>
-          <p>Puedes importar automáticamente los mismos alumnos registrados en este turno en meses anteriores para comenzar a cargar las asistencias.</p>
+          <h3>No hay alumnos cargados en {monthsList.find(m => m.value === selectedMonth)?.label}</h3>
+          <p>Puedes inicializar automáticamente <strong>todos los turnos (11:50, 11:25, 12:00, 12:40 y 13:05)</strong> con la lista completa de alumnos del último mes registrado con un solo clic.</p>
           <div className="empty-state-actions">
             <button className="btn btn-primary" onClick={handleInitializeMonth}>
               <RefreshCw size={18} />
-              <span>Inicializar Alumnos del Turno</span>
+              <span>Inicializar Todos los Turnos del Mes</span>
             </button>
             <button className="btn btn-outline" onClick={handleAddRow}>
               <Plus size={18} />
