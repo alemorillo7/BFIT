@@ -908,6 +908,16 @@ export default function CobrosView() {
     return matchSearch && matchCourse && matchTurn;
   });
 
+  // Summary statistics for current turn
+  const summaryStats = useMemo(() => {
+    const turnData = data.filter(r => r.turno === selectedTurn);
+    const totalStudents = turnData.length;
+    const totalPlatos = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
+    const totalBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
+    const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
+    return { totalStudents, totalPlatos, totalBs, inDebtCount };
+  }, [data, selectedTurn]);
+
   // Unique list of courses for filter dropdown
   const uniqueCourses = useMemo(() => {
     const courses = data.map(r => String(r.curso || '').trim()).filter(Boolean);
@@ -917,102 +927,138 @@ export default function CobrosView() {
   return (
     <div className="cobros-container">
       <div className="cobros-header premium-card">
-        <div className="title-section">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <h1>Planilla de Cobros</h1>
-            {syncingAbsences && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', color: '#6b7280' }}>
-                <Loader2 className="spinner" size={16} />
-                <span>Sincronizando faltas...</span>
+        <div className="title-row">
+          <div className="title-section">
+            <div className="title-with-badge">
+              <h1>Planilla de Cobros</h1>
+              <span className="badge-turn-indicator">
+                {turnsList.find(t => t.value === selectedTurn)?.label}
+              </span>
+              {syncingAbsences && (
+                <div className="sync-badge">
+                  <Loader2 className="spinner" size={14} />
+                  <span>Sincronizando faltas...</span>
+                </div>
+              )}
+            </div>
+            <p className="subtitle">Gestión e importes de comidas de alumnos</p>
+          </div>
+
+          {/* Quick summary stats chips */}
+          <div className="stats-chips-container">
+            <div className="stat-chip">
+              <span className="stat-label">Alumnos:</span>
+              <span className="stat-value">{summaryStats.totalStudents}</span>
+            </div>
+            <div className="stat-chip">
+              <span className="stat-label">Platos:</span>
+              <span className="stat-value text-primary">{summaryStats.totalPlatos}</span>
+            </div>
+            <div className="stat-chip">
+              <span className="stat-label">Total:</span>
+              <span className="stat-value text-success">{summaryStats.totalBs} Bs</span>
+            </div>
+            {summaryStats.inDebtCount > 0 ? (
+              <div className="stat-chip stat-chip--danger" title="Alumnos con saldo negativo">
+                <span className="stat-label">Pendientes:</span>
+                <span className="stat-value text-danger">{summaryStats.inDebtCount}</span>
+              </div>
+            ) : (
+              <div className="stat-chip stat-chip--success" title="Todos al día">
+                <span className="stat-value text-success">Al día ✓</span>
               </div>
             )}
           </div>
-          <p className="subtitle">Gestión e importes de comidas de alumnos</p>
         </div>
 
-        <div className="controls-section">
-          {/* Month Selector */}
-          <div className="filter-box month-filter-box">
-            <Calendar size={18} className="filter-icon" />
-            <select
-              value={selectedMonth}
-              onChange={(e) => setSelectedMonth(e.target.value)}
-              className="input select-filter month-select"
+        {/* Toolbar with Filters and Actions */}
+        <div className="controls-toolbar">
+          <div className="filters-group">
+            {/* Month Selector */}
+            <div className="filter-box month-filter-box">
+              <Calendar size={16} className="filter-icon" />
+              <select
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(e.target.value)}
+                className="input select-filter month-select"
+              >
+                {monthsList.map(m => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
+            </div>
+
+            {/* Turn Selector */}
+            <div className="filter-box turn-filter-box">
+              <Clock size={16} className="filter-icon" />
+              <select
+                value={selectedTurn}
+                onChange={(e) => setSelectedTurn(e.target.value)}
+                className="input select-filter turn-select"
+              >
+                {turnsList.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="search-box">
+              <Search size={16} className="search-icon" />
+              <input
+                type="text"
+                placeholder="Buscar alumno o curso..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="input search-input"
+              />
+            </div>
+
+            <div className="filter-box course-filter-box">
+              <Filter size={16} className="filter-icon" />
+              <select
+                value={courseFilter}
+                onChange={(e) => setCourseFilter(e.target.value)}
+                className="input select-filter"
+              >
+                <option value="">Todos los cursos</option>
+                {uniqueCourses.map(course => (
+                  <option key={course} value={course}>{course}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="actions-group">
+            <button 
+              className="btn btn-outline btn-quick-settle-all" 
+              onClick={handleSettleAllCurrentTurn} 
+              disabled={data.length === 0}
+              title="Pone al día a todos los alumnos que tienen saldo negativo en este turno (0 Bs / Verde)"
             >
-              {monthsList.map(m => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
-            </select>
-          </div>
+              <CheckCheck size={16} />
+              <span>Saldar Turno</span>
+            </button>
 
-          {/* Turn Selector */}
-          <div className="filter-box turn-filter-box">
-            <Clock size={18} className="filter-icon" />
-            <select
-              value={selectedTurn}
-              onChange={(e) => setSelectedTurn(e.target.value)}
-              className="input select-filter turn-select"
+            <button 
+              className="btn btn-outline btn-quick-month-all" 
+              onClick={handleSetFullMonthAllCurrentTurn} 
+              disabled={data.length === 0}
+              title={`Carga el pago del mes completo (${currentMonthDays.length} días) a todos los alumnos del turno`}
             >
-              {turnsList.map(t => (
-                <option key={t.value} value={t.value}>{t.label}</option>
-              ))}
-            </select>
+              <Coins size={16} />
+              <span>Mes Completo</span>
+            </button>
+
+            <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
+              <Download size={16} />
+              <span>CSV</span>
+            </button>
+
+            <button className="btn btn-primary btn-add-student" onClick={handleAddRow}>
+              <Plus size={16} />
+              <span>+ Alumno</span>
+            </button>
           </div>
-
-          <div className="search-box">
-            <Search size={18} className="search-icon" />
-            <input
-              type="text"
-              placeholder="Buscar por alumno, curso..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="input search-input"
-            />
-          </div>
-
-          <div className="filter-box">
-            <Filter size={18} className="filter-icon" />
-            <select
-              value={courseFilter}
-              onChange={(e) => setCourseFilter(e.target.value)}
-              className="input select-filter"
-            >
-              <option value="">Todos los cursos</option>
-              {uniqueCourses.map(course => (
-                <option key={course} value={course}>{course}</option>
-              ))}
-            </select>
-          </div>
-
-          <button className="btn btn-outline" onClick={handleExport} disabled={data.length === 0}>
-            <Download size={18} />
-            <span>Exportar CSV</span>
-          </button>
-
-          <button 
-            className="btn btn-outline btn-quick-settle-all" 
-            onClick={handleSettleAllCurrentTurn} 
-            disabled={data.length === 0}
-            title="Pone al día a todos los alumnos que tienen saldo negativo en este turno (0 Bs / Verde)"
-          >
-            <CheckCheck size={18} />
-            <span>Saldar Turno</span>
-          </button>
-
-          <button 
-            className="btn btn-outline btn-quick-month-all" 
-            onClick={handleSetFullMonthAllCurrentTurn} 
-            disabled={data.length === 0}
-            title={`Carga el pago del mes completo (${currentMonthDays.length} días) a todos los alumnos del turno`}
-          >
-            <Coins size={18} />
-            <span>Mes Completo a Todos</span>
-          </button>
-
-          <button className="btn btn-primary" onClick={handleAddRow}>
-            <Plus size={18} />
-            <span>Agregar Alumno</span>
-          </button>
         </div>
       </div>
 

@@ -3,6 +3,8 @@ import { useLocation } from 'react-router-dom';
 import './Header.css';
 
 const TITLE_BY_PATH = {
+  '/': 'Planilla de Cobros',
+  '/cobros': 'Planilla de Cobros',
   '/padres-alumnos': 'Padres / Alumnos',
   '/menu-tradicional': 'Menú Tradicional',
   '/menu-fit': 'Menú Fit',

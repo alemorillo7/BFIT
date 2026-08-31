@@ -1,35 +1,34 @@
 .layout-container {
   display: flex;
+  width: 100vw;
   min-height: 100dvh;
   height: 100dvh;
   background-color: var(--color-background);
   overflow: hidden;
+  position: relative;
 }
 
 .sidebar-wrapper {
+  flex-shrink: 0;
   z-index: 50;
+  height: 100vh;
 }
 
 .main-content {
   flex: 1;
-  margin-left: var(--sidebar-width);
-  min-height: 0;
+  min-width: 0;
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  transition: margin-left var(--transition-normal);
   overflow: hidden;
-}
-
-.layout-container.sidebar-collapsed .main-content {
-  margin-left: 80px;
+  background-color: var(--color-background);
 }
 
 .content-area {
   flex: 1;
   min-height: 0;
-  padding: 14px;
-  overflow: auto;
+  padding: 1.25rem;
+  overflow-y: auto;
   overflow-x: hidden;
   overscroll-behavior: contain;
 }
@@ -39,30 +38,28 @@
   position: fixed;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.5);
-  z-index: 40;
+  z-index: 45;
   opacity: 0;
   pointer-events: none;
   transition: opacity var(--transition-normal);
 }
 
-@media (max-width: 1440px) and (min-width: 1025px) {
-  .layout-container {
-    --sidebar-width: 220px;
-  }
-
+@media (max-width: 1200px) and (min-width: 769px) {
   .content-area {
-    padding: 10px;
+    padding: 0.85rem;
   }
 }
 
-@media (max-width: 1024px) {
-  .main-content,
-  .layout-container.sidebar-collapsed .main-content {
-    margin-left: 72px;
+@media (max-width: 768px) {
+  .sidebar-wrapper {
+    position: fixed;
+    left: 0;
+    top: 0;
+    z-index: 50;
   }
-  
+
   .content-area {
-    padding: 10px;
+    padding: 0.75rem;
   }
 
   .sidebar-overlay {
@@ -72,12 +69,5 @@
   .sidebar-overlay.open {
     opacity: 1;
     pointer-events: auto;
-  }
-}
-
-@media (max-width: 640px) {
-  .main-content,
-  .layout-container.sidebar-collapsed .main-content {
-    margin-left: 0;
   }
 }

@@ -1,211 +1,543 @@
 .cobros-container {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem;
+  gap: 1rem;
+  padding: 0;
   max-width: 100%;
   overflow-x: hidden;
-  animation: fadeIn 0.4s ease;
+  animation: fadeIn 0.3s ease;
 }
 
+/* Header Card */
 .cobros-header {
   display: flex;
   flex-direction: column;
-  gap: 1.25rem;
-  padding: 1.5rem;
+  gap: 0.85rem;
+  padding: 1rem 1.25rem;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
 }
 
-@media (min-width: 768px) {
-  .cobros-header {
-    flex-direction: row;
-    justify-content: space-between;
-    align-items: center;
-  }
+.title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
 }
 
-.cobros-header .title-section h1 {
-  font-size: 1.75rem;
+.title-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.title-with-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.title-with-badge h1 {
+  font-size: 1.4rem;
   font-weight: 700;
-  margin: 0 0 0.25rem 0;
-  color: var(--text-color);
+  margin: 0;
+  color: var(--color-text);
+  letter-spacing: -0.02em;
 }
 
-.cobros-header .title-section .subtitle {
-  font-size: 0.9rem;
-  color: var(--text-muted);
+.badge-turn-indicator {
+  font-size: 0.72rem;
+  font-weight: 600;
+  background-color: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+}
+
+.sync-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: var(--color-text-muted);
+  background-color: var(--color-background);
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid var(--color-border);
+}
+
+.subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
   margin: 0;
 }
 
-.cobros-header .controls-section {
+/* Summary Stats Chips */
+.stats-chips-container {
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
   align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
 }
 
-.cobros-header .search-box, 
-.cobros-header .filter-box {
+.stat-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background-color: var(--color-background);
+  padding: 0.3rem 0.65rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  font-size: 0.78rem;
+  font-weight: 500;
+}
+
+.stat-label {
+  color: var(--color-text-muted);
+}
+
+.stat-value {
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.stat-chip--danger {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.stat-chip--success {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+/* Toolbar: Filters & Actions */
+.controls-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.filters-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.actions-group {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.filter-box {
   position: relative;
-  min-width: 200px;
 }
 
-.cobros-header .search-icon, 
-.cobros-header .filter-icon {
+.filter-icon {
   position: absolute;
-  left: 10px;
+  left: 9px;
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-muted);
+  color: var(--color-text-muted);
+  pointer-events: none;
 }
 
-.cobros-header .search-input {
-  padding-left: 2.25rem;
+.month-filter-box .select-filter {
+  min-width: 145px;
+  font-weight: 600;
+  color: #065f46;
+  background-color: #ecfdf5;
+  border-color: #a7f3d0;
 }
 
-.cobros-header .select-filter {
-  padding-left: 2.25rem;
-  appearance: none;
+.turn-filter-box .select-filter {
+  min-width: 135px;
+  font-weight: 600;
+  color: #92400e;
+  background-color: #fffbeb;
+  border-color: #fde68a;
+}
+
+.search-box {
+  position: relative;
+  min-width: 180px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--color-text-muted);
+  pointer-events: none;
+}
+
+.search-input {
+  padding: 0.4rem 0.65rem 0.4rem 2rem;
+  font-size: 0.8rem;
+  height: 34px;
+}
+
+.select-filter {
+  padding: 0.4rem 0.65rem 0.4rem 2rem;
+  font-size: 0.8rem;
+  height: 34px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background-color: var(--color-surface);
+  color: var(--color-text);
   cursor: pointer;
 }
 
+.btn-quick-settle-all {
+  height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #059669 !important;
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  border-radius: var(--radius-md);
+}
+
+.btn-quick-settle-all:hover:not(:disabled) {
+  background-color: #059669 !important;
+  color: white !important;
+  border-color: #059669 !important;
+}
+
+.btn-quick-month-all {
+  height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #d97706 !important;
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+  border-radius: var(--radius-md);
+}
+
+.btn-quick-month-all:hover:not(:disabled) {
+  background-color: #d97706 !important;
+  color: white !important;
+  border-color: #d97706 !important;
+}
+
+.btn-export {
+  height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+}
+
+.btn-add-student {
+  height: 34px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* Error Alert */
 .error-alert {
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 1rem;
-  background-color: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  color: #ef4444;
-  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
 }
 
-.error-alert button {
-  margin-left: auto;
+/* Table Wrapper */
+.table-wrapper {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1rem;
+  gap: 0.75rem;
+  color: var(--color-text-muted);
+  font-size: 0.88rem;
 }
 
 /* Excel Table Container */
 .excel-table-container {
   overflow-x: auto;
   max-width: 100%;
-  border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  max-height: calc(100vh - 210px);
+  position: relative;
 }
 
 .excel-table {
   width: 100%;
-  border-collapse: collapse;
-  font-size: 0.74rem;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.72rem;
   text-align: left;
 }
 
 .excel-table th, 
 .excel-table td {
-  border: 1px solid var(--border-color);
-  padding: 0.15rem 0.2rem;
+  border-bottom: 1px solid var(--color-border);
+  border-right: 1px solid var(--color-border);
+  padding: 0.18rem 0.22rem;
   vertical-align: middle;
+  box-sizing: border-box;
 }
 
-/* Header Cells */
-.excel-table th {
-  background-color: var(--bg-card);
-  color: var(--text-color);
-  font-weight: 600;
-  text-align: center;
-}
-
+/* Header Rows */
 .excel-table tr.main-header-row th {
-  padding: 0.3rem 0.4rem;
-  font-size: 0.74rem;
+  background-color: #f1f5f9;
+  color: #334155;
+  font-weight: 700;
+  font-size: 0.7rem;
+  text-align: center;
+  padding: 0.35rem 0.3rem;
+  border-top: 1px solid var(--color-border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
 }
 
 .excel-table tr.days-header-row th {
-  padding: 0.15rem 0.1rem;
-  font-size: 0.68rem;
-  background-color: var(--bg-body);
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  font-size: 0.65rem;
+  text-align: center;
+  padding: 0.2rem 0.1rem;
+  position: sticky;
+  top: 28px;
+  z-index: 10;
 }
 
-/* Column Widths */
-.col-nro { width: 30px; }
-.col-alumno { width: 140px; min-width: 130px; }
-.col-curso { width: 45px; }
-.col-turno { width: 50px; text-align: center; }
-.col-date { width: 62px; }
-.col-obs { width: 100px; min-width: 80px; }
-.col-day { width: 26px; min-width: 26px; text-align: center; }
-.col-total { width: 55px; text-align: center; }
-.col-balance-input { width: 88px; min-width: 85px; text-align: center; }
-.col-balance { width: 75px; text-align: center; }
-.col-color { width: 90px; }
-.col-actions { width: 35px; }
+.col-month-header {
+  background-color: #e2e8f0 !important;
+  color: #1e293b !important;
+  letter-spacing: 0.04em;
+}
+
+/* Column Dimensions */
+.col-nro { width: 32px; min-width: 32px; text-align: center; }
+.col-alumno { width: 145px; min-width: 140px; }
+.col-curso { width: 50px; min-width: 48px; }
+.col-turno { width: 48px; min-width: 46px; text-align: center; }
+.col-date { width: 58px; min-width: 55px; }
+.col-obs { width: 95px; min-width: 80px; }
+.col-day { width: 24px; min-width: 24px; text-align: center; }
+.col-total { width: 52px; min-width: 50px; text-align: center; }
+.col-balance-input { width: 84px; min-width: 80px; text-align: center; }
+.col-balance { width: 72px; min-width: 68px; text-align: center; }
+.col-color { width: 85px; min-width: 80px; }
+.col-actions { width: 34px; min-width: 32px; text-align: center; }
+
+/* Sticky Columns on Nro and Alumno */
+.excel-table th.col-nro,
+.excel-table td.cell-nro {
+  position: sticky;
+  left: 0;
+  z-index: 5;
+  background-color: #ffffff;
+}
+
+.excel-table th.col-alumno,
+.excel-table td.cell-alumno {
+  position: sticky;
+  left: 32px;
+  z-index: 5;
+  background-color: #ffffff;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
+  border-right: 2px solid #cbd5e1 !important;
+}
+
+.excel-table tr.main-header-row th.col-nro,
+.excel-table tr.main-header-row th.col-alumno {
+  z-index: 15;
+  background-color: #f1f5f9;
+}
 
 /* Cell Inputs */
 .cell-input {
   width: 100%;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-color);
-  padding: 0.15rem 0.25rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  transition: all 0.2s ease;
+  color: var(--color-text);
+  padding: 0.12rem 0.2rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
+  font-family: inherit;
+  transition: all 0.15s ease;
 }
 
 .cell-input:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-color);
+  background-color: rgba(0, 0, 0, 0.03);
+  border-color: var(--color-border);
 }
 
 .cell-input:focus {
-  background-color: var(--bg-body);
-  border-color: var(--primary-color);
+  background-color: #ffffff;
+  border-color: var(--color-primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
 }
 
 .cell-day-input {
   width: 100%;
   background: transparent;
   border: 1px solid transparent;
-  color: var(--text-color);
+  color: var(--color-text);
   padding: 0.1rem 0;
-  border-radius: 4px;
-  font-size: 0.72rem;
-  transition: all 0.2s ease;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  text-align: center;
+  font-family: inherit;
+  transition: all 0.15s ease;
 }
 
 .cell-day-input:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-color);
+  background-color: rgba(0, 0, 0, 0.04);
+  border-color: var(--color-border);
 }
 
 .cell-day-input:focus {
-  background-color: var(--bg-body);
-  border-color: var(--primary-color);
+  background-color: #ffffff;
+  border-color: var(--color-primary);
   outline: none;
 }
 
-/* Highlighting values */
-.cell-day-input[value="1"],
-.cell-day-input[value="MENU FIT"],
-.cell-day-input[value="menu fit"] {
-  font-weight: bold;
-  color: var(--primary-color);
+.cell-day-input--falta {
+  font-weight: 700 !important;
+  color: #dc2626 !important;
+  background-color: #fee2e2 !important;
+  border-color: #fca5a5 !important;
+  border-radius: 3px;
 }
 
-/* Backgrounds */
-.bg-light {
-  background-color: var(--bg-body);
+/* Table Row Hovers & Colored Variants */
+.excel-row:hover td {
+  background-color: #f8fafc;
 }
 
-.text-bold {
-  font-weight: 600;
+.excel-row.row-color--verde td {
+  background-color: #f0fdf4 !important;
+  border-color: #dcfce7 !important;
 }
 
-.text-center {
+.excel-row.row-color--azul td {
+  background-color: #eff6ff !important;
+  border-color: #dbeafe !important;
+}
+
+.excel-row.row-color--amarillo td {
+  background-color: #fefce8 !important;
+  border-color: #fef08a !important;
+}
+
+.excel-row.row-color--fff2cc td {
+  background-color: #fffbeb !important;
+  border-color: #fde68a !important;
+}
+
+.excel-row.row-color--naranja td {
+  background-color: #fff7ed !important;
+  border-color: #ffedd5 !important;
+}
+
+/* Balance & Quick Pay in Cell */
+.balance-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.cell-balance-input-field {
+  width: 100%;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--color-text);
+  padding: 0.1rem 0.2rem;
+  border-radius: 3px;
+  font-size: 0.72rem;
   text-align: center;
+  font-weight: 600;
+  font-family: inherit;
 }
 
-/* Select Color Dots Picker */
+.cell-balance-input-field:hover {
+  background-color: rgba(0, 0, 0, 0.03);
+  border-color: var(--color-border);
+}
+
+.cell-balance-input-field:focus {
+  background-color: #ffffff;
+  border-color: var(--color-primary);
+  outline: none;
+}
+
+.quick-pay-chips {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+  width: 100%;
+}
+
+.quick-chip {
+  font-size: 0.58rem;
+  font-weight: 700;
+  padding: 1px 3px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  line-height: 1;
+  text-transform: uppercase;
+  transition: all 0.15s ease;
+}
+
+.chip-settle {
+  background-color: #d1fae5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.chip-settle:hover {
+  background-color: #059669;
+  color: white;
+}
+
+.chip-month {
+  background-color: #dbeafe;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.chip-month:hover {
+  background-color: #2563eb;
+  color: white;
+}
+
+/* Color Dot Picker */
 .color-dots-picker {
   display: flex;
   gap: 3px;
@@ -214,15 +546,13 @@
 }
 
 .color-dot {
-  width: 10px;
-  height: 10px;
+  width: 9px;
+  height: 9px;
   border-radius: 50%;
   border: 1px solid var(--color-border);
   cursor: pointer;
   padding: 0;
   transition: all 0.15s ease;
-  background-color: transparent;
-  flex-shrink: 0;
 }
 
 .color-dot:hover {
@@ -230,78 +560,66 @@
 }
 
 .color-dot.active {
-  box-shadow: 0 0 0 1px var(--color-surface), 0 0 0 2px var(--color-primary);
-  border-color: white !important;
+  box-shadow: 0 0 0 1px #ffffff, 0 0 0 2px #0f172a;
 }
 
-.color-dot.dot-none { background-color: #94a3b8; border-color: #64748b; }
+.color-dot.dot-none { background-color: #cbd5e1; border-color: #94a3b8; }
 .color-dot.dot-fff2cc { background-color: #fde047; border-color: #eab308; }
 .color-dot.dot-verde { background-color: #4ade80; border-color: #22c55e; }
 .color-dot.dot-azul { background-color: #60a5fa; border-color: #3b82f6; }
 .color-dot.dot-amarillo { background-color: #eab308; border-color: #ca8a04; }
 .color-dot.dot-naranja { background-color: #fb923c; border-color: #f97316; }
 
-/* Row Color Classes (mapped to Excel styles & App theme) */
-.row-color--fff2cc {
-  background-color: rgba(255, 242, 204, 0.08) !important;
-}
-.row-color--fff2cc td {
-  border-color: rgba(255, 242, 204, 0.2) !important;
-}
-.row-color--fff2cc .cell-input,
-.row-color--fff2cc .cell-day-input {
-  color: #ffe082 !important;
-}
-
-.row-color--verde {
-  background-color: rgba(16, 185, 129, 0.08) !important;
-}
-.row-color--verde td {
-  border-color: rgba(16, 185, 129, 0.2) !important;
-}
-.row-color--verde .cell-input,
-.row-color--verde .cell-day-input {
-  color: #34d399 !important;
+/* Empty state card */
+.empty-state-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 2.5rem 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  gap: 0.75rem;
+  max-width: 540px;
+  margin: 1.5rem auto;
+  box-shadow: var(--shadow-sm);
 }
 
-.row-color--azul {
-  background-color: rgba(59, 130, 246, 0.08) !important;
-}
-.row-color--azul td {
-  border-color: rgba(59, 130, 246, 0.2) !important;
-}
-.row-color--azul .cell-input,
-.row-color--azul .cell-day-input {
-  color: #60a5fa !important;
+.empty-calendar-icon {
+  color: var(--color-primary);
+  opacity: 0.85;
 }
 
-.row-color--amarillo {
-  background-color: rgba(245, 158, 11, 0.08) !important;
-}
-.row-color--amarillo td {
-  border-color: rgba(245, 158, 11, 0.2) !important;
-}
-.row-color--amarillo .cell-input,
-.row-color--amarillo .cell-day-input {
-  color: #fbbf24 !important;
+.empty-state-card h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  margin: 0;
 }
 
-.row-color--naranja {
-  background-color: rgba(249, 115, 22, 0.08) !important;
-}
-.row-color--naranja td {
-  border-color: rgba(249, 115, 22, 0.2) !important;
-}
-.row-color--naranja .cell-input,
-.row-color--naranja .cell-day-input {
-  color: #ff7849 !important;
+.empty-state-card p {
+  font-size: 0.84rem;
+  color: var(--color-text-muted);
+  margin: 0;
+  line-height: 1.4;
 }
 
-/* Spinner and Saving effects */
-.row-saving {
-  opacity: 0.7;
+.empty-state-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
 }
 
+.text-bold { font-weight: 700; }
+.text-center { text-align: center; }
+.text-danger { color: #dc2626 !important; }
+.text-success { color: #059669 !important; }
+.text-info { color: #2563eb !important; }
+.text-muted { color: #64748b !important; }
+.text-primary { color: #059669 !important; }
+
+/* Spinner */
 .spinner {
   animation: spin 1s linear infinite;
 }
@@ -317,323 +635,19 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
+  from { opacity: 0; transform: translateY(6px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-/* Actions cell alignment */
-.action-row {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* --- Mobile & Sticky Columns Optimizations --- */
-
-/* Enable sticky columns on Nro and Alumno */
-.excel-table th.col-nro,
-.excel-table td.cell-nro {
-  position: sticky;
-  left: 0;
-  z-index: 5;
-  background-color: var(--color-surface);
-  box-shadow: inset -1px 0 0 var(--color-border);
-}
-
-.excel-table th.col-alumno,
-.excel-table td.cell-alumno {
-  position: sticky;
-  left: 30px; /* Width of Nro column */
-  z-index: 5;
-  background-color: var(--color-surface);
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05), inset -1px 0 0 var(--color-border);
-  border-right: 2px solid var(--color-border) !important;
-}
-
-/* Ensure row color overlay handles sticky cell backgrounds */
-.excel-table tr.excel-row td.cell-nro,
-.excel-table tr.excel-row td.cell-alumno {
-  transition: background-color 0.2s ease;
-}
-
-.excel-row.row-color--fff2cc td.cell-nro,
-.excel-row.row-color--fff2cc td.cell-alumno {
-  background-color: #fffbf0 !important;
-}
-.excel-row.row-color--verde td.cell-nro,
-.excel-row.row-color--verde td.cell-alumno {
-  background-color: #f0fdf4 !important;
-}
-.excel-row.row-color--azul td.cell-nro,
-.excel-row.row-color--azul td.cell-alumno {
-  background-color: #eff6ff !important;
-}
-.excel-row.row-color--amarillo td.cell-nro,
-.excel-row.row-color--amarillo td.cell-alumno {
-  background-color: #fefbeb !important;
-}
-.excel-row.row-color--naranja td.cell-nro,
-.excel-row.row-color--naranja td.cell-alumno {
-  background-color: #fff7ed !important;
-}
-
-/* Fix z-index for headers */
-.excel-table tr.main-header-row th.col-nro,
-.excel-table tr.main-header-row th.col-alumno {
-  z-index: 6;
-  background-color: var(--color-background);
-}
-
-/* Adjust row headers on scroll */
-.excel-table-container {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Mobile responsive styling for controls and headers */
-@media (max-width: 768px) {
-  .cobros-container {
-    padding: 0.75rem;
-    gap: 1rem;
+@media (max-width: 900px) {
+  .controls-toolbar {
+    flex-direction: column;
+    align-items: stretch;
   }
-  
-  .cobros-header {
-    padding: 1rem;
-  }
-  
-  .cobros-header .controls-section {
+
+  .filters-group,
+  .actions-group {
     width: 100%;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.5rem;
+    justify-content: flex-start;
   }
-  
-  .cobros-header .search-box,
-  .cobros-header .filter-box,
-  .cobros-header button {
-    width: 100%;
-    min-width: 0;
-  }
-  
-  /* Make horizontal scrolling obvious on mobile */
-  .excel-table-container::after {
-    content: '← Desliza horizontalmente para ver más días →';
-    display: block;
-    text-align: center;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    padding: 0.5rem;
-    background-color: var(--color-background);
-    border-top: 1px solid var(--color-border);
-  }
-}
-
-/* Empty Month State Card */
-.empty-state-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 3rem 2rem;
-  background: var(--color-surface);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-lg);
-  gap: 1rem;
-  max-width: 600px;
-  margin: 2rem auto;
-  box-shadow: var(--shadow-md);
-  animation: fadeIn 0.4s ease;
-}
-
-.empty-calendar-icon {
-  color: var(--color-primary);
-  opacity: 0.8;
-  margin-bottom: 0.5rem;
-}
-
-.empty-state-card h3 {
-  font-size: 1.35rem;
-  font-weight: 600;
-  margin: 0;
-  color: var(--color-text);
-}
-
-.empty-state-card p {
-  font-size: 0.9rem;
-  color: var(--color-text-muted);
-  max-width: 420px;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.empty-state-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-  justify-content: center;
-  margin-top: 1rem;
-}
-
-.month-filter-box {
-  min-width: 170px !important;
-}
-
-.month-select {
-  font-weight: 600;
-  color: var(--color-primary-dark) !important;
-  border-color: var(--color-primary-light) !important;
-  background-color: var(--color-primary-light) !important;
-}
-
-.month-select:hover {
-  background-color: rgba(16, 185, 129, 0.15) !important;
-}
-
-.turn-filter-box {
-  min-width: 170px !important;
-}
-
-.turn-select {
-  font-weight: 600;
-  color: var(--color-secondary-dark) !important;
-  border-color: #fef3c7 !important;
-  background-color: #fef3c7 !important;
-}
-
-.turn-select:hover {
-  background-color: #fde68a !important;
-}
-
-/* Balance column cell styling */
-.cell-balance-input {
-  text-align: center;
-  padding: 0.1rem 0.2rem !important;
-}
-
-.cell-balance-input-field {
-  width: 100%;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--text-color);
-  padding: 0.15rem 0.25rem;
-  border-radius: 4px;
-  font-size: 0.75rem;
-  font-family: inherit;
-  transition: all 0.2s ease;
-}
-
-.cell-balance-input-field:hover {
-  background-color: rgba(255, 255, 255, 0.05);
-  border-color: var(--border-color);
-}
-
-.cell-balance-input-field:focus {
-  background-color: var(--bg-body);
-  border-color: var(--primary-color);
-  outline: none;
-}
-
-.cell-balance {
-  font-size: 0.75rem;
-}
-
-.text-danger {
-  color: #ef4444 !important;
-}
-
-.text-info {
-  color: #3b82f6 !important;
-}
-
-.text-success {
-  color: #10b981 !important;
-}
-
-.cell-day-input--falta {
-  font-weight: bold !important;
-  color: #ef4444 !important; /* soft red */
-  background-color: rgba(239, 68, 68, 0.12) !important;
-  border-color: rgba(239, 68, 68, 0.25) !important;
-}
-
-/* Quick Pay Button and Chips Styles */
-.balance-input-wrapper {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 2px;
-}
-
-.quick-pay-chips {
-  display: flex;
-  gap: 3px;
-  justify-content: center;
-  width: 100%;
-}
-
-.quick-chip {
-  font-size: 0.62rem;
-  font-weight: 600;
-  padding: 1px 4px;
-  border-radius: 3px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  transition: all 0.15s ease;
-  line-height: 1.1;
-  text-transform: uppercase;
-}
-
-.chip-settle {
-  background-color: rgba(16, 185, 129, 0.12);
-  color: #10b981;
-  border-color: rgba(16, 185, 129, 0.3);
-}
-
-.chip-settle:hover {
-  background-color: #10b981;
-  color: white;
-  transform: scale(1.05);
-}
-
-.chip-month {
-  background-color: rgba(59, 130, 246, 0.12);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.3);
-}
-
-.chip-month:hover {
-  background-color: #3b82f6;
-  color: white;
-  transform: scale(1.05);
-}
-
-/* Global Quick Action Buttons in Header */
-.btn-quick-settle-all {
-  color: #10b981 !important;
-  border-color: rgba(16, 185, 129, 0.4) !important;
-  background-color: rgba(16, 185, 129, 0.08) !important;
-  font-weight: 600;
-}
-
-.btn-quick-settle-all:hover:not(:disabled) {
-  background-color: #10b981 !important;
-  color: white !important;
-  border-color: #10b981 !important;
-  transform: translateY(-1px);
-}
-
-.btn-quick-month-all {
-  color: #f59e0b !important;
-  border-color: rgba(245, 158, 11, 0.4) !important;
-  background-color: rgba(245, 158, 11, 0.08) !important;
-  font-weight: 600;
-}
-
-.btn-quick-month-all:hover:not(:disabled) {
-  background-color: #f59e0b !important;
-  color: white !important;
-  border-color: #f59e0b !important;
-  transform: translateY(-1px);
 }

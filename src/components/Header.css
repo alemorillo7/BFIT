@@ -141,7 +141,7 @@
   margin-left: 0.5rem;
 }
 
-@media (max-width: 1500px) and (min-width: 1025px) {
+@media (max-width: 1440px) and (min-width: 769px) {
   .header {
     height: 60px;
     padding: 0 1.25rem;
@@ -152,19 +152,20 @@
   }
 
   .page-title {
-    font-size: 1.1rem;
+    font-size: 1.15rem;
+    font-weight: 600;
   }
 
   .user-name {
-    font-size: 0.8rem;
+    font-size: 0.82rem;
   }
 
   .user-role {
-    font-size: 0.68rem;
+    font-size: 0.7rem;
   }
 }
 
-@media (max-width: 1500px) {
+@media (max-width: 768px) {
   .mobile-toggle {
     display: flex;
   }
@@ -175,6 +176,7 @@
     display: none;
   }
   .header {
+    height: 56px;
     padding: 0 1rem;
   }
 }
