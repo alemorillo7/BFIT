@@ -77,6 +77,11 @@ const getWorkingDaysOfMonth = (yearMonth) => {
     return days.filter(d => d.dayNum !== 6 && d.dayNum !== 7);
   }
   
+  // Specific override for September 2026: skip Wed 2, Fri 18, and Mon 21 - Fri 25 (recess/holidays)
+  if (yearMonth === '2026-09') {
+    return days.filter(d => d.dayNum !== 2 && d.dayNum !== 18 && !(d.dayNum >= 21 && d.dayNum <= 25));
+  }
+  
   return days;
 };
 
