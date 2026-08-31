@@ -166,21 +166,30 @@ export default function CobrosView() {
     const oldRow = data[rowIndex];
     let updatedRow = { ...oldRow };
 
+    const isMerienda = (obs) => String(obs || '').toLowerCase().includes('merienda');
+
     if (key === 'alumno' || key === 'curso' || key === 'turno' || key === 'fecha_inicio' || key === 'fecha_fin' || key === 'observaciones' || key === 'pagos_bs' || key === 'saldo_merienditas') {
       if (key === 'pagos_bs' || key === 'saldo_merienditas') {
         const numVal = Number(value || 0);
         updatedRow[key] = numVal;
         if (key === 'pagos_bs') {
           const net = numVal - Number(updatedRow.platos_vendidos_bs || 0);
-          updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+          updatedRow.color = isMerienda(updatedRow.observaciones) ? 'Amarillo' : (net >= 0 ? 'Verde' : 'Azul');
         }
       } else {
         updatedRow[key] = value;
-        if (key === 'curso') {
+        if (key === 'observaciones') {
+          if (isMerienda(value)) {
+            updatedRow.color = 'Amarillo';
+          } else {
+            const net = Number(updatedRow.pagos_bs || 0) - Number(updatedRow.platos_vendidos_bs || 0);
+            updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+          }
+        } else if (key === 'curso') {
           const totals = calculateRowTotals(updatedRow.asistencias, value);
           updatedRow = { ...updatedRow, ...totals };
           const net = Number(updatedRow.pagos_bs || 0) - totals.platos_vendidos_bs;
-          updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+          updatedRow.color = isMerienda(updatedRow.observaciones) ? 'Amarillo' : (net >= 0 ? 'Verde' : 'Azul');
         }
       }
     } else {
@@ -200,7 +209,7 @@ export default function CobrosView() {
       const totals = calculateRowTotals(newAsistencias, updatedRow.curso);
       updatedRow = { ...updatedRow, ...totals };
       const net = Number(updatedRow.pagos_bs || 0) - totals.platos_vendidos_bs;
-      updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+      updatedRow.color = isMerienda(updatedRow.observaciones) ? 'Amarillo' : (net >= 0 ? 'Verde' : 'Azul');
 
       // Real-time two-way synchronization of absences (Faltas) with Google Sheets
       const formattedDate = `${selectedMonth}-${String(key).padStart(2, '0')}`;
