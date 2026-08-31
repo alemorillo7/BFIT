@@ -133,7 +133,7 @@
 .col-obs { width: 100px; min-width: 80px; }
 .col-day { width: 26px; min-width: 26px; text-align: center; }
 .col-total { width: 55px; text-align: center; }
-.col-balance-input { width: 70px; text-align: center; }
+.col-balance-input { width: 88px; min-width: 85px; text-align: center; }
 .col-balance { width: 75px; text-align: center; }
 .col-color { width: 90px; }
 .col-actions { width: 35px; }
@@ -556,4 +556,84 @@
   color: #ef4444 !important; /* soft red */
   background-color: rgba(239, 68, 68, 0.12) !important;
   border-color: rgba(239, 68, 68, 0.25) !important;
+}
+
+/* Quick Pay Button and Chips Styles */
+.balance-input-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.quick-pay-chips {
+  display: flex;
+  gap: 3px;
+  justify-content: center;
+  width: 100%;
+}
+
+.quick-chip {
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 1px 4px;
+  border-radius: 3px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+  line-height: 1.1;
+  text-transform: uppercase;
+}
+
+.chip-settle {
+  background-color: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  border-color: rgba(16, 185, 129, 0.3);
+}
+
+.chip-settle:hover {
+  background-color: #10b981;
+  color: white;
+  transform: scale(1.05);
+}
+
+.chip-month {
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.chip-month:hover {
+  background-color: #3b82f6;
+  color: white;
+  transform: scale(1.05);
+}
+
+/* Global Quick Action Buttons in Header */
+.btn-quick-settle-all {
+  color: #10b981 !important;
+  border-color: rgba(16, 185, 129, 0.4) !important;
+  background-color: rgba(16, 185, 129, 0.08) !important;
+  font-weight: 600;
+}
+
+.btn-quick-settle-all:hover:not(:disabled) {
+  background-color: #10b981 !important;
+  color: white !important;
+  border-color: #10b981 !important;
+  transform: translateY(-1px);
+}
+
+.btn-quick-month-all {
+  color: #f59e0b !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+  background-color: rgba(245, 158, 11, 0.08) !important;
+  font-weight: 600;
+}
+
+.btn-quick-month-all:hover:not(:disabled) {
+  background-color: #f59e0b !important;
+  color: white !important;
+  border-color: #f59e0b !important;
+  transform: translateY(-1px);
 }

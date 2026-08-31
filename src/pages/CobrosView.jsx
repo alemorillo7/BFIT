@@ -10,7 +10,9 @@ import {
   Filter,
   Calendar,
   RefreshCw,
-  Clock
+  Clock,
+  CheckCheck,
+  Coins
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
@@ -341,14 +343,216 @@ export default function CobrosView() {
     }
   };
 
+  // Quick action: Settle a single student's debt (set pagos_bs = platos_vendidos_bs -> saldo 0 Bs, Verde)
+  const handleSettleStudentDebt = async (rowId) => {
+    const rowIndex = data.findIndex(r => r.id === rowId);
+    if (rowIndex === -1) return;
+
+    const row = data[rowIndex];
+    const amountToSettle = Number(row.platos_vendidos_bs || 0);
+
+    const updatedRow = {
+      ...row,
+      pagos_bs: amountToSettle,
+      color: 'Verde'
+    };
+
+    const newData = [...data];
+    newData[rowIndex] = updatedRow;
+    setData(newData);
+
+    setSavingRows(prev => {
+      const next = new Set(prev);
+      next.add(rowId);
+      return next;
+    });
+
+    try {
+      const { error } = await supabaseCobros
+        .from('cobros')
+        .update({
+          pagos_bs: amountToSettle,
+          color: 'Verde',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rowId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error settling student debt:', err);
+      const reverted = [...data];
+      reverted[rowIndex] = row;
+      setData(reverted);
+      alert('Error al saldar la cuenta del alumno.');
+    } finally {
+      setSavingRows(prev => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+    }
+  };
+
+  // Quick action: Set full month payment for a single student
+  const handleSetFullMonthPayment = async (rowId) => {
+    const rowIndex = data.findIndex(r => r.id === rowId);
+    if (rowIndex === -1) return;
+
+    const row = data[rowIndex];
+    const workingDaysCount = currentMonthDays.length;
+    const pricePerPlate = getPricePerPlate(row.curso);
+    const fullMonthAmount = workingDaysCount * pricePerPlate;
+
+    const updatedRow = {
+      ...row,
+      pagos_bs: fullMonthAmount,
+      color: 'Verde'
+    };
+
+    const newData = [...data];
+    newData[rowIndex] = updatedRow;
+    setData(newData);
+
+    setSavingRows(prev => {
+      const next = new Set(prev);
+      next.add(rowId);
+      return next;
+    });
+
+    try {
+      const { error } = await supabaseCobros
+        .from('cobros')
+        .update({
+          pagos_bs: fullMonthAmount,
+          color: 'Verde',
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rowId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error setting full month payment:', err);
+      const reverted = [...data];
+      reverted[rowIndex] = row;
+      setData(reverted);
+      alert('Error al registrar el pago del mes completo.');
+    } finally {
+      setSavingRows(prev => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+    }
+  };
+
+  // Global action: Settle all students with pending debt in the current turn
+  const handleSettleAllCurrentTurn = async () => {
+    const turnStudentsInDebt = data.filter(r => 
+      r.turno === selectedTurn && (Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0))
+    );
+
+    if (turnStudentsInDebt.length === 0) {
+      alert(`Todos los alumnos del Turno ${selectedTurn} ya se encuentran al día o con saldo a favor.`);
+      return;
+    }
+
+    if (!window.confirm(`¿Deseas saldar a los ${turnStudentsInDebt.length} alumnos con saldo pendiente en el Turno ${selectedTurn}? Sus pagos se igualarán a sus consumos actuales (saldo 0 Bs / Al día).`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const updatedRows = [];
+
+      for (const st of turnStudentsInDebt) {
+        const amount = Number(st.platos_vendidos_bs || 0);
+        const { error } = await supabaseCobros
+          .from('cobros')
+          .update({
+            pagos_bs: amount,
+            color: 'Verde',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', st.id);
+
+        if (error) throw error;
+        updatedRows.push({ ...st, pagos_bs: amount, color: 'Verde' });
+      }
+
+      setData(prev => prev.map(item => {
+        const match = updatedRows.find(u => u.id === item.id);
+        return match ? match : item;
+      }));
+
+      alert(`¡Se saldaron exitosamente ${updatedRows.length} alumnos del Turno ${selectedTurn}!`);
+    } catch (err) {
+      console.error('Error settling all students:', err);
+      alert('Ocurrió un error al saldar los alumnos del turno.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Global action: Set full month payment for all students in current turn
+  const handleSetFullMonthAllCurrentTurn = async () => {
+    const turnStudents = data.filter(r => r.turno === selectedTurn);
+
+    if (turnStudents.length === 0) {
+      alert(`No hay alumnos registrados en el Turno ${selectedTurn}.`);
+      return;
+    }
+
+    const workingDaysCount = currentMonthDays.length;
+    if (!window.confirm(`¿Deseas cargar el pago de MES COMPLETO (${workingDaysCount} días hábiles) a los ${turnStudents.length} alumnos del Turno ${selectedTurn}?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const updatedRows = [];
+
+      for (const st of turnStudents) {
+        const price = getPricePerPlate(st.curso);
+        const fullMonthAmount = workingDaysCount * price;
+
+        const { error } = await supabaseCobros
+          .from('cobros')
+          .update({
+            pagos_bs: fullMonthAmount,
+            color: 'Verde',
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', st.id);
+
+        if (error) throw error;
+        updatedRows.push({ ...st, pagos_bs: fullMonthAmount, color: 'Verde' });
+      }
+
+      setData(prev => prev.map(item => {
+        const match = updatedRows.find(u => u.id === item.id);
+        return match ? match : item;
+      }));
+
+      alert(`¡Se cargó el pago de mes completo a ${updatedRows.length} alumnos del Turno ${selectedTurn}!`);
+    } catch (err) {
+      console.error('Error setting full month for all students:', err);
+      alert('Ocurrió un error al cargar los pagos del mes.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Initialize a new month for the current turn with previous month's student names
   const handleInitializeMonth = async () => {
     const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
     const turnLabel = turnsList.find(t => t.value === selectedTurn)?.label;
+    const workingDaysCount = currentMonthDays.length;
     
-    if (!window.confirm(`¿Deseas inicializar el mes de ${monthLabel} para el ${turnLabel} con los alumnos de este mismo turno del último mes registrado? Todos los días comenzarán vacíos.`)) {
+    if (!window.confirm(`¿Deseas inicializar el mes de ${monthLabel} para el ${turnLabel} con los alumnos de este mismo turno del último mes registrado?`)) {
       return;
     }
+
+    const prepayMonth = window.confirm(`¿Deseas que los alumnos inicien con el pago del MES COMPLETO (${workingDaysCount} días) precargado?\n\n- Aceptar (OK): Precargar pago de mes completo en Verde\n- Cancelar: Iniciar con pagos en 0 Bs`);
 
     try {
       setLoading(true);
@@ -375,7 +579,7 @@ export default function CobrosView() {
           studentsToCopy = latestRecords.map(r => ({
             alumno: r.alumno,
             curso: r.curso,
-            color: r.color
+            color: prepayMonth ? 'Verde' : r.color
           }));
         }
       }
@@ -386,18 +590,22 @@ export default function CobrosView() {
       }
       
       // Create empty records for the selected month and turn
-      const newRecords = studentsToCopy.map(s => ({
-        alumno: s.alumno,
-        curso: s.curso,
-        color: s.color,
-        mes: selectedMonth,
-        turno: selectedTurn,
-        asistencias: {},
-        platos_vendidos: 0,
-        platos_vendidos_bs: 0,
-        pagos_bs: 0,
-        saldo_merienditas: 0
-      }));
+      const newRecords = studentsToCopy.map(s => {
+        const price = getPricePerPlate(s.curso);
+        const pagosBs = prepayMonth ? (workingDaysCount * price) : 0;
+        return {
+          alumno: s.alumno,
+          curso: s.curso,
+          color: prepayMonth ? 'Verde' : s.color,
+          mes: selectedMonth,
+          turno: selectedTurn,
+          asistencias: {},
+          platos_vendidos: 0,
+          platos_vendidos_bs: 0,
+          pagos_bs: pagosBs,
+          saldo_merienditas: 0
+        };
+      });
       
       const { data: inserted, error: insertErr } = await supabaseCobros
         .from('cobros')
@@ -781,6 +989,26 @@ export default function CobrosView() {
             <span>Exportar CSV</span>
           </button>
 
+          <button 
+            className="btn btn-outline btn-quick-settle-all" 
+            onClick={handleSettleAllCurrentTurn} 
+            disabled={data.length === 0}
+            title="Pone al día a todos los alumnos que tienen saldo negativo en este turno (0 Bs / Verde)"
+          >
+            <CheckCheck size={18} />
+            <span>Saldar Turno</span>
+          </button>
+
+          <button 
+            className="btn btn-outline btn-quick-month-all" 
+            onClick={handleSetFullMonthAllCurrentTurn} 
+            disabled={data.length === 0}
+            title={`Carga el pago del mes completo (${currentMonthDays.length} días) a todos los alumnos del turno`}
+          >
+            <Coins size={18} />
+            <span>Mes Completo a Todos</span>
+          </button>
+
           <button className="btn btn-primary" onClick={handleAddRow}>
             <Plus size={18} />
             <span>Agregar Alumno</span>
@@ -985,19 +1213,39 @@ export default function CobrosView() {
 
                         {/* Cargar Pago (Bs) */}
                         <td className="cell-balance-input">
-                          <input
-                            type="number"
-                            value={row.pagos_bs || ''}
-                            placeholder="0"
-                            onChange={(e) => {
-                              const newData = [...data];
-                              const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].pagos_bs = e.target.value;
-                              setData(newData);
-                            }}
-                            onBlur={(e) => handleCellChange(row.id, 'pagos_bs', e.target.value)}
-                            className="cell-balance-input-field text-center text-bold"
-                          />
+                          <div className="balance-input-wrapper">
+                            <input
+                              type="number"
+                              value={row.pagos_bs || ''}
+                              placeholder="0"
+                              onChange={(e) => {
+                                const newData = [...data];
+                                const idx = newData.findIndex(r => r.id === row.id);
+                                newData[idx].pagos_bs = e.target.value;
+                                setData(newData);
+                              }}
+                              onBlur={(e) => handleCellChange(row.id, 'pagos_bs', e.target.value)}
+                              className="cell-balance-input-field text-center text-bold"
+                            />
+                            <div className="quick-pay-chips">
+                              <button
+                                type="button"
+                                className="quick-chip chip-settle"
+                                onClick={() => handleSettleStudentDebt(row.id)}
+                                title="Saldar al día (igualar pago a platos consumidos)"
+                              >
+                                Saldar
+                              </button>
+                              <button
+                                type="button"
+                                className="quick-chip chip-month"
+                                onClick={() => handleSetFullMonthPayment(row.id)}
+                                title={`Pagar mes completo (${currentMonthDays.length} días = ${currentMonthDays.length * getPricePerPlate(row.curso)} Bs)`}
+                              >
+                                Mes
+                              </button>
+                            </div>
+                          </div>
                         </td>
 
                         {/* Saldo Almuerzo */}

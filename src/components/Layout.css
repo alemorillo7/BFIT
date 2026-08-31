@@ -45,7 +45,7 @@
   transition: opacity var(--transition-normal);
 }
 
-@media (max-width: 1500px) and (min-width: 1025px) {
+@media (max-width: 1440px) and (min-width: 1025px) {
   .layout-container {
     --sidebar-width: 220px;
   }
@@ -55,7 +55,7 @@
   }
 }
 
-@media (max-width: 1500px) {
+@media (max-width: 1024px) {
   .main-content,
   .layout-container.sidebar-collapsed .main-content {
     margin-left: 72px;
