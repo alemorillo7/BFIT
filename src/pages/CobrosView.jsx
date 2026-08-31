@@ -106,7 +106,8 @@ export default function CobrosView() {
         .from('cobros')
         .select('*')
         .eq('mes', selectedMonth)
-        .order('alumno', { ascending: true });
+        .order('alumno', { ascending: true })
+        .limit(5000);
         
       if (error) throw error;
       setData(cobrosData || []);
@@ -568,7 +569,8 @@ export default function CobrosView() {
       // Query the database to retrieve students across ALL turns and months
       const { data: allRecords, error: fetchErr } = await supabaseCobros
         .from('cobros')
-        .select('alumno, curso, turno, observaciones, color, mes');
+        .select('alumno, curso, turno, observaciones, color, mes')
+        .limit(5000);
         
       if (fetchErr) throw fetchErr;
       
@@ -1091,26 +1093,55 @@ export default function CobrosView() {
         </div>
       )}
 
-      {/* Empty month initialization message */}
-      {!loading && data.length === 0 && (
+      {/* Empty month or turn initialization message */}
+      {!loading && filteredData.length === 0 && (
         <div className="empty-state-card premium-card animate-fade-in">
           <Calendar size={48} className="empty-calendar-icon" />
-          <h3>No hay alumnos cargados en {monthsList.find(m => m.value === selectedMonth)?.label}</h3>
-          <p>Puedes inicializar automáticamente <strong>todos los turnos (11:50, 11:25, 12:00, 12:40 y 13:05)</strong> con la lista completa de alumnos del último mes registrado con un solo clic.</p>
-          <div className="empty-state-actions">
-            <button className="btn btn-primary" onClick={handleInitializeMonth}>
-              <RefreshCw size={18} />
-              <span>Inicializar Todos los Turnos del Mes</span>
-            </button>
-            <button className="btn btn-outline" onClick={handleAddRow}>
-              <Plus size={18} />
-              <span>Agregar Alumno Manualmente</span>
-            </button>
-          </div>
+          {data.length === 0 ? (
+            <>
+              <h3>No hay alumnos cargados en {monthsList.find(m => m.value === selectedMonth)?.label}</h3>
+              <p>Puedes inicializar automáticamente <strong>todos los turnos (11:50, 11:25, 12:00, 12:40 y 13:05)</strong> con la lista completa de alumnos del último mes registrado con un solo clic.</p>
+              <div className="empty-state-actions">
+                <button className="btn btn-primary" onClick={handleInitializeMonth}>
+                  <RefreshCw size={18} />
+                  <span>Inicializar Todos los Turnos del Mes</span>
+                </button>
+                <button className="btn btn-outline" onClick={handleAddRow}>
+                  <Plus size={18} />
+                  <span>Agregar Alumno Manualmente</span>
+                </button>
+              </div>
+            </>
+          ) : data.filter(r => r.turno === selectedTurn).length === 0 && !searchTerm && !courseFilter ? (
+            <>
+              <h3>No hay alumnos registrados en el {turnsList.find(t => t.value === selectedTurn)?.label} para {monthsList.find(m => m.value === selectedMonth)?.label}</h3>
+              <p>Puedes importar automáticamente a todos los alumnos que falten en este mes desde el mes anterior.</p>
+              <div className="empty-state-actions">
+                <button className="btn btn-primary" onClick={handleInitializeMonth}>
+                  <RefreshCw size={18} />
+                  <span>Importar Alumnos Faltantes</span>
+                </button>
+                <button className="btn btn-outline" onClick={handleAddRow}>
+                  <Plus size={18} />
+                  <span>Agregar Alumno Manualmente</span>
+                </button>
+              </div>
+            </>
+          ) : (
+            <>
+              <h3>No se encontraron alumnos</h3>
+              <p>No hay coincidencias con los filtros de búsqueda aplicados ({searchTerm || courseFilter}).</p>
+              <div className="empty-state-actions">
+                <button className="btn btn-outline" onClick={() => { setSearchTerm(''); setCourseFilter(''); }}>
+                  Limpiar Filtros
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
-      <div className="table-wrapper premium-card" style={{ display: data.length === 0 ? 'none' : 'block' }}>
+      <div className="table-wrapper premium-card" style={{ display: filteredData.length === 0 ? 'none' : 'block' }}>
         {loading ? (
           <div className="loading-state">
             <Loader2 className="spinner" size={40} />
