@@ -10,11 +10,21 @@ import {
   CheckCircle2, 
   UserX,
   Copy,
-  Check
+  Check,
+  CheckCheck
 } from 'lucide-react';
 import './FinanzasView.css';
 
-export default function FinanzasView({ allMonthData, selectedMonth, monthLabel, turnsList, workingDays, getPricePerPlate, onSettleStudent }) {
+export default function FinanzasView({ 
+  allMonthData, 
+  selectedMonth, 
+  monthLabel, 
+  turnsList, 
+  workingDays, 
+  getPricePerPlate, 
+  onSettleStudent,
+  onSettleAllDebts 
+}) {
   const [selectedTurnFilter, setSelectedTurnFilter] = useState('ALL');
   const [copiedId, setCopiedId] = useState(null);
 
@@ -283,9 +293,21 @@ export default function FinanzasView({ allMonthData, selectedMonth, monthLabel, 
       {/* 4. Pending Debt Management List */}
       <div className="finanzas-section premium-card">
         <div className="section-header">
-          <div className="section-title">
-            <UserX size={18} className="text-red" />
-            <h2>Alumnos con Saldo Pendiente por Cobrar</h2>
+          <div className="section-title-wrapper">
+            <div className="section-title">
+              <UserX size={18} className="text-red" />
+              <h2>Alumnos con Saldo Pendiente por Cobrar</h2>
+            </div>
+            {onSettleAllDebts && filteredDebtStudents.length > 0 && (
+              <button 
+                className="btn btn-settle-all-finanzas"
+                onClick={() => onSettleAllDebts(selectedTurnFilter)}
+                title={`Saldar a todos los ${filteredDebtStudents.length} alumnos con deuda ${selectedTurnFilter === 'ALL' ? 'de todos los turnos' : `del Turno ${selectedTurnFilter}`}`}
+              >
+                <CheckCheck size={16} />
+                <span>Saldar Todo ({filteredDebtStudents.length} Alumnos)</span>
+              </button>
+            )}
           </div>
           <div className="filter-turn-tabs">
             <button 

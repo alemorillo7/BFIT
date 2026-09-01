@@ -116,11 +116,21 @@ const getMonthGlobalNotice = (yearMonth, workingDaysCount) => {
   };
 };
 
+// Helper to get real current month default (e.g. '2026-09')
+const getCurrentMonthDefault = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, '0');
+  const currentYM = `${y}-${m}`;
+  const exists = monthsList.some(item => item.value === currentYM);
+  return exists ? currentYM : '2026-09';
+};
+
 export default function CobrosView() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('planilla'); // 'planilla' | 'finanzas' | 'importar'
-  const [selectedMonth, setSelectedMonth] = useState('2026-08');
+  const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthDefault);
   const [selectedTurn, setSelectedTurn] = useState('11:50');
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
@@ -589,6 +599,64 @@ export default function CobrosView() {
     }
   };
 
+  // Settle all students with outstanding debt across all turns or a specific turn
+  const handleSettleAllDebts = async (turnFilter = 'ALL') => {
+    const inDebtStudents = data.filter(r => {
+      const hasDebt = Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0);
+      const matchesTurn = turnFilter === 'ALL' || r.turno === turnFilter;
+      return hasDebt && matchesTurn;
+    });
+
+    if (inDebtStudents.length === 0) {
+      alert('No hay alumnos con saldo pendiente para saldar en este turno.');
+      return;
+    }
+
+    const totalDebtBs = inDebtStudents.reduce((sum, r) => {
+      return sum + (Number(r.platos_vendidos_bs || 0) - Number(r.pagos_bs || 0));
+    }, 0);
+
+    const turnText = turnFilter === 'ALL' ? 'TODOS los turnos' : `el Turno ${turnFilter}`;
+    if (!window.confirm(`¿Deseas saldar la cuenta de los ${inDebtStudents.length} alumnos con saldo pendiente en ${turnText} por un total acumulado de ${totalDebtBs} Bs?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const updatedRows = [];
+
+      for (const st of inDebtStudents) {
+        const requiredPayment = Number(st.platos_vendidos_bs || 0);
+        const isMerienda = String(st.observaciones || '').toLowerCase().includes('merienda');
+        const newColor = isMerienda ? 'Amarillo' : 'Verde';
+
+        const { error } = await supabaseCobros
+          .from('cobros')
+          .update({
+            pagos_bs: requiredPayment,
+            color: newColor,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', st.id);
+
+        if (error) throw error;
+        updatedRows.push({ ...st, pagos_bs: requiredPayment, color: newColor });
+      }
+
+      setData(prev => prev.map(item => {
+        const match = updatedRows.find(u => u.id === item.id);
+        return match ? match : item;
+      }));
+
+      alert(`¡Se saldaron exitosamente ${updatedRows.length} alumnos con deuda! Sus cuentas quedaron al día.`);
+    } catch (err) {
+      console.error('Error settling all debts:', err);
+      alert('Ocurrió un error al saldar las deudas.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Export full multi-sheet Excel workbook for the accountant
   const handleDownloadFullExcel = () => {
     if (data.length === 0) {
@@ -1046,6 +1114,7 @@ export default function CobrosView() {
           workingDays={currentMonthDays}
           getPricePerPlate={getPricePerPlate}
           onSettleStudent={handleSettleStudentDebt}
+          onSettleAllDebts={handleSettleAllDebts}
         />
       )}
 

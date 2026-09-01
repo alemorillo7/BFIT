@@ -263,7 +263,36 @@
   margin-top: 4px;
 }
 
-/* 4. Filter Turn Tabs */
+/* 4. Filter Turn Tabs & Settle All */
+.section-title-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.btn-settle-all-finanzas {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  background-color: #059669;
+  color: #ffffff;
+  border: 1px solid #047857;
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.25);
+  transition: all 0.15s ease;
+}
+
+.btn-settle-all-finanzas:hover {
+  background-color: #047857;
+  box-shadow: 0 2px 6px rgba(5, 150, 105, 0.35);
+  transform: translateY(-1px);
+}
+
 .filter-turn-tabs {
   display: flex;
   gap: 4px;
