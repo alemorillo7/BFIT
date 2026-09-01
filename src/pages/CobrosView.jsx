@@ -80,13 +80,13 @@ const getWorkingDaysOfMonth = (yearMonth) => {
     date.setDate(date.getDate() + 1);
   }
   
-  // Specific override for August 2026 to skip Aug 6 & Aug 7 holidays, matching the original Excel layout
-  if (yearMonth === '2026-08') {
+  // Specific override for August: skip Aug 6 & Aug 7 holidays
+  if (month === 8 || yearMonth === '2026-08') {
     return days.filter(d => d.dayNum !== 6 && d.dayNum !== 7);
   }
   
-  // Specific override for September 2026: skip Wed 2, Fri 18, and Mon 21 - Fri 25 (recess/holidays)
-  if (yearMonth === '2026-09') {
+  // Specific override for September: skip Wed 2, Fri 18, and Mon 21 - Fri 25 (recess/holidays)
+  if (month === 9 || yearMonth === '2026-09' || String(yearMonth).endsWith('-09')) {
     return days.filter(d => d.dayNum !== 2 && d.dayNum !== 18 && !(d.dayNum >= 21 && d.dayNum <= 25));
   }
   
@@ -95,14 +95,14 @@ const getWorkingDaysOfMonth = (yearMonth) => {
 
 // Global non-school days & month observations helper
 const getMonthGlobalNotice = (yearMonth, workingDaysCount) => {
-  if (yearMonth === '2026-09') {
+  if (yearMonth === '2026-09' || String(yearMonth).endsWith('-09')) {
     return {
       title: 'Observación Global de Septiembre 2026',
       text: 'Días sin clases: Miércoles 2, Viernes 18, y Semana de Primavera / Receso (21 al 25 Sep). Total: 15 días hábiles de cobro.',
       type: 'info'
     };
   }
-  if (yearMonth === '2026-08') {
+  if (yearMonth === '2026-08' || String(yearMonth).endsWith('-08')) {
     return {
       title: 'Observación Global de Agosto 2026',
       text: 'Días sin clases: Jueves 6 y Viernes 7 de Agosto (Feriados Patrios). Total: 19 días hábiles de cobro.',
