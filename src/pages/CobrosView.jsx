@@ -16,7 +16,8 @@ import {
   FileSpreadsheet,
   TrendingUp,
   UploadCloud,
-  Table as TableIcon
+  Table as TableIcon,
+  Info
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
@@ -90,6 +91,29 @@ const getWorkingDaysOfMonth = (yearMonth) => {
   }
   
   return days;
+};
+
+// Global non-school days & month observations helper
+const getMonthGlobalNotice = (yearMonth, workingDaysCount) => {
+  if (yearMonth === '2026-09') {
+    return {
+      title: 'Observación Global de Septiembre 2026',
+      text: 'Días sin clases: Miércoles 2, Viernes 18, y Semana de Primavera / Receso (21 al 25 Sep). Total: 15 días hábiles de cobro.',
+      type: 'info'
+    };
+  }
+  if (yearMonth === '2026-08') {
+    return {
+      title: 'Observación Global de Agosto 2026',
+      text: 'Días sin clases: Jueves 6 y Viernes 7 de Agosto (Feriados Patrios). Total: 19 días hábiles de cobro.',
+      type: 'info'
+    };
+  }
+  return {
+    title: 'Días Hábiles del Mes',
+    text: `Total de días hábiles de cobro (Lunes a Viernes): ${workingDaysCount} días.`,
+    type: 'default'
+  };
 };
 
 export default function CobrosView() {
@@ -1082,6 +1106,21 @@ export default function CobrosView() {
             )}
           </div>
         </div>
+
+        {/* Global Month Notice Banner */}
+        {(() => {
+          const notice = getMonthGlobalNotice(selectedMonth, currentMonthDays.length);
+          return (
+            <div className="global-month-notice">
+              <div className="global-notice-left">
+                <Info size={16} className="notice-icon" />
+                <span className="global-notice-title">{notice.title}:</span>
+                <span className="global-notice-text">{notice.text}</span>
+              </div>
+              <span className="badge-working-days">{currentMonthDays.length} Días Hábiles</span>
+            </div>
+          );
+        })()}
 
         {/* Toolbar with Filters and Actions */}
         <div className="controls-toolbar">

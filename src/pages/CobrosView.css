@@ -193,6 +193,53 @@
   border-color: #bbf7d0;
 }
 
+/* Global Month Notice Banner */
+.global-month-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  background-color: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+}
+
+.global-notice-left {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.notice-icon {
+  color: #2563eb;
+  flex-shrink: 0;
+}
+
+.global-notice-title {
+  font-weight: 700;
+  color: #1e40af;
+}
+
+.global-notice-text {
+  color: #1e3a8a;
+  font-weight: 500;
+}
+
+.badge-working-days {
+  font-size: 0.7rem;
+  font-weight: 700;
+  background-color: #dbeafe;
+  color: #1e40af;
+  padding: 0.15rem 0.5rem;
+  border-radius: 9999px;
+  border: 1px solid #bfdbfe;
+  white-space: nowrap;
+}
+
 /* Toolbar: Filters & Actions */
 .controls-toolbar {
   display: flex;
