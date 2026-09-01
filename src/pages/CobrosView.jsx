@@ -6,16 +6,23 @@ import {
   Trash2, 
   Download, 
   AlertCircle, 
-  Loader2,
-  Filter,
-  Calendar,
-  RefreshCw,
-  Clock,
-  CheckCheck,
-  Coins
+  Loader2, 
+  Filter, 
+  Calendar, 
+  RefreshCw, 
+  Clock, 
+  CheckCheck, 
+  Coins,
+  FileSpreadsheet,
+  TrendingUp,
+  UploadCloud,
+  Table as TableIcon
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
+import { exportFullExcelWorkbook } from '../components/cobros/cobrosExport';
+import FinanzasView from '../components/cobros/FinanzasView';
+import ImportarExcelView from '../components/cobros/ImportarExcelView';
 import './CobrosView.css';
 
 const monthsList = [
@@ -88,6 +95,7 @@ const getWorkingDaysOfMonth = (yearMonth) => {
 export default function CobrosView() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('planilla'); // 'planilla' | 'finanzas' | 'importar'
   const [selectedMonth, setSelectedMonth] = useState('2026-08');
   const [selectedTurn, setSelectedTurn] = useState('11:50');
   const [searchTerm, setSearchTerm] = useState('');
@@ -557,6 +565,17 @@ export default function CobrosView() {
     }
   };
 
+  // Export full multi-sheet Excel workbook for the accountant
+  const handleDownloadFullExcel = () => {
+    if (data.length === 0) {
+      alert('No hay datos cargados para exportar en este mes.');
+      return;
+    }
+    const monthObj = monthsList.find(m => m.value === selectedMonth);
+    const monthLabel = monthObj ? monthObj.label : selectedMonth;
+    exportFullExcelWorkbook(data, selectedMonth, currentMonthDays, turnsList, monthLabel);
+  };
+
   // Initialize all turns for a new month with previous month's student records
   const handleInitializeMonth = async () => {
     const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
@@ -954,11 +973,76 @@ export default function CobrosView() {
 
   return (
     <div className="cobros-container">
-      <div className="cobros-header premium-card">
-        <div className="title-row">
-          <div className="title-section">
-            <div className="title-with-badge">
-              <h1>Planilla de Cobros</h1>
+      {/* 1. Top Navigation Sub-Tabs & Accountant Excel Export */}
+      <div className="cobros-nav-tabs-bar">
+        <div className="cobros-nav-tabs">
+          <button 
+            className={`cobros-tab-btn ${activeTab === 'planilla' ? 'active' : ''}`}
+            onClick={() => setActiveTab('planilla')}
+          >
+            <TableIcon size={16} />
+            <span>Planilla de Asistencia</span>
+          </button>
+
+          <button 
+            className={`cobros-tab-btn ${activeTab === 'finanzas' ? 'active' : ''}`}
+            onClick={() => setActiveTab('finanzas')}
+          >
+            <TrendingUp size={16} />
+            <span>Finanzas e Ingresos</span>
+          </button>
+
+          <button 
+            className={`cobros-tab-btn ${activeTab === 'importar' ? 'active' : ''}`}
+            onClick={() => setActiveTab('importar')}
+          >
+            <UploadCloud size={16} />
+            <span>Cargar Planilla Excel</span>
+          </button>
+        </div>
+
+        <button 
+          className="btn btn-export-excel-full"
+          onClick={handleDownloadFullExcel}
+          disabled={data.length === 0}
+          title="Descarga el archivo Excel con todas las planillas de los 5 turnos y el resumen general para la contadora"
+        >
+          <FileSpreadsheet size={16} />
+          <span>Descargar Excel Contabilidad (Todos los Turnos)</span>
+        </button>
+      </div>
+
+      {/* 2. Sub-views */}
+      {activeTab === 'finanzas' && (
+        <FinanzasView
+          allMonthData={data}
+          selectedMonth={selectedMonth}
+          monthLabel={monthsList.find(m => m.value === selectedMonth)?.label}
+          turnsList={turnsList}
+          workingDays={currentMonthDays}
+          getPricePerPlate={getPricePerPlate}
+          onSettleStudent={handleSettleStudentDebt}
+        />
+      )}
+
+      {activeTab === 'importar' && (
+        <ImportarExcelView
+          monthsList={monthsList}
+          selectedMonth={selectedMonth}
+          turnsList={turnsList}
+          getPricePerPlate={getPricePerPlate}
+          calculateRowTotals={calculateRowTotals}
+          onImportSuccess={loadData}
+        />
+      )}
+
+      {activeTab === 'planilla' && (
+        <>
+          <div className="cobros-header premium-card">
+            <div className="title-row">
+              <div className="title-section">
+                <div className="title-with-badge">
+                  <h1>Planilla de Cobros</h1>
               <span className="badge-turn-indicator">
                 {turnsList.find(t => t.value === selectedTurn)?.label}
               </span>
@@ -1425,6 +1509,8 @@ export default function CobrosView() {
           </div>
         )}
       </div>
+      </>
+      )}
     </div>
   );
 }
