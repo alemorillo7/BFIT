@@ -788,3 +788,299 @@
     justify-content: flex-start;
   }
 }
+
+/* ==========================================================================
+   Day Cell Wrapper, Red Triangle Indicator & Excel Yellow Sticky Notes
+   ========================================================================== */
+.cell-day {
+  position: relative !important;
+}
+
+.cell-day-wrapper {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Red Excel Comment Triangle Indicator in upper-right corner */
+.btn-day-note-marker {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 10px;
+  height: 10px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+  margin: 0;
+  z-index: 4;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  line-height: 1;
+  color: transparent;
+  transition: all 0.15s ease;
+}
+
+.cell-day:hover .btn-day-note-marker:not(.btn-day-note-marker--active) {
+  color: #94a3b8;
+  background-color: rgba(0, 0, 0, 0.08);
+  border-radius: 0 0 0 3px;
+}
+
+.btn-day-note-marker--active {
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 7px 7px 0;
+  border-color: transparent #dc2626 transparent transparent !important;
+  background: transparent !important;
+}
+
+/* Excel-Style Yellow Sticky Note Tooltip on Hover */
+.excel-sticky-note-tooltip {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  width: 220px;
+  background-color: #fffbeb;
+  border: 1.5px solid #d97706;
+  border-radius: 4px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.18), 0 2px 4px rgba(0, 0, 0, 0.08);
+  padding: 0.5rem 0.65rem;
+  z-index: 100;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  font-family: inherit;
+  text-align: left;
+}
+
+.excel-sticky-note-tooltip::before {
+  content: '';
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 5px;
+  border-style: solid;
+  border-color: transparent transparent #d97706 transparent;
+}
+
+.cell-day:hover .excel-sticky-note-tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.sticky-note-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: #92400e;
+  border-bottom: 1px solid #fde68a;
+  padding-bottom: 2px;
+  margin-bottom: 4px;
+}
+
+.sticky-author {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sticky-date {
+  font-size: 0.62rem;
+  color: #b45309;
+}
+
+.sticky-note-body {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.35;
+  word-break: break-word;
+}
+
+.sticky-note-footer {
+  font-size: 0.58rem;
+  font-weight: 500;
+  color: #b45309;
+  text-align: right;
+  margin-top: 4px;
+  font-style: italic;
+}
+
+/* Day Note Modal Dialog */
+.day-note-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.6);
+  backdrop-filter: blur(3px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: fadeIn 0.15s ease;
+  padding: 1rem;
+}
+
+.day-note-modal-card {
+  background-color: #ffffff;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
+  border: 1px solid var(--color-border);
+  overflow: hidden;
+  animation: modalPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes modalPop {
+  from { opacity: 0; transform: scale(0.95) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.day-note-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  background-color: #f8fafc;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.day-note-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.day-note-modal-title h3 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin: 0;
+  color: #0f172a;
+}
+
+.btn-close-modal {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: #64748b;
+  padding: 0.2rem;
+  border-radius: 4px;
+}
+
+.btn-close-modal:hover {
+  background-color: #e2e8f0;
+  color: #0f172a;
+}
+
+.day-note-modal-body {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.student-info-badge {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.45rem 0.75rem;
+  background-color: #f1f5f9;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  color: #334155;
+}
+
+.day-note-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.day-note-textarea {
+  width: 100%;
+  padding: 0.65rem 0.75rem;
+  border: 1.5px solid #94a3b8;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-family: inherit;
+  resize: vertical;
+  color: #0f172a;
+  background-color: #ffffff;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.day-note-textarea:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.2);
+}
+
+.quick-note-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.quick-tag-label {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #64748b;
+  width: 100%;
+  margin-bottom: 2px;
+}
+
+.quick-note-tag-btn {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 0.2rem 0.45rem;
+  background-color: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 4px;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.1s ease;
+}
+
+.quick-note-tag-btn:hover {
+  background-color: #e0f2fe;
+  border-color: #38bdf8;
+  color: #0369a1;
+}
+
+.day-note-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.85rem 1.25rem;
+  background-color: #f8fafc;
+  border-top: 1px solid var(--color-border);
+}
+
+.footer-right-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-danger-text {
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+}
+
+.btn-danger-text:hover {
+  background-color: #fef2f2 !important;
+}

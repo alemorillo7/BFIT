@@ -17,7 +17,10 @@ import {
   TrendingUp,
   UploadCloud,
   Table as TableIcon,
-  Info
+  Info,
+  StickyNote,
+  Save,
+  X
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
@@ -137,6 +140,7 @@ export default function CobrosView() {
   const [savingRows, setSavingRows] = useState(new Set());
   const [errorMessage, setErrorMessage] = useState(null);
   const [syncingAbsences, setSyncingAbsences] = useState(false);
+  const [activeNoteModal, setActiveNoteModal] = useState(null); // { rowId, dayKey, dayLabel, studentName, currentValue, currentNote }
   const lastSyncedMonthRef = useRef('');
   
   // Get active day columns for the selected month
@@ -190,6 +194,8 @@ export default function CobrosView() {
     const currentDaysKeys = currentMonthDays.map(d => d.key);
     
     Object.keys(asistencias || {}).forEach(dayKey => {
+      if (dayKey.endsWith('_nota')) return; // Ignore observation notes for counting plates
+      
       // Only count days that actually belong to the current month's columns
       if (currentDaysKeys.includes(dayKey)) {
         const val = String(asistencias[dayKey] || '').trim().toUpperCase();
@@ -205,6 +211,53 @@ export default function CobrosView() {
       platos_vendidos_bs: plates * price
     };
   }, [currentMonthDays]);
+
+  // Save or delete observation note for a specific day and student
+  const handleSaveDayNote = async (rowId, dayKey, noteText) => {
+    const rowIndex = data.findIndex(r => r.id === rowId);
+    if (rowIndex === -1) return;
+
+    const oldRow = data[rowIndex];
+    const newAsistencias = { ...(oldRow.asistencias || {}) };
+    const cleanNote = String(noteText || '').trim();
+
+    if (cleanNote === '') {
+      delete newAsistencias[`${dayKey}_nota`];
+    } else {
+      newAsistencias[`${dayKey}_nota`] = cleanNote;
+    }
+
+    const updatedRow = { ...oldRow, asistencias: newAsistencias };
+
+    // Optimistic UI update
+    const newData = [...data];
+    newData[rowIndex] = updatedRow;
+    setData(newData);
+
+    setSavingRows(prev => new Set(prev).add(rowId));
+
+    try {
+      const { error } = await supabaseCobros
+        .from('cobros')
+        .update({
+          asistencias: newAsistencias,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', rowId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error saving day note:', err);
+      alert('Error al guardar la observación del día.');
+    } finally {
+      setSavingRows(prev => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+      setActiveNoteModal(null);
+    }
+  };
 
   // Handle cell changes and auto-save
   const handleCellChange = async (rowId, key, value) => {
@@ -1476,25 +1529,91 @@ export default function CobrosView() {
                         {/* Dynamic Day Columns */}
                         {currentMonthDays.map(d => {
                           const val = row.asistencias?.[d.key] || '';
-                          const isFalta = val.toUpperCase() === 'F';
+                          const note = row.asistencias?.[`${d.key}_nota`] || '';
+                          const isFalta = String(val).toUpperCase() === 'F';
+                          const hasNote = Boolean(note && String(note).trim());
+
                           return (
-                            <td key={d.key} className="cell-day">
-                              <input
-                                type="text"
-                                value={val}
-                                onChange={(e) => {
-                                  const newData = [...data];
-                                  const idx = newData.findIndex(r => r.id === row.id);
-                                  if (!newData[idx].asistencias) {
-                                    newData[idx].asistencias = {};
-                                  }
-                                  newData[idx].asistencias[d.key] = e.target.value;
-                                  setData(newData);
-                                }}
-                                onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
-                                className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''}`}
-                                maxLength={10}
-                              />
+                            <td 
+                              key={d.key} 
+                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''}`}
+                              onContextMenu={(e) => {
+                                e.preventDefault();
+                                setActiveNoteModal({
+                                  rowId: row.id,
+                                  dayKey: d.key,
+                                  dayLabel: d.label,
+                                  studentName: row.alumno,
+                                  currentValue: val,
+                                  currentNote: note
+                                });
+                              }}
+                              onDoubleClick={() => {
+                                setActiveNoteModal({
+                                  rowId: row.id,
+                                  dayKey: d.key,
+                                  dayLabel: d.label,
+                                  studentName: row.alumno,
+                                  currentValue: val,
+                                  currentNote: note
+                                });
+                              }}
+                            >
+                              <div className="cell-day-wrapper">
+                                <input
+                                  type="text"
+                                  value={val}
+                                  onChange={(e) => {
+                                    const newData = [...data];
+                                    const idx = newData.findIndex(r => r.id === row.id);
+                                    if (!newData[idx].asistencias) {
+                                      newData[idx].asistencias = {};
+                                    }
+                                    newData[idx].asistencias[d.key] = e.target.value;
+                                    setData(newData);
+                                  }}
+                                  onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
+                                  className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''}`}
+                                  maxLength={10}
+                                  title={hasNote ? `Observación: ${note} (Doble clic para editar)` : 'Doble clic o clic derecho para agregar observación al día'}
+                                />
+
+                                {/* Red corner comment marker button / trigger */}
+                                <button
+                                  type="button"
+                                  className={`btn-day-note-marker ${hasNote ? 'btn-day-note-marker--active' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setActiveNoteModal({
+                                      rowId: row.id,
+                                      dayKey: d.key,
+                                      dayLabel: d.label,
+                                      studentName: row.alumno,
+                                      currentValue: val,
+                                      currentNote: note
+                                    });
+                                  }}
+                                  title={hasNote ? `Nota: ${note}` : 'Agregar observación a este día'}
+                                >
+                                  {hasNote ? '' : '+'}
+                                </button>
+
+                                {/* Excel Yellow Sticky Note Popover on Hover */}
+                                {hasNote && (
+                                  <div className="excel-sticky-note-tooltip">
+                                    <div className="sticky-note-header">
+                                      <span className="sticky-author">{row.alumno}</span>
+                                      <span className="sticky-date">({d.label})</span>
+                                    </div>
+                                    <div className="sticky-note-body">
+                                      {note}
+                                    </div>
+                                    <div className="sticky-note-footer">
+                                      <span>Doble clic para editar</span>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             </td>
                           );
                         })}
@@ -1618,6 +1737,105 @@ export default function CobrosView() {
         )}
       </div>
       </>
+      )}
+
+      {/* Day Note / Observation Modal Dialog */}
+      {activeNoteModal && (
+        <div className="day-note-modal-overlay" onClick={() => setActiveNoteModal(null)}>
+          <div className="day-note-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="day-note-modal-header">
+              <div className="day-note-modal-title">
+                <StickyNote size={18} className="text-amber" />
+                <h3>Observación del Día ({activeNoteModal.dayLabel})</h3>
+              </div>
+              <button 
+                className="btn-close-modal"
+                onClick={() => setActiveNoteModal(null)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="day-note-modal-body">
+              <div className="student-info-badge">
+                <span><strong>Alumno:</strong> {activeNoteModal.studentName}</span>
+                <span><strong>Valor actual:</strong> {activeNoteModal.currentValue || 'Sin marcar'}</span>
+              </div>
+
+              <label className="day-note-label">
+                Detalle del Menú / Observación Especial:
+              </label>
+              
+              <textarea
+                className="day-note-textarea"
+                rows={3}
+                defaultValue={activeNoteModal.currentNote || ''}
+                id="dayNoteInput"
+                placeholder="Ej: TALLARIN A LA MANTEQUILLA CON SALCHICHA / Menú FIT / Solo sopa..."
+                autoFocus
+              />
+
+              {/* Quick template tags */}
+              <div className="quick-note-tags">
+                <span className="quick-tag-label">Sugerencias rápidas:</span>
+                {[
+                  'TALLARIN A LA MANTEQUILLA CON SALCHICHA',
+                  'MENU FIT',
+                  'SOLO SOPA',
+                  'SIN LACTEOS',
+                  'SIN GLUTEN',
+                  'FALTA JUSTIFICADA',
+                  'ALMUERZO DOBLE'
+                ].map(tag => (
+                  <button
+                    key={tag}
+                    type="button"
+                    className="quick-note-tag-btn"
+                    onClick={() => {
+                      const el = document.getElementById('dayNoteInput');
+                      if (el) el.value = tag;
+                    }}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="day-note-modal-footer">
+              {activeNoteModal.currentNote ? (
+                <button
+                  type="button"
+                  className="btn btn-outline btn-danger-text"
+                  onClick={() => handleSaveDayNote(activeNoteModal.rowId, activeNoteModal.dayKey, '')}
+                >
+                  <Trash2 size={15} />
+                  <span>Eliminar Nota</span>
+                </button>
+              ) : <div />}
+              <div className="footer-right-actions">
+                <button
+                  type="button"
+                  className="btn btn-outline"
+                  onClick={() => setActiveNoteModal(null)}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  onClick={() => {
+                    const el = document.getElementById('dayNoteInput');
+                    handleSaveDayNote(activeNoteModal.rowId, activeNoteModal.dayKey, el?.value || '');
+                  }}
+                >
+                  <Save size={15} />
+                  <span>Guardar Observación</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
