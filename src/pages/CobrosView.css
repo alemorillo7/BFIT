@@ -376,9 +376,9 @@
 
 .excel-table th, 
 .excel-table td {
-  border-bottom: 1px solid var(--color-border);
-  border-right: 1px solid var(--color-border);
-  padding: 0.18rem 0.22rem;
+  border-bottom: 1px solid #cbd5e1;
+  border-right: 1px solid #cbd5e1;
+  padding: 0.2rem 0.25rem;
   vertical-align: middle;
   box-sizing: border-box;
 }
@@ -391,7 +391,9 @@
   font-size: 0.7rem;
   text-align: center;
   padding: 0.35rem 0.3rem;
-  border-top: 1px solid var(--color-border);
+  border-top: 1px solid #cbd5e1;
+  border-bottom: 1.5px solid #94a3b8;
+  border-right: 1px solid #cbd5e1;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -399,11 +401,13 @@
 
 .excel-table tr.days-header-row th {
   background-color: #f8fafc;
-  color: #64748b;
-  font-weight: 600;
+  color: #475569;
+  font-weight: 700;
   font-size: 0.65rem;
   text-align: center;
-  padding: 0.2rem 0.1rem;
+  padding: 0.25rem 0.1rem;
+  border-bottom: 2px solid #94a3b8;
+  border-right: 1px solid #cbd5e1;
   position: sticky;
   top: 28px;
   z-index: 10;
@@ -411,8 +415,10 @@
 
 .col-month-header {
   background-color: #e2e8f0 !important;
-  color: #1e293b !important;
+  color: #0f172a !important;
+  font-weight: 800 !important;
   letter-spacing: 0.04em;
+  border-bottom: 1.5px solid #94a3b8 !important;
 }
 
 /* Column Dimensions */
@@ -422,9 +428,9 @@
 .col-turno { width: 48px; min-width: 46px; text-align: center; }
 .col-date { width: 58px; min-width: 55px; }
 .col-obs { width: 95px; min-width: 80px; }
-.col-day { width: 24px; min-width: 24px; text-align: center; }
+.col-day { width: 28px; min-width: 28px; text-align: center; }
 .col-total { width: 52px; min-width: 50px; text-align: center; }
-.col-balance-input { width: 84px; min-width: 80px; text-align: center; }
+.col-balance-input { width: 88px; min-width: 84px; text-align: center; }
 .col-balance { width: 72px; min-width: 68px; text-align: center; }
 .col-color { width: 85px; min-width: 80px; }
 .col-actions { width: 34px; min-width: 32px; text-align: center; }
@@ -444,8 +450,8 @@
   left: 32px;
   z-index: 5;
   background-color: #ffffff;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
-  border-right: 2px solid #cbd5e1 !important;
+  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.06);
+  border-right: 2px solid #94a3b8 !important;
 }
 
 .excel-table tr.main-header-row th.col-nro,
@@ -460,7 +466,7 @@
   background: transparent;
   border: 1px solid transparent;
   color: var(--color-text);
-  padding: 0.12rem 0.2rem;
+  padding: 0.15rem 0.25rem;
   border-radius: 3px;
   font-size: 0.72rem;
   font-family: inherit;
@@ -469,46 +475,59 @@
 
 .cell-input:hover {
   background-color: rgba(0, 0, 0, 0.03);
-  border-color: var(--color-border);
+  border-color: #94a3b8;
 }
 
 .cell-input:focus {
   background-color: #ffffff;
   border-color: var(--color-primary);
   outline: none;
-  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.2);
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
+}
+
+/* Day cell with clear, visible square box */
+.cell-day {
+  padding: 0.15rem !important;
+  text-align: center;
 }
 
 .cell-day-input {
-  width: 100%;
-  background: transparent;
-  border: 1px solid transparent;
-  color: var(--color-text);
-  padding: 0.1rem 0;
-  border-radius: 2px;
-  font-size: 0.7rem;
+  width: 24px;
+  height: 24px;
+  background-color: #ffffff;
+  border: 1.5px solid #94a3b8;
+  border-radius: 4px;
+  color: #0f172a;
+  padding: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
   text-align: center;
   font-family: inherit;
+  margin: 0 auto;
+  display: block;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.04);
   transition: all 0.15s ease;
 }
 
 .cell-day-input:hover {
-  background-color: rgba(0, 0, 0, 0.04);
-  border-color: var(--color-border);
+  background-color: #f8fafc;
+  border-color: #475569;
+  box-shadow: 0 0 0 1px rgba(71, 85, 105, 0.2);
 }
 
 .cell-day-input:focus {
   background-color: #ffffff;
-  border-color: var(--color-primary);
+  border-color: #059669;
   outline: none;
+  box-shadow: 0 0 0 2.5px rgba(5, 150, 105, 0.3);
 }
 
 .cell-day-input--falta {
-  font-weight: 700 !important;
+  font-weight: 800 !important;
   color: #dc2626 !important;
   background-color: #fee2e2 !important;
-  border-color: #fca5a5 !important;
-  border-radius: 3px;
+  border-color: #ef4444 !important;
+  box-shadow: inset 0 1px 2px rgba(239, 68, 68, 0.15);
 }
 
 /* Table Row Hovers & Colored Variants */
@@ -551,26 +570,28 @@
 
 .cell-balance-input-field {
   width: 100%;
-  background: transparent;
-  border: 1px solid transparent;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
   color: var(--color-text);
-  padding: 0.1rem 0.2rem;
-  border-radius: 3px;
+  padding: 0.15rem 0.2rem;
+  border-radius: 4px;
   font-size: 0.72rem;
   text-align: center;
-  font-weight: 600;
+  font-weight: 700;
   font-family: inherit;
+  transition: all 0.15s ease;
 }
 
 .cell-balance-input-field:hover {
-  background-color: rgba(0, 0, 0, 0.03);
-  border-color: var(--color-border);
+  background-color: #f8fafc;
+  border-color: #94a3b8;
 }
 
 .cell-balance-input-field:focus {
   background-color: #ffffff;
   border-color: var(--color-primary);
   outline: none;
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
 }
 
 .quick-pay-chips {
