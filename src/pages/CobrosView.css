@@ -415,17 +415,16 @@
 
 .excel-table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
   font-size: 0.72rem;
   text-align: left;
+  background-color: #ffffff;
 }
 
 .excel-table th, 
 .excel-table td {
-  border-bottom: 1px solid #94a3b8;
-  border-right: 1px solid #94a3b8;
-  padding: 0.2rem 0.25rem;
+  border: 1px solid #64748b !important; /* Visible dark gridlines like Excel */
+  padding: 0.18rem 0.22rem;
   vertical-align: middle;
   box-sizing: border-box;
 }
@@ -438,9 +437,8 @@
   font-size: 0.72rem;
   text-align: center;
   padding: 0.4rem 0.3rem;
-  border-top: 1.5px solid #64748b;
-  border-bottom: 2px solid #334155;
-  border-right: 1px solid #94a3b8;
+  border: 1px solid #334155 !important;
+  border-bottom: 2px solid #0f172a !important;
   position: sticky;
   top: 0;
   z-index: 10;
@@ -453,8 +451,8 @@
   font-size: 0.68rem;
   text-align: center;
   padding: 0.3rem 0.1rem;
-  border-bottom: 2px solid #0f172a;
-  border-right: 1.5px solid #64748b;
+  border: 1px solid #334155 !important;
+  border-bottom: 2px solid #0f172a !important;
   position: sticky;
   top: 28px;
   z-index: 10;
@@ -465,7 +463,8 @@
   color: #0f172a !important;
   font-weight: 800 !important;
   letter-spacing: 0.04em;
-  border-bottom: 2px solid #334155 !important;
+  border: 1px solid #334155 !important;
+  border-bottom: 2px solid #0f172a !important;
 }
 
 /* Column Dimensions */
@@ -521,8 +520,7 @@
 }
 
 .cell-input:hover {
-  background-color: rgba(0, 0, 0, 0.03);
-  border-color: #64748b;
+  background-color: rgba(0, 0, 0, 0.04);
 }
 
 .cell-input:focus {
@@ -532,81 +530,73 @@
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.25);
 }
 
-/* Day cell with sharp, clearly marked black border like Excel */
+/* Day cell grid box */
 .cell-day {
-  padding: 0.15rem !important;
+  padding: 0 !important;
   text-align: center;
-  border-right: 1.5px solid #64748b !important;
+  border: 1px solid #475569 !important; /* Clearly marked black/dark grid border */
+  background-color: #ffffff;
 }
 
 .cell-day-input {
   width: 100%;
-  height: 26px;
-  background-color: #ffffff;
-  border: 1.5px solid #0f172a; /* Borde negro bien remarcado estilo Excel */
-  border-radius: 3px;
+  height: 28px;
+  background: transparent;
+  border: none !important;
   color: #000000;
   padding: 0;
-  font-size: 0.75rem;
+  font-size: 0.78rem;
   font-weight: 800;
   text-align: center;
   font-family: inherit;
-  margin: 0 auto;
+  margin: 0;
   display: block;
   box-sizing: border-box;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
-  transition: all 0.1s ease;
+  cursor: text;
 }
 
-.cell-day-input:hover {
-  background-color: #f1f5f9;
-  border-color: #000000;
-  box-shadow: 0 0 0 1.5px #000000;
+.cell-day:hover {
+  background-color: #f1f5f9 !important;
+  box-shadow: inset 0 0 0 1.5px #0f172a;
 }
 
-.cell-day-input:focus {
-  background-color: #ffffff;
-  border-color: #000000;
-  outline: 2px solid #059669;
-  box-shadow: 0 0 0 2px rgba(5, 150, 105, 0.3);
+.cell-day:focus-within {
+  background-color: #ffffff !important;
+  box-shadow: inset 0 0 0 2px #059669;
 }
 
 .cell-day-input--falta {
   font-weight: 900 !important;
   color: #b91c1c !important;
-  background-color: #fee2e2 !important;
-  border: 1.5px solid #dc2626 !important;
-  box-shadow: inset 0 1px 2px rgba(220, 38, 38, 0.2);
 }
 
-/* Table Row Hovers & Colored Variants */
-.excel-row:hover td {
+.cell-day:has(.cell-day-input--falta) {
+  background-color: #fee2e2 !important;
+}
+
+/* Table Row Hovers & Colored Variants (Keep grid borders intact!) */
+.excel-row:hover td:not(.cell-day) {
   background-color: #f8fafc;
 }
 
-.excel-row.row-color--verde td {
-  background-color: #f0fdf4 !important;
-  border-color: #dcfce7 !important;
+.excel-row.row-color--verde td:not(.cell-day) {
+  background-color: #f0fdf4;
 }
 
-.excel-row.row-color--azul td {
-  background-color: #eff6ff !important;
-  border-color: #dbeafe !important;
+.excel-row.row-color--azul td:not(.cell-day) {
+  background-color: #eff6ff;
 }
 
-.excel-row.row-color--amarillo td {
-  background-color: #fefce8 !important;
-  border-color: #fef08a !important;
+.excel-row.row-color--amarillo td:not(.cell-day) {
+  background-color: #fefce8;
 }
 
-.excel-row.row-color--fff2cc td {
-  background-color: #fffbeb !important;
-  border-color: #fde68a !important;
+.excel-row.row-color--fff2cc td:not(.cell-day) {
+  background-color: #fffbeb;
 }
 
-.excel-row.row-color--naranja td {
-  background-color: #fff7ed !important;
-  border-color: #ffedd5 !important;
+.excel-row.row-color--naranja td:not(.cell-day) {
+  background-color: #fff7ed;
 }
 
 /* Balance & Quick Pay in Cell */
