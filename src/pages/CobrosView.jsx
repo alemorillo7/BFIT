@@ -1117,6 +1117,78 @@ export default function CobrosView() {
     }
   }, [selectedMonth, data.length, syncObservationsAndAbsencesGlobally]);
 
+  // Filtering data (Global search across all turns when searching, local turn when empty)
+  const filteredData = data.filter(row => {
+    const isSearching = searchTerm.trim() !== '';
+    
+    const matchSearch = 
+      String(row.alumno).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(row.curso).toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(row.observaciones || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+      String(row.turno || '').toLowerCase().includes(searchTerm.toLowerCase());
+      
+    const matchCourse = courseFilter === '' || 
+      String(row.curso).toLowerCase().includes(courseFilter.toLowerCase());
+      
+    const matchTurn = isSearching || row.turno === selectedTurn;
+      
+    return matchSearch && matchCourse && matchTurn;
+  });
+
+  // Summary statistics for current turn
+  const summaryStats = useMemo(() => {
+    const turnData = data.filter(r => r.turno === selectedTurn);
+    const totalStudents = turnData.length;
+    const totalPlatos = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
+    const totalBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
+    const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
+    return { totalStudents, totalPlatos, totalBs, inDebtCount };
+  }, [data, selectedTurn]);
+
+  // Unique list of courses for filter dropdown
+  const uniqueCourses = useMemo(() => {
+    const courses = data.map(r => String(r.curso || '').trim()).filter(Boolean);
+    return [...new Set(courses)].sort();
+  }, [data]);
+
+  // Export to CSV
+  const handleExport = () => {
+    const csvData = filteredData.map((row, index) => {
+      const exportRow = {
+        'Nro.': index + 1,
+        'Alumno': row.alumno,
+        'Curso': row.curso,
+        'Turno': row.turno,
+        'Fecha Inicio': row.fecha_inicio || '',
+        'Fecha Fin': row.fecha_fin || '',
+        'Observaciones': row.observaciones || '',
+      };
+      
+      currentMonthDays.forEach(d => {
+        exportRow[d.label] = row.asistencias?.[d.key] || '';
+      });
+      
+      exportRow['Platos Vendidos'] = row.platos_vendidos;
+      exportRow['Importe Total (Bs)'] = row.platos_vendidos_bs;
+      exportRow['Pago Almuerzo (Bs)'] = row.pagos_bs || 0;
+      exportRow['Saldo Almuerzo (Bs)'] = Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0);
+      exportRow['Saldo Merienda (Bs)'] = row.saldo_merienditas || 0;
+      
+      return exportRow;
+    });
+
+    const csv = Papa.unparse(csvData);
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Cobros_Planilla_${selectedMonth}_Turno_${selectedTurn.replace(':', '_')}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // Manejador de navegación con flechas de teclado tipo Excel en la tabla
   const handleTableKeyDown = useCallback((e) => {
     const target = e.target;
@@ -1197,78 +1269,6 @@ export default function CobrosView() {
       }
     }
   }, [currentMonthDays.length, filteredData.length]);
-
-  // Export to CSV
-  const handleExport = () => {
-    const csvData = filteredData.map((row, index) => {
-      const exportRow = {
-        'Nro.': index + 1,
-        'Alumno': row.alumno,
-        'Curso': row.curso,
-        'Turno': row.turno,
-        'Fecha Inicio': row.fecha_inicio || '',
-        'Fecha Fin': row.fecha_fin || '',
-        'Observaciones': row.observaciones || '',
-      };
-      
-      currentMonthDays.forEach(d => {
-        exportRow[d.label] = row.asistencias?.[d.key] || '';
-      });
-      
-      exportRow['Platos Vendidos'] = row.platos_vendidos;
-      exportRow['Importe Total (Bs)'] = row.platos_vendidos_bs;
-      exportRow['Pago Almuerzo (Bs)'] = row.pagos_bs || 0;
-      exportRow['Saldo Almuerzo (Bs)'] = Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0);
-      exportRow['Saldo Merienda (Bs)'] = row.saldo_merienditas || 0;
-      
-      return exportRow;
-    });
-
-    const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', `Cobros_Planilla_${selectedMonth}_Turno_${selectedTurn.replace(':', '_')}.csv`);
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
-
-  // Filtering data (Global search across all turns when searching, local turn when empty)
-  const filteredData = data.filter(row => {
-    const isSearching = searchTerm.trim() !== '';
-    
-    const matchSearch = 
-      String(row.alumno).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(row.curso).toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(row.observaciones || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      String(row.turno || '').toLowerCase().includes(searchTerm.toLowerCase());
-      
-    const matchCourse = courseFilter === '' || 
-      String(row.curso).toLowerCase().includes(courseFilter.toLowerCase());
-      
-    const matchTurn = isSearching || row.turno === selectedTurn;
-      
-    return matchSearch && matchCourse && matchTurn;
-  });
-
-  // Summary statistics for current turn
-  const summaryStats = useMemo(() => {
-    const turnData = data.filter(r => r.turno === selectedTurn);
-    const totalStudents = turnData.length;
-    const totalPlatos = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
-    const totalBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
-    const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
-    return { totalStudents, totalPlatos, totalBs, inDebtCount };
-  }, [data, selectedTurn]);
-
-  // Unique list of courses for filter dropdown
-  const uniqueCourses = useMemo(() => {
-    const courses = data.map(r => String(r.curso || '').trim()).filter(Boolean);
-    return [...new Set(courses)].sort();
-  }, [data]);
 
   return (
     <div className="cobros-container">
