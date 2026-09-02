@@ -847,16 +847,29 @@ export default function CobrosView() {
     }
   };
 
-  // Sincronizar faltas desde el sistema (Google Sheets: Observaciones) para todos los turnos
-  const syncAbsencesGlobally = useCallback(async (targetMonth, isSilent = true) => {
+  // Sincronizar faltas y observaciones/cambios de menú desde el sistema (Google Sheets) para todos los turnos
+  const syncObservationsAndAbsencesGlobally = useCallback(async (targetMonth, isSilent = true) => {
     try {
       if (syncingAbsences) return;
       setSyncingAbsences(true);
 
-      // 1. Fetch Observaciones sheet
-      const rawAbsences = await fetchSheetData('Observaciones');
-      if (!rawAbsences || rawAbsences.length === 0) {
-        if (!isSilent) alert("No se encontraron registros de faltas en la planilla de Observaciones.");
+      // 1. Fetch Observaciones and Registros_Cambios in parallel
+      const [rawObservaciones, rawCambios] = await Promise.all([
+        fetchSheetData('Observaciones').catch(err => {
+          console.error('Error fetching Observaciones sheet:', err);
+          return [];
+        }),
+        fetchSheetData('Registros_Cambios').catch(err => {
+          console.error('Error fetching Registros_Cambios sheet:', err);
+          return [];
+        })
+      ]);
+
+      const hasObs = rawObservaciones && rawObservaciones.length > 0;
+      const hasCambios = rawCambios && rawCambios.length > 0;
+
+      if (!hasObs && !hasCambios) {
+        if (!isSilent) alert("No se encontraron registros de faltas ni de cambios de menú en Google Sheets.");
         return;
       }
 
@@ -872,21 +885,36 @@ export default function CobrosView() {
         return;
       }
 
-      // Helper to parse dates like "2026-08-14" or "14/08/2026"
-      const parseAbsenceDate = (dateStr) => {
+      // Helper to parse dates in any format: ISO, DD/MM/YYYY, DD/MM/YY, YYYY-MM-DD
+      const parseDateInfo = (dateStr) => {
         if (!dateStr) return null;
-        const isoMatch = String(dateStr).match(/^(\d{4})-(\d{2})-(\d{2})/);
+        const clean = String(dateStr).trim();
+        const isoMatch = clean.match(/^(\d{4})-(\d{2})-(\d{2})/);
         if (isoMatch) {
           return {
             yearMonth: `${isoMatch[1]}-${isoMatch[2]}`,
             dayNum: String(parseInt(isoMatch[3], 10))
           };
         }
-        const slashesMatch = String(dateStr).match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
-        if (slashesMatch) {
+        const slashes4Match = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+        if (slashes4Match) {
           return {
-            yearMonth: `${slashesMatch[3]}-${slashesMatch[2].padStart(2, '0')}`,
-            dayNum: String(parseInt(slashesMatch[1], 10))
+            yearMonth: `${slashes4Match[3]}-${slashes4Match[2].padStart(2, '0')}`,
+            dayNum: String(parseInt(slashes4Match[1], 10))
+          };
+        }
+        const slashes2Match = clean.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2})$/);
+        if (slashes2Match) {
+          return {
+            yearMonth: `20${slashes2Match[3]}-${slashes2Match[2].padStart(2, '0')}`,
+            dayNum: String(parseInt(slashes2Match[1], 10))
+          };
+        }
+        const hyphensMatch = clean.match(/^(\d{1,2})-(\d{1,2})-(\d{4})/);
+        if (hyphensMatch) {
+          return {
+            yearMonth: `${hyphensMatch[3]}-${hyphensMatch[2].padStart(2, '0')}`,
+            dayNum: String(parseInt(hyphensMatch[1], 10))
           };
         }
         return null;
@@ -911,15 +939,14 @@ export default function CobrosView() {
           .filter(w => w.length >= 3 && !['del', 'las', 'los', 'pre', 'kin', 'kinder'].includes(w));
       };
 
-      const findStudentMatch = (excelName, turn) => {
+      const findStudentMatch = (excelName) => {
         const excelWords = getWords(excelName);
         if (excelWords.length === 0) return null;
 
         let bestDb = null;
         let maxOverlap = 0;
 
-        const turnRecords = dbRecords.filter(r => r.turno === turn);
-        for (const dbRec of turnRecords) {
+        for (const dbRec of dbRecords) {
           const dbWords = getWords(dbRec.alumno);
           let overlap = 0;
           excelWords.forEach(ew => {
@@ -939,59 +966,109 @@ export default function CobrosView() {
         return maxOverlap >= 2.0 ? bestDb : null;
       };
 
-      // 3. Filter absences belonging to the current month and valid reason
-      const currentMonthAbsences = rawAbsences.filter(obs => {
-        const dateInfo = parseAbsenceDate(obs.fecha);
-        return dateInfo && dateInfo.yearMonth === targetMonth && isAbsenceReason(obs.motivo_de_falta);
-      });
+      // Map to accumulate updates by student ID
+      const studentsToUpdateMap = new Map();
 
-      // 4. Match and group updates
-      let importedCount = 0;
-      const studentsToUpdate = [];
-
-      for (const obs of currentMonthAbsences) {
-        // Find match in any turn
-        const turns = ['11:50', '11:25', '12:00', '12:40', '13:05'];
-        let match = null;
-        for (const turn of turns) {
-          match = findStudentMatch(obs.alumno, turn);
-          if (match) break;
+      const getQueuedStudent = (studentMatch) => {
+        if (studentsToUpdateMap.has(studentMatch.id)) {
+          return studentsToUpdateMap.get(studentMatch.id);
         }
+        const copy = {
+          ...studentMatch,
+          asistencias: { ...(studentMatch.asistencias || {}) }
+        };
+        studentsToUpdateMap.set(studentMatch.id, copy);
+        return copy;
+      };
 
-        if (match) {
-          const dateInfo = parseAbsenceDate(obs.fecha);
+      let importedFaltas = 0;
+      let importedCambios = 0;
+
+      // 3. Process Observaciones sheet (both faltas and dietary/menu observations)
+      if (rawObservaciones && rawObservaciones.length > 0) {
+        for (const obs of rawObservaciones) {
+          const studentName = obs.alumno || obs.nombre_hijo || obs.nombre;
+          const dateInfo = parseDateInfo(obs.fecha);
+          if (!studentName || !dateInfo || dateInfo.yearMonth !== targetMonth) continue;
+
+          const match = findStudentMatch(studentName);
+          if (!match) continue;
+
           const dayKey = dateInfo.dayNum;
-          
-          const currentAsistencias = match.asistencias || {};
-          if (currentAsistencias[dayKey] !== 'F' && currentAsistencias[dayKey] !== 'f') {
-            const updatedAsistencias = { ...currentAsistencias, [dayKey]: 'F' };
-            const rowTotals = calculateRowTotals(updatedAsistencias, match.curso);
-            const netBalance = Number(match.pagos_bs || 0) - rowTotals.platos_vendidos_bs;
-            
-            // Check if this student is already queued for update in this transaction
-            const queuedIdx = studentsToUpdate.findIndex(s => s.id === match.id);
-            if (queuedIdx !== -1) {
-              studentsToUpdate[queuedIdx].asistencias[dayKey] = 'F';
-              const accumTotals = calculateRowTotals(studentsToUpdate[queuedIdx].asistencias, match.curso);
-              studentsToUpdate[queuedIdx].platos_vendidos = accumTotals.platos_vendidos;
-              studentsToUpdate[queuedIdx].platos_vendidos_bs = accumTotals.platos_vendidos_bs;
-              studentsToUpdate[queuedIdx].color = (Number(match.pagos_bs || 0) - accumTotals.platos_vendidos_bs) >= 0 ? 'Verde' : 'Azul';
-            } else {
-              studentsToUpdate.push({
-                ...match,
-                asistencias: updatedAsistencias,
-                platos_vendidos: rowTotals.platos_vendidos,
-                platos_vendidos_bs: rowTotals.platos_vendidos_bs,
-                color: netBalance >= 0 ? 'Verde' : 'Azul'
-              });
+          const motivo = String(obs.motivo_de_falta || obs.motivo || obs.observacion || obs.detalle || '').trim();
+          const queued = getQueuedStudent(match);
+          let changed = false;
+
+          if (isAbsenceReason(motivo)) {
+            if (queued.asistencias[dayKey] !== 'F') {
+              queued.asistencias[dayKey] = 'F';
+              changed = true;
+              importedFaltas++;
             }
-            importedCount++;
+            if (motivo && !queued.asistencias[`${dayKey}_nota`]) {
+              queued.asistencias[`${dayKey}_nota`] = motivo;
+              changed = true;
+            }
+          } else if (motivo) {
+            // It's a menu change / dietary observation in Observaciones!
+            const currentNote = queued.asistencias[`${dayKey}_nota`] || '';
+            if (!currentNote.includes(motivo)) {
+              queued.asistencias[`${dayKey}_nota`] = currentNote ? `${currentNote} | ${motivo}` : motivo;
+              changed = true;
+              importedCambios++;
+            }
+          }
+
+          if (changed) {
+            const accumTotals = calculateRowTotals(queued.asistencias, queued.curso);
+            queued.platos_vendidos = accumTotals.platos_vendidos;
+            queued.platos_vendidos_bs = accumTotals.platos_vendidos_bs;
+            queued.color = (Number(queued.pagos_bs || 0) - accumTotals.platos_vendidos_bs) >= 0 ? 'Verde' : 'Azul';
           }
         }
       }
 
+      // 4. Process Registros_Cambios sheet (explicit menu changes)
+      if (rawCambios && rawCambios.length > 0) {
+        for (const cambio of rawCambios) {
+          const studentName = cambio.nombre_hijo || cambio.alumno || cambio.nombre;
+          const dateInfo = parseDateInfo(cambio.fecha);
+          if (!studentName || !dateInfo || dateInfo.yearMonth !== targetMonth) continue;
+
+          const match = findStudentMatch(studentName);
+          if (!match) continue;
+
+          const dayKey = dateInfo.dayNum;
+          const platoElegido = String(cambio.plato_elegido || '').trim();
+          const platoOriginal = String(cambio.plato_original || '').trim();
+          if (!platoElegido && !platoOriginal) continue;
+
+          const noteText = platoOriginal 
+            ? `Cambio de menú: ${platoElegido} (original: ${platoOriginal})` 
+            : `Cambio de menú: ${platoElegido}`;
+
+          const queued = getQueuedStudent(match);
+          const currentNote = queued.asistencias[`${dayKey}_nota`] || '';
+
+          if (!currentNote.includes(platoElegido)) {
+            queued.asistencias[`${dayKey}_nota`] = currentNote ? `${currentNote} | ${noteText}` : noteText;
+            importedCambios++;
+            const accumTotals = calculateRowTotals(queued.asistencias, queued.curso);
+            queued.platos_vendidos = accumTotals.platos_vendidos;
+            queued.platos_vendidos_bs = accumTotals.platos_vendidos_bs;
+            queued.color = (Number(queued.pagos_bs || 0) - accumTotals.platos_vendidos_bs) >= 0 ? 'Verde' : 'Azul';
+          }
+        }
+      }
+
+      const studentsToUpdate = Array.from(studentsToUpdateMap.values()).filter(st => {
+        const original = dbRecords.find(r => r.id === st.id);
+        if (!original) return false;
+        return JSON.stringify(original.asistencias) !== JSON.stringify(st.asistencias);
+      });
+
       if (studentsToUpdate.length === 0) {
-        if (!isSilent) alert("Todas las faltas de Google Sheets ya se encuentran sincronizadas.");
+        if (!isSilent) alert("Todas las faltas y observaciones de cambios de menú ya se encuentran sincronizadas.");
         return;
       }
 
@@ -1010,39 +1087,116 @@ export default function CobrosView() {
         if (saveErr) throw saveErr;
       }
 
-      // 6. Refresh state of the current view if any student of the current turn was updated
-      const updatedInCurrentView = studentsToUpdate.filter(s => s.turno === selectedTurn);
-      if (updatedInCurrentView.length > 0) {
-        // Optimistically update React view state
-        setData(prev => {
-          return prev.map(student => {
-            const matchUpdated = updatedInCurrentView.find(u => u.id === student.id);
-            return matchUpdated ? matchUpdated : student;
-          });
+      // 6. Refresh state of the current view
+      setData(prev => {
+        return prev.map(student => {
+          const matchUpdated = studentsToUpdate.find(u => u.id === student.id);
+          return matchUpdated ? matchUpdated : student;
         });
-      }
+      });
 
       if (!isSilent) {
-        alert(`Sincronización completada con éxito. Se importaron ${importedCount} faltas de asistencia en todos los turnos.`);
+        alert(`Sincronización completada con éxito. Se actualizaron ${studentsToUpdate.length} alumnos (${importedFaltas} faltas y ${importedCambios} observaciones de menú sincronizadas).`);
       }
     } catch (err) {
-      console.error('Error in global absence sync:', err);
-      if (!isSilent) alert('Ocurrió un error al sincronizar las faltas desde Google Sheets.');
+      console.error('Error in global sync:', err);
+      if (!isSilent) alert('Ocurrió un error al sincronizar las observaciones y cambios desde Google Sheets.');
     } finally {
       setSyncingAbsences(false);
     }
-  }, [syncingAbsences, selectedTurn, calculateRowTotals]);
+  }, [syncingAbsences, calculateRowTotals]);
 
-  // Sincronizar faltas en segundo plano de manera silenciosa cuando cambie el mes o los datos estén listos
+  // Sincronizar faltas y observaciones en segundo plano de manera silenciosa cuando cambie el mes o los datos estén listos
   useEffect(() => {
     if (data.length > 0 && lastSyncedMonthRef.current !== selectedMonth) {
       lastSyncedMonthRef.current = selectedMonth;
       const timer = window.setTimeout(() => {
-        syncAbsencesGlobally(selectedMonth, true);
+        syncObservationsAndAbsencesGlobally(selectedMonth, true);
       }, 1000); // 1s delay to run smoothly in background after initial load
       return () => window.clearTimeout(timer);
     }
-  }, [selectedMonth, data.length, syncAbsencesGlobally]);
+  }, [selectedMonth, data.length, syncObservationsAndAbsencesGlobally]);
+
+  // Manejador de navegación con flechas de teclado tipo Excel en la tabla
+  const handleTableKeyDown = useCallback((e) => {
+    const target = e.target;
+    if (!target || target.tagName !== 'INPUT') return;
+
+    const rAttr = target.getAttribute('data-r');
+    const cAttr = target.getAttribute('data-c');
+    if (rAttr === null || cAttr === null) return;
+
+    const r = parseInt(rAttr, 10);
+    const c = parseInt(cAttr, 10);
+    if (isNaN(r) || isNaN(c)) return;
+
+    const isDayCell = target.classList.contains('cell-day-input');
+    const { key, shiftKey } = e;
+
+    const maxC = 7 + currentMonthDays.length;
+    let targetR = r;
+    let targetC = c;
+    let shouldNavigate = false;
+
+    if (key === 'ArrowUp' || (key === 'Enter' && shiftKey)) {
+      targetR = r - 1;
+      shouldNavigate = true;
+    } else if (key === 'ArrowDown' || (key === 'Enter' && !shiftKey)) {
+      targetR = r + 1;
+      shouldNavigate = true;
+    } else if (key === 'ArrowLeft') {
+      if (isDayCell) {
+        targetC = c - 1;
+        shouldNavigate = true;
+      } else {
+        const isAllSelected = target.selectionStart === 0 && target.selectionEnd === target.value.length;
+        const isAtStart = target.selectionStart === 0 && target.selectionEnd === 0;
+        if (isAllSelected || isAtStart) {
+          targetC = c - 1;
+          shouldNavigate = true;
+        }
+      }
+    } else if (key === 'ArrowRight') {
+      if (isDayCell) {
+        targetC = c + 1;
+        shouldNavigate = true;
+      } else {
+        const isAllSelected = target.selectionStart === 0 && target.selectionEnd === target.value.length;
+        const isAtEnd = target.selectionStart === target.value.length && target.selectionEnd === target.value.length;
+        if (isAllSelected || isAtEnd) {
+          targetC = c + 1;
+          shouldNavigate = true;
+        }
+      }
+    } else if (key === 'Tab') {
+      if (shiftKey) {
+        if (c > 0) {
+          targetC = c - 1;
+        } else if (r > 0) {
+          targetR = r - 1;
+          targetC = maxC;
+        }
+      } else {
+        if (c < maxC) {
+          targetC = c + 1;
+        } else if (r < filteredData.length - 1) {
+          targetR = r + 1;
+          targetC = 0;
+        }
+      }
+      shouldNavigate = true;
+    }
+
+    if (shouldNavigate) {
+      const nextInput = document.querySelector(`input[data-r="${targetR}"][data-c="${targetC}"]`);
+      if (nextInput) {
+        e.preventDefault();
+        nextInput.focus();
+        nextInput.select();
+        nextInput.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+      }
+    }
+  }, [currentMonthDays.length, filteredData.length]);
 
   // Export to CSV
   const handleExport = () => {
@@ -1322,6 +1476,16 @@ export default function CobrosView() {
               <span>Mes Completo</span>
             </button>
 
+            <button 
+              className="btn btn-outline btn-sync-data" 
+              onClick={() => syncObservationsAndAbsencesGlobally(selectedMonth, false)} 
+              disabled={syncingAbsences || data.length === 0}
+              title="Sincronizar faltas y observaciones/cambios de menú desde Google Sheets (Observaciones y Registros de Cambios)"
+            >
+              <RefreshCw size={16} className={syncingAbsences ? 'spinner' : ''} />
+              <span>Sincronizar</span>
+            </button>
+
             <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
               <Download size={16} />
               <span>CSV</span>
@@ -1399,7 +1563,7 @@ export default function CobrosView() {
           </div>
         ) : (
           <div className="excel-table-container">
-            <table className="excel-table">
+            <table className="excel-table" onKeyDown={handleTableKeyDown}>
               <thead>
                 <tr className="main-header-row">
                   <th rowSpan={2} className="col-nro">Nro.</th>
@@ -1442,6 +1606,9 @@ export default function CobrosView() {
                           <input
                             type="text"
                             value={row.alumno || ''}
+                            data-r={index}
+                            data-c={0}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
@@ -1456,6 +1623,9 @@ export default function CobrosView() {
                           <input
                             type="text"
                             value={row.curso || ''}
+                            data-r={index}
+                            data-c={1}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
@@ -1470,6 +1640,9 @@ export default function CobrosView() {
                           <input
                             type="text"
                             value={row.turno || ''}
+                            data-r={index}
+                            data-c={2}
+                            onFocus={(e) => e.target.select()}
                             onChange={(e) => {
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
@@ -1484,6 +1657,9 @@ export default function CobrosView() {
                           <input
                             type="text"
                             value={row.fecha_inicio || ''}
+                            data-r={index}
+                            data-c={3}
+                            onFocus={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
                               const newData = [...data];
@@ -1499,6 +1675,9 @@ export default function CobrosView() {
                           <input
                             type="text"
                             value={row.fecha_fin || ''}
+                            data-r={index}
+                            data-c={4}
+                            onFocus={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
                               const newData = [...data];
@@ -1514,6 +1693,9 @@ export default function CobrosView() {
                           <input
                             type="text"
                             value={row.observaciones || ''}
+                            data-r={index}
+                            data-c={5}
+                            onFocus={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
                               const newData = [...data];
@@ -1527,7 +1709,7 @@ export default function CobrosView() {
                         </td>
                         
                         {/* Dynamic Day Columns */}
-                        {currentMonthDays.map(d => {
+                        {currentMonthDays.map((d, dIdx) => {
                           const val = row.asistencias?.[d.key] || '';
                           const note = row.asistencias?.[`${d.key}_nota`] || '';
                           const isFalta = String(val).toUpperCase() === 'F';
@@ -1536,7 +1718,14 @@ export default function CobrosView() {
                           return (
                             <td 
                               key={d.key} 
-                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''}`}
+                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''}`}
+                              onClick={(e) => {
+                                const inp = e.currentTarget.querySelector('input');
+                                if (inp && document.activeElement !== inp) {
+                                  inp.focus();
+                                  inp.select();
+                                }
+                              }}
                               onContextMenu={(e) => {
                                 e.preventDefault();
                                 setActiveNoteModal({
@@ -1563,6 +1752,9 @@ export default function CobrosView() {
                                 <input
                                   type="text"
                                   value={val}
+                                  data-r={index}
+                                  data-c={6 + dIdx}
+                                  onFocus={(e) => e.target.select()}
                                   onChange={(e) => {
                                     const newData = [...data];
                                     const idx = newData.findIndex(r => r.id === row.id);
@@ -1631,6 +1823,9 @@ export default function CobrosView() {
                             <input
                               type="number"
                               value={row.pagos_bs || ''}
+                              data-r={index}
+                              data-c={6 + currentMonthDays.length}
+                              onFocus={(e) => e.target.select()}
                               placeholder="0"
                               onChange={(e) => {
                                 const newData = [...data];
@@ -1678,6 +1873,9 @@ export default function CobrosView() {
                           <input
                             type="number"
                             value={row.saldo_merienditas || ''}
+                            data-r={index}
+                            data-c={7 + currentMonthDays.length}
+                            onFocus={(e) => e.target.select()}
                             placeholder="0"
                             onChange={(e) => {
                               const newData = [...data];

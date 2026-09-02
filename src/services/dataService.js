@@ -9,7 +9,7 @@ const WEBHOOK_URL = 'https://automation8n.fluxia.site/webhook/70b25ce8-51d3-48b9
  * @returns {Promise<Array>}
  */
 export const fetchSheetData = async (sheetName) => {
-  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(sheetName)}`;
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&sheet=${encodeURIComponent(sheetName)}&t=${Date.now()}`;
   
   return new Promise((resolve, reject) => {
     Papa.parse(url, {
