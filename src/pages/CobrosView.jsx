@@ -1490,7 +1490,7 @@ export default function CobrosView() {
 
               {/* Global Month Notice Banner */}
               {(() => {
-                const notice = getMonthGlobalNotice(selectedMonth, currentMonthDays.length);
+                const notice = getDynamicMonthNotice(selectedMonth, currentMonthDays.length);
                 return (
                   <div className="global-month-notice">
                     <div className="global-notice-left">
