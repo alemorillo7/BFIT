@@ -385,6 +385,34 @@
   cursor: not-allowed;
 }
 
+.btn-fullscreen {
+  height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #4338ca !important;
+  background-color: #eef2ff !important;
+  border-color: #c7d2fe !important;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-fullscreen:hover:not(:disabled) {
+  background-color: #4338ca !important;
+  color: white !important;
+  border-color: #4338ca !important;
+}
+
+.btn-fullscreen.active {
+  background-color: #4338ca !important;
+  color: white !important;
+  border-color: #3730a3 !important;
+}
+
 .btn-export {
   height: 34px;
   padding: 0.35rem 0.75rem;
@@ -1140,4 +1168,47 @@
 
 .btn-danger-text:hover {
   background-color: #fef2f2 !important;
+}
+
+/* Fullscreen Spreadsheet Expansion Mode */
+.cobros-container--fullscreen {
+  position: fixed !important;
+  inset: 0 !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  z-index: 99999 !important;
+  background-color: #f8fafc !important;
+  padding: 0.75rem 1rem !important;
+  margin: 0 !important;
+  max-width: none !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+.cobros-container--fullscreen .summary-ribbon,
+.cobros-container--fullscreen .global-month-notice {
+  margin-bottom: 0.35rem;
+}
+
+.cobros-container--fullscreen .controls-toolbar {
+  margin-bottom: 0.5rem;
+}
+
+.cobros-container--fullscreen .table-wrapper {
+  flex: 1 1 auto;
+  display: flex !important;
+  flex-direction: column;
+  margin-bottom: 0;
+  height: calc(100vh - 170px) !important;
+  border-radius: var(--radius-md);
+}
+
+.cobros-container--fullscreen .excel-table-container {
+  max-height: calc(100vh - 175px) !important;
+  height: calc(100vh - 175px) !important;
+  flex: 1 1 auto;
 }

@@ -20,6 +20,8 @@ import {
   Info,
   StickyNote,
   Save,
+  Maximize2,
+  Minimize2,
   X
 } from 'lucide-react';
 import * as Papa from 'papaparse';
@@ -141,8 +143,47 @@ export default function CobrosView() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [syncingAbsences, setSyncingAbsences] = useState(false);
   const [activeNoteModal, setActiveNoteModal] = useState(null); // { rowId, dayKey, dayLabel, studentName, currentValue, currentNote }
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const lastSyncedMonthRef = useRef('');
   const pressedKeysRef = useRef(new Set());
+
+  const toggleFullscreen = useCallback(() => {
+    setIsFullscreen(prev => {
+      const next = !prev;
+      if (next) {
+        if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+          document.documentElement.requestFullscreen().catch(() => {});
+        }
+      } else {
+        if (document.exitFullscreen && document.fullscreenElement) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsFullscreen(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        setIsFullscreen(false);
+        if (document.fullscreenElement && document.exitFullscreen) {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    };
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isFullscreen]);
 
   useEffect(() => {
     const handleWindowBlur = () => {
@@ -1311,7 +1352,7 @@ export default function CobrosView() {
   }, [currentMonthDays.length, filteredData.length]);
 
   return (
-    <div className="cobros-container">
+    <div className={`cobros-container ${isFullscreen ? 'cobros-container--fullscreen' : ''}`}>
       {/* 1. Top Navigation Sub-Tabs & Accountant Excel Export */}
       <div className="cobros-nav-tabs-bar">
         <div className="cobros-nav-tabs">
@@ -1529,6 +1570,15 @@ export default function CobrosView() {
             <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
               <Download size={16} />
               <span>CSV</span>
+            </button>
+
+            <button 
+              className={`btn btn-outline btn-fullscreen ${isFullscreen ? 'active' : ''}`}
+              onClick={toggleFullscreen}
+              title={isFullscreen ? "Salir de Pantalla Completa (Esc)" : "Expandir planilla a Pantalla Completa"}
+            >
+              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
+              <span>{isFullscreen ? 'Salir' : 'Pantalla Completa'}</span>
             </button>
 
             <button className="btn btn-primary btn-add-student" onClick={handleAddRow}>
