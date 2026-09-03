@@ -7,6 +7,7 @@ import {
   ListPlus,
   LogOut,
   MessageSquare,
+  RefreshCw,
   Settings,
   Star,
   Users,
@@ -14,6 +15,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
+import { forceClearCacheAndReload } from '../utils/cacheBuster';
 import './Sidebar.css';
 
 const Sidebar = ({ isCollapsed, isOpen, onLogout, onNavigate }) => {
@@ -59,6 +61,16 @@ const Sidebar = ({ isCollapsed, isOpen, onLogout, onNavigate }) => {
 
       <div className="sidebar-footer">
         {!isCollapsed && <p className="footer-copy">© 2026 Bfit System</p>}
+        
+        <button 
+          className="sidebar-refresh-btn" 
+          onClick={forceClearCacheAndReload} 
+          title="Limpiar caché y forzar última versión actualizada"
+        >
+          <RefreshCw size={18} />
+          {!isCollapsed && <span>Actualizar Sistema</span>}
+        </button>
+
         <button className="sidebar-logout-btn" onClick={onLogout} title="Cerrar Sesión">
           <LogOut size={20} />
           {!isCollapsed && <span>Cerrar Sesión</span>}

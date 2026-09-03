@@ -144,6 +144,40 @@
   display: none;
 }
 
+.sidebar-refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  width: 100%;
+  background-color: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.25);
+  padding: 0.55rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sidebar.collapsed .sidebar-refresh-btn {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  padding: 0;
+}
+
+.sidebar.collapsed .sidebar-refresh-btn span {
+  display: none;
+}
+
+.sidebar-refresh-btn:hover {
+  background-color: rgba(59, 130, 246, 0.22);
+  border-color: #3b82f6;
+  color: #93c5fd;
+}
+
 .sidebar-logout-btn {
   display: flex;
   align-items: center;
