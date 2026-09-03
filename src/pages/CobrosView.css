@@ -1170,7 +1170,7 @@
   background-color: #fef2f2 !important;
 }
 
-/* Fullscreen Spreadsheet Expansion Mode */
+/* Fullscreen Spreadsheet Pure Expansion Mode */
 .cobros-container--fullscreen {
   position: fixed !important;
   inset: 0 !important;
@@ -1178,9 +1178,9 @@
   left: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  z-index: 99999 !important;
-  background-color: #f8fafc !important;
-  padding: 0.75rem 1rem !important;
+  z-index: 999999 !important;
+  background-color: #ffffff !important;
+  padding: 0 !important;
   margin: 0 !important;
   max-width: none !important;
   overflow: hidden !important;
@@ -1189,26 +1189,123 @@
   flex-direction: column !important;
 }
 
-.cobros-container--fullscreen .summary-ribbon,
-.cobros-container--fullscreen .global-month-notice {
-  margin-bottom: 0.35rem;
+.fullscreen-top-bar {
+  height: 44px;
+  min-height: 44px;
+  background: #0f172a;
+  color: #f8fafc;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1rem;
+  border-bottom: 1px solid #334155;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+  z-index: 20;
 }
 
-.cobros-container--fullscreen .controls-toolbar {
-  margin-bottom: 0.5rem;
+.fullscreen-top-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-fullscreen-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: #3b82f6;
+  color: #ffffff;
+  border: none;
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-md);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+  transition: all 0.15s ease;
+}
+
+.btn-fullscreen-back:hover {
+  background: #2563eb;
+  transform: translateX(-2px);
+}
+
+.fullscreen-info-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.fullscreen-badge-title {
+  color: #93c5fd;
+  font-weight: 700;
+}
+
+.fullscreen-badge-sep {
+  color: #64748b;
+}
+
+.fullscreen-badge-course {
+  color: #fde047;
+  font-weight: 700;
+}
+
+.fullscreen-top-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.fullscreen-student-count {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #94a3b8;
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+}
+
+.btn-fullscreen-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-fullscreen-exit:hover {
+  background: #ef4444;
+  color: #ffffff;
 }
 
 .cobros-container--fullscreen .table-wrapper {
   flex: 1 1 auto;
   display: flex !important;
   flex-direction: column;
-  margin-bottom: 0;
-  height: calc(100vh - 170px) !important;
-  border-radius: var(--radius-md);
+  margin: 0 !important;
+  height: calc(100vh - 44px) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: #ffffff !important;
 }
 
 .cobros-container--fullscreen .excel-table-container {
-  max-height: calc(100vh - 175px) !important;
-  height: calc(100vh - 175px) !important;
+  max-height: calc(100vh - 44px) !important;
+  height: calc(100vh - 44px) !important;
   flex: 1 1 auto;
+  border: none !important;
 }

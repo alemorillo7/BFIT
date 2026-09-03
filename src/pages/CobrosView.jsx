@@ -22,6 +22,7 @@ import {
   Save,
   Maximize2,
   Minimize2,
+  ArrowLeft,
   X
 } from 'lucide-react';
 import * as Papa from 'papaparse';
@@ -1353,44 +1354,89 @@ export default function CobrosView() {
 
   return (
     <div className={`cobros-container ${isFullscreen ? 'cobros-container--fullscreen' : ''}`}>
-      {/* 1. Top Navigation Sub-Tabs & Accountant Excel Export */}
-      <div className="cobros-nav-tabs-bar">
-        <div className="cobros-nav-tabs">
-          <button 
-            className={`cobros-tab-btn ${activeTab === 'planilla' ? 'active' : ''}`}
-            onClick={() => setActiveTab('planilla')}
-          >
-            <TableIcon size={16} />
-            <span>Planilla de Asistencia</span>
-          </button>
+      {/* 0. Fullscreen Dedicated Minimal Bar */}
+      {isFullscreen && (
+        <div className="fullscreen-top-bar">
+          <div className="fullscreen-top-left">
+            <button 
+              className="btn-fullscreen-back"
+              onClick={toggleFullscreen}
+              title="Salir de Pantalla Completa y volver al panel principal (Esc)"
+            >
+              <ArrowLeft size={18} />
+              <span>Volver al Panel</span>
+            </button>
+
+            <div className="fullscreen-info-badge">
+              <TableIcon size={15} />
+              <span className="fullscreen-badge-title">Planilla de Cobros</span>
+              <span className="fullscreen-badge-sep">&bull;</span>
+              <span className="fullscreen-badge-month">{monthsList.find(m => m.value === selectedMonth)?.label}</span>
+              <span className="fullscreen-badge-sep">&bull;</span>
+              <span className="fullscreen-badge-turn">Turno {turnsList.find(t => t.value === selectedTurn)?.label}</span>
+              {courseFilter && (
+                <>
+                  <span className="fullscreen-badge-sep">&bull;</span>
+                  <span className="fullscreen-badge-course">Curso: {courseFilter}</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <div className="fullscreen-top-right">
+            <span className="fullscreen-student-count">{filteredData.length} Alumnos</span>
+            <button 
+              className="btn-fullscreen-exit"
+              onClick={toggleFullscreen}
+              title="Salir de Pantalla Completa (Esc)"
+            >
+              <Minimize2 size={16} />
+              <span>Salir (Esc)</span>
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* 1. Top Navigation Sub-Tabs & Accountant Excel Export (Hidden in Fullscreen) */}
+      {!isFullscreen && (
+        <div className="cobros-nav-tabs-bar">
+          <div className="cobros-nav-tabs">
+            <button 
+              className={`cobros-tab-btn ${activeTab === 'planilla' ? 'active' : ''}`}
+              onClick={() => setActiveTab('planilla')}
+            >
+              <TableIcon size={16} />
+              <span>Planilla de Asistencia</span>
+            </button>
+
+            <button 
+              className={`cobros-tab-btn ${activeTab === 'finanzas' ? 'active' : ''}`}
+              onClick={() => setActiveTab('finanzas')}
+            >
+              <TrendingUp size={16} />
+              <span>Finanzas e Ingresos</span>
+            </button>
+
+            <button 
+              className={`cobros-tab-btn ${activeTab === 'importar' ? 'active' : ''}`}
+              onClick={() => setActiveTab('importar')}
+            >
+              <UploadCloud size={16} />
+              <span>Cargar Planilla Excel</span>
+            </button>
+          </div>
 
           <button 
-            className={`cobros-tab-btn ${activeTab === 'finanzas' ? 'active' : ''}`}
-            onClick={() => setActiveTab('finanzas')}
+            className="btn btn-export-excel-full"
+            onClick={handleDownloadFullExcel}
+            disabled={data.length === 0}
+            title="Descarga el archivo Excel con todas las planillas de los 5 turnos y el resumen general para la contadora"
           >
-            <TrendingUp size={16} />
-            <span>Finanzas e Ingresos</span>
-          </button>
-
-          <button 
-            className={`cobros-tab-btn ${activeTab === 'importar' ? 'active' : ''}`}
-            onClick={() => setActiveTab('importar')}
-          >
-            <UploadCloud size={16} />
-            <span>Cargar Planilla Excel</span>
+            <FileSpreadsheet size={16} />
+            <span>Descargar Excel Contabilidad (Todos los Turnos)</span>
           </button>
         </div>
-
-        <button 
-          className="btn btn-export-excel-full"
-          onClick={handleDownloadFullExcel}
-          disabled={data.length === 0}
-          title="Descarga el archivo Excel con todas las planillas de los 5 turnos y el resumen general para la contadora"
-        >
-          <FileSpreadsheet size={16} />
-          <span>Descargar Excel Contabilidad (Todos los Turnos)</span>
-        </button>
-      </div>
+      )}
 
       {/* 2. Sub-views */}
       {activeTab === 'finanzas' && (
@@ -1419,175 +1465,179 @@ export default function CobrosView() {
 
       {activeTab === 'planilla' && (
         <>
-          <div className="cobros-header premium-card">
-            <div className="title-row">
-              <div className="title-section">
-                <div className="title-with-badge">
-                  <h1>Planilla de Cobros</h1>
-              <span className="badge-turn-indicator">
-                {turnsList.find(t => t.value === selectedTurn)?.label}
-              </span>
-              {syncingAbsences && (
-                <div className="sync-badge">
-                  <Loader2 className="spinner" size={14} />
-                  <span>Sincronizando faltas...</span>
+          {!isFullscreen && (
+            <>
+              <div className="cobros-header premium-card">
+                <div className="title-row">
+                  <div className="title-section">
+                    <div className="title-with-badge">
+                      <h1>Planilla de Cobros</h1>
+                      <span className="badge-turn-indicator">
+                        {turnsList.find(t => t.value === selectedTurn)?.label}
+                      </span>
+                      {syncingAbsences && (
+                        <div className="sync-badge">
+                          <Loader2 className="spinner" size={14} />
+                          <span>Sincronizando faltas...</span>
+                        </div>
+                      )}
+                    </div>
+                    <p className="subtitle">Gestión e importes de comidas de alumnos</p>
+                  </div>
+
+                  {/* Quick summary stats chips */}
+                  <div className="stats-chips-container">
+                    <div className="stat-chip">
+                      <span className="stat-label">Alumnos:</span>
+                      <span className="stat-value">{summaryStats.totalStudents}</span>
+                    </div>
+                    <div className="stat-chip">
+                      <span className="stat-label">Platos:</span>
+                      <span className="stat-value text-primary">{summaryStats.totalPlatos}</span>
+                    </div>
+                    <div className="stat-chip">
+                      <span className="stat-label">Total:</span>
+                      <span className="stat-value text-success">{summaryStats.totalBs} Bs</span>
+                    </div>
+                    {summaryStats.inDebtCount > 0 ? (
+                      <div className="stat-chip stat-chip--danger" title="Alumnos con saldo negativo">
+                        <span className="stat-label">Pendientes:</span>
+                        <span className="stat-value text-danger">{summaryStats.inDebtCount}</span>
+                      </div>
+                    ) : (
+                      <div className="stat-chip stat-chip--success" title="Todos al día">
+                        <span className="stat-value text-success">Al día ✓</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              )}
-            </div>
-            <p className="subtitle">Gestión e importes de comidas de alumnos</p>
-          </div>
-
-          {/* Quick summary stats chips */}
-          <div className="stats-chips-container">
-            <div className="stat-chip">
-              <span className="stat-label">Alumnos:</span>
-              <span className="stat-value">{summaryStats.totalStudents}</span>
-            </div>
-            <div className="stat-chip">
-              <span className="stat-label">Platos:</span>
-              <span className="stat-value text-primary">{summaryStats.totalPlatos}</span>
-            </div>
-            <div className="stat-chip">
-              <span className="stat-label">Total:</span>
-              <span className="stat-value text-success">{summaryStats.totalBs} Bs</span>
-            </div>
-            {summaryStats.inDebtCount > 0 ? (
-              <div className="stat-chip stat-chip--danger" title="Alumnos con saldo negativo">
-                <span className="stat-label">Pendientes:</span>
-                <span className="stat-value text-danger">{summaryStats.inDebtCount}</span>
               </div>
-            ) : (
-              <div className="stat-chip stat-chip--success" title="Todos al día">
-                <span className="stat-value text-success">Al día ✓</span>
+
+              {/* Global Month Notice Banner */}
+              {(() => {
+                const notice = getMonthGlobalNotice(selectedMonth, currentMonthDays.length);
+                return (
+                  <div className="global-month-notice">
+                    <div className="global-notice-left">
+                      <Info size={16} className="notice-icon" />
+                      <span className="global-notice-title">{notice.title}:</span>
+                      <span className="global-notice-text">{notice.text}</span>
+                    </div>
+                    <span className="badge-working-days">{currentMonthDays.length} Días Hábiles</span>
+                  </div>
+                );
+              })()}
+
+              {/* Toolbar with Filters and Actions */}
+              <div className="controls-toolbar">
+                <div className="filters-group">
+                  {/* Month Selector */}
+                  <div className="filter-box month-filter-box">
+                    <Calendar size={16} className="filter-icon" />
+                    <select
+                      value={selectedMonth}
+                      onChange={(e) => setSelectedMonth(e.target.value)}
+                      className="input select-filter month-select"
+                    >
+                      {monthsList.map(m => (
+                        <option key={m.value} value={m.value}>{m.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* Turn Selector */}
+                  <div className="filter-box turn-filter-box">
+                    <Clock size={16} className="filter-icon" />
+                    <select
+                      value={selectedTurn}
+                      onChange={(e) => setSelectedTurn(e.target.value)}
+                      className="input select-filter turn-select"
+                    >
+                      {turnsList.map(t => (
+                        <option key={t.value} value={t.value}>{t.label}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className="search-box">
+                    <Search size={16} className="search-icon" />
+                    <input
+                      type="text"
+                      placeholder="Buscar alumno o curso..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="input search-input"
+                    />
+                  </div>
+
+                  <div className="filter-box course-filter-box">
+                    <Filter size={16} className="filter-icon" />
+                    <select
+                      value={courseFilter}
+                      onChange={(e) => setCourseFilter(e.target.value)}
+                      className="input select-filter"
+                    >
+                      <option value="">Todos los cursos</option>
+                      {uniqueCourses.map(course => (
+                        <option key={course} value={course}>{course}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="actions-group">
+                  <button 
+                    className="btn btn-outline btn-quick-settle-all" 
+                    onClick={handleSettleAllCurrentTurn} 
+                    disabled={data.length === 0}
+                    title="Pone al día a todos los alumnos que tienen saldo negativo en este turno (0 Bs / Verde)"
+                  >
+                    <CheckCheck size={16} />
+                    <span>Saldar Turno</span>
+                  </button>
+
+                  <button 
+                    className="btn btn-outline btn-quick-month-all" 
+                    onClick={handleSetFullMonthAllCurrentTurn} 
+                    disabled={data.length === 0}
+                    title={`Carga el pago del mes completo (${currentMonthDays.length} días) a todos los alumnos del turno`}
+                  >
+                    <Coins size={16} />
+                    <span>Mes Completo</span>
+                  </button>
+
+                  <button 
+                    className="btn btn-outline btn-sync-data" 
+                    onClick={() => syncObservationsAndAbsencesGlobally(selectedMonth, false)} 
+                    disabled={syncingAbsences || data.length === 0}
+                    title="Sincronizar faltas y observaciones/cambios de menú desde Google Sheets (Observaciones y Registros de Cambios)"
+                  >
+                    <RefreshCw size={16} className={syncingAbsences ? 'spinner' : ''} />
+                    <span>Sincronizar</span>
+                  </button>
+
+                  <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
+                    <Download size={16} />
+                    <span>CSV</span>
+                  </button>
+
+                  <button 
+                    className={`btn btn-outline btn-fullscreen ${isFullscreen ? 'active' : ''}`}
+                    onClick={toggleFullscreen}
+                    title="Expandir planilla a Pantalla Completa"
+                  >
+                    <Maximize2 size={16} />
+                    <span>Pantalla Completa</span>
+                  </button>
+
+                  <button className="btn btn-primary btn-add-student" onClick={handleAddRow}>
+                    <Plus size={16} />
+                    <span>+ Alumno</span>
+                  </button>
+                </div>
               </div>
-            )}
-          </div>
-        </div>
-
-        {/* Global Month Notice Banner */}
-        {(() => {
-          const notice = getMonthGlobalNotice(selectedMonth, currentMonthDays.length);
-          return (
-            <div className="global-month-notice">
-              <div className="global-notice-left">
-                <Info size={16} className="notice-icon" />
-                <span className="global-notice-title">{notice.title}:</span>
-                <span className="global-notice-text">{notice.text}</span>
-              </div>
-              <span className="badge-working-days">{currentMonthDays.length} Días Hábiles</span>
-            </div>
-          );
-        })()}
-
-        {/* Toolbar with Filters and Actions */}
-        <div className="controls-toolbar">
-          <div className="filters-group">
-            {/* Month Selector */}
-            <div className="filter-box month-filter-box">
-              <Calendar size={16} className="filter-icon" />
-              <select
-                value={selectedMonth}
-                onChange={(e) => setSelectedMonth(e.target.value)}
-                className="input select-filter month-select"
-              >
-                {monthsList.map(m => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
-                ))}
-              </select>
-            </div>
-
-            {/* Turn Selector */}
-            <div className="filter-box turn-filter-box">
-              <Clock size={16} className="filter-icon" />
-              <select
-                value={selectedTurn}
-                onChange={(e) => setSelectedTurn(e.target.value)}
-                className="input select-filter turn-select"
-              >
-                {turnsList.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
-            </div>
-
-            <div className="search-box">
-              <Search size={16} className="search-icon" />
-              <input
-                type="text"
-                placeholder="Buscar alumno o curso..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="input search-input"
-              />
-            </div>
-
-            <div className="filter-box course-filter-box">
-              <Filter size={16} className="filter-icon" />
-              <select
-                value={courseFilter}
-                onChange={(e) => setCourseFilter(e.target.value)}
-                className="input select-filter"
-              >
-                <option value="">Todos los cursos</option>
-                {uniqueCourses.map(course => (
-                  <option key={course} value={course}>{course}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="actions-group">
-            <button 
-              className="btn btn-outline btn-quick-settle-all" 
-              onClick={handleSettleAllCurrentTurn} 
-              disabled={data.length === 0}
-              title="Pone al día a todos los alumnos que tienen saldo negativo en este turno (0 Bs / Verde)"
-            >
-              <CheckCheck size={16} />
-              <span>Saldar Turno</span>
-            </button>
-
-            <button 
-              className="btn btn-outline btn-quick-month-all" 
-              onClick={handleSetFullMonthAllCurrentTurn} 
-              disabled={data.length === 0}
-              title={`Carga el pago del mes completo (${currentMonthDays.length} días) a todos los alumnos del turno`}
-            >
-              <Coins size={16} />
-              <span>Mes Completo</span>
-            </button>
-
-            <button 
-              className="btn btn-outline btn-sync-data" 
-              onClick={() => syncObservationsAndAbsencesGlobally(selectedMonth, false)} 
-              disabled={syncingAbsences || data.length === 0}
-              title="Sincronizar faltas y observaciones/cambios de menú desde Google Sheets (Observaciones y Registros de Cambios)"
-            >
-              <RefreshCw size={16} className={syncingAbsences ? 'spinner' : ''} />
-              <span>Sincronizar</span>
-            </button>
-
-            <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
-              <Download size={16} />
-              <span>CSV</span>
-            </button>
-
-            <button 
-              className={`btn btn-outline btn-fullscreen ${isFullscreen ? 'active' : ''}`}
-              onClick={toggleFullscreen}
-              title={isFullscreen ? "Salir de Pantalla Completa (Esc)" : "Expandir planilla a Pantalla Completa"}
-            >
-              {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
-              <span>{isFullscreen ? 'Salir' : 'Pantalla Completa'}</span>
-            </button>
-
-            <button className="btn btn-primary btn-add-student" onClick={handleAddRow}>
-              <Plus size={16} />
-              <span>+ Alumno</span>
-            </button>
-          </div>
-        </div>
-      </div>
+            </>
+          )}
 
       {errorMessage && (
         <div className="error-alert">
