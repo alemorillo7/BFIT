@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
   Calendar as CalendarIcon, 
   X, 
@@ -8,9 +9,9 @@ import {
   Plus, 
   Save, 
   Info,
-  ChevronLeft,
-  ChevronRight,
-  Sparkles
+  RotateCcw,
+  Sparkles,
+  Tag
 } from 'lucide-react';
 import { 
   getNonSchoolDaysForMonth, 
@@ -41,7 +42,13 @@ export default function DiasSinClasesModal({
       setNonSchoolDays([...initialDays]);
       setSavedSuccess(false);
       setEditingReasonDay(null);
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
     }
+    return () => {
+      document.body.style.overflow = '';
+    };
   }, [isOpen, selectedMonth]);
 
   // Compute calendar grid for the selected month
@@ -51,9 +58,8 @@ export default function DiasSinClasesModal({
     const month = parseInt(monthStr, 10);
 
     const firstDayDate = new Date(year, month - 1, 1);
-    // Sunday = 0, Monday = 1... convert to Monday = 0, Sunday = 6
     let startingDay = firstDayDate.getDay() - 1;
-    if (startingDay < 0) startingDay = 6;
+    if (startingDay < 0) startingDay = 6; // Monday is 0
 
     const daysInMonth = new Date(year, month, 0).getDate();
     const days = [];
@@ -65,7 +71,7 @@ export default function DiasSinClasesModal({
 
     const nonSchoolMap = new Map(nonSchoolDays.map(d => [Number(d.day), d.reason || 'Día sin clases']));
 
-    // Real days
+    // Month days
     for (let day = 1; day <= daysInMonth; day++) {
       const date = new Date(year, month - 1, day);
       const dayOfWeek = date.getDay();
@@ -103,21 +109,19 @@ export default function DiasSinClasesModal({
   }, [calendarGrid, nonSchoolDays]);
 
   const handleToggleDay = (dayNum, isWeekend) => {
-    if (isWeekend) return; // Weekends are naturally non-working
+    if (isWeekend) return;
 
     const existingIdx = nonSchoolDays.findIndex(d => Number(d.day) === dayNum);
     if (existingIdx >= 0) {
-      // Remove day
       const updated = nonSchoolDays.filter((_, idx) => idx !== existingIdx);
       setNonSchoolDays(updated);
       if (editingReasonDay === dayNum) setEditingReasonDay(null);
     } else {
-      // Add day
-      const updated = [...nonSchoolDays, { day: dayNum, reason: 'Día sin clases / Feriado' }];
+      const updated = [...nonSchoolDays, { day: dayNum, reason: 'Día sin clases' }];
       updated.sort((a, b) => a.day - b.day);
       setNonSchoolDays(updated);
       setEditingReasonDay(dayNum);
-      setCustomReason('Día sin clases / Feriado');
+      setCustomReason('Día sin clases');
     }
   };
 
@@ -154,7 +158,7 @@ export default function DiasSinClasesModal({
       setTimeout(() => {
         setSavedSuccess(false);
         onClose();
-      }, 700);
+      }, 600);
     } catch (err) {
       console.error('Error saving calendar non-school days:', err);
     } finally {
@@ -164,7 +168,7 @@ export default function DiasSinClasesModal({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className="dias-modal-backdrop" onClick={onClose}>
       <div className="dias-modal-card animate-fade-in" onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -180,7 +184,7 @@ export default function DiasSinClasesModal({
               </p>
             </div>
           </div>
-          <button className="btn-close-modal" onClick={onClose} title="Cerrar">
+          <button className="btn-close-modal" onClick={onClose} title="Cerrar ventana">
             <X size={20} />
           </button>
         </div>
@@ -188,13 +192,13 @@ export default function DiasSinClasesModal({
         {/* Month Selector Bar */}
         <div className="dias-month-picker-bar">
           <div className="month-picker-left">
-            <label className="picker-label">Mes a configurar:</label>
+            <label className="picker-label">Mes:</label>
             <select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="dias-select-month"
             >
-              {monthsList.map(m => (
+              {monthsList && monthsList.map(m => (
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
             </select>
@@ -202,7 +206,7 @@ export default function DiasSinClasesModal({
 
           <div className="month-picker-stats">
             <span className="stat-badge stat-badge--working">
-              <strong>{stats.workingDaysCount}</strong> Días con Clases (Cobro)
+              <strong>{stats.workingDaysCount}</strong> Días de Cobro
             </span>
             <span className="stat-badge stat-badge--noschool">
               <strong>{stats.nonSchoolWeekdays}</strong> Días Sin Clases
@@ -210,8 +214,8 @@ export default function DiasSinClasesModal({
           </div>
         </div>
 
-        {/* Interactive Calendar View */}
-        <div className="dias-calendar-wrapper">
+        {/* Interactive Calendar Body */}
+        <div className="dias-modal-body">
           <div className="dias-weekdays-header">
             <span>Lun</span>
             <span>Mar</span>
@@ -235,7 +239,7 @@ export default function DiasSinClasesModal({
                   key={item.key}
                   className={`calendar-cell ${isWeekend ? 'cell-weekend' : 'cell-weekday'} ${isNonSchool ? 'cell-noschool' : 'cell-school'}`}
                   onClick={() => handleToggleDay(day, isWeekend)}
-                  title={isWeekend ? 'Fin de semana' : isNonSchool ? `Sin Clases: ${reason} (Clic para desmarcar)` : 'Día de clases normal (Clic para marcar sin clases)'}
+                  title={isWeekend ? 'Fin de semana' : isNonSchool ? `Sin Clases: ${reason} (Clic para desmarcar)` : 'Día de clases (Clic para marcar sin clases)'}
                 >
                   <div className="cell-top">
                     <span className="day-number">{day}</span>
@@ -261,79 +265,88 @@ export default function DiasSinClasesModal({
               );
             })}
           </div>
-        </div>
 
-        {/* Reason Quick-Edit Drawer if a day is selected */}
-        {editingReasonDay && (
-          <div className="reason-edit-drawer animate-fade-in">
-            <div className="drawer-header">
-              <span className="drawer-title">Motivo para el día {editingReasonDay}:</span>
-              <button className="drawer-close" onClick={() => setEditingReasonDay(null)}>
-                <X size={14} />
-              </button>
-            </div>
-            <div className="drawer-body">
-              <input
-                type="text"
-                value={customReason}
-                onChange={(e) => setCustomReason(e.target.value)}
-                placeholder="Ej. Feriado departamental, Día del Maestro, Receso escolar..."
-                className="drawer-input"
-                autoFocus
-              />
-              <div className="drawer-quick-tags">
-                <button type="button" onClick={() => setCustomReason('Feriado Nacional / Departamental')}>Feriado</button>
-                <button type="button" onClick={() => setCustomReason('Receso Escolar / Primavera')}>Receso Escolar</button>
-                <button type="button" onClick={() => setCustomReason('Día del Maestro')}>Día del Maestro</button>
-                <button type="button" onClick={() => setCustomReason('Día del Estudiante')}>Día del Estudiante</button>
-                <button type="button" onClick={() => setCustomReason('Sin clases por evento escolar')}>Evento Escolar</button>
+          {/* Reason Quick-Edit Drawer */}
+          {editingReasonDay && (
+            <div className="reason-edit-drawer animate-fade-in">
+              <div className="drawer-header">
+                <div className="drawer-title-row">
+                  <Tag size={14} className="text-primary" />
+                  <span className="drawer-title">Motivo para el día {editingReasonDay}:</span>
+                </div>
+                <button className="drawer-close" onClick={() => setEditingReasonDay(null)}>
+                  <X size={14} />
+                </button>
               </div>
-              <button 
-                className="btn btn-sm btn-primary drawer-save-btn"
-                onClick={() => handleUpdateReason(editingReasonDay, customReason)}
-              >
-                Guardar Motivo
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Selected Non-School Days List */}
-        <div className="non-school-summary-box">
-          <div className="summary-box-title">
-            <Info size={16} className="text-primary" />
-            <span>Lista de Días Sin Clases configurados para este mes:</span>
-          </div>
-
-          {nonSchoolDays.length === 0 ? (
-            <p className="no-days-msg">No hay días sin clases marcados en este mes (todos los días hábiles son de cobro normal).</p>
-          ) : (
-            <div className="non-school-chips-list">
-              {nonSchoolDays.map((d) => (
-                <div key={d.day} className="non-school-chip">
-                  <span className="chip-day">Día {d.day}</span>
-                  <span 
-                    className="chip-reason"
-                    onClick={() => {
-                      setEditingReasonDay(d.day);
-                      setCustomReason(d.reason || '');
-                    }}
-                    title="Clic para editar motivo"
-                  >
-                    {d.reason || 'Día sin clases'}
-                  </span>
+              <div className="drawer-body">
+                <div className="drawer-input-row">
+                  <input
+                    type="text"
+                    value={customReason}
+                    onChange={(e) => setCustomReason(e.target.value)}
+                    placeholder="Ej. Feriado departamental, Receso escolar, Aniversario..."
+                    className="drawer-input"
+                    autoFocus
+                  />
                   <button 
-                    type="button" 
-                    className="chip-remove" 
-                    onClick={() => handleRemoveNonSchoolDay(d.day)}
-                    title="Eliminar este día sin clases"
+                    className="btn btn-sm btn-primary drawer-save-btn"
+                    onClick={() => handleUpdateReason(editingReasonDay, customReason)}
                   >
-                    <X size={13} />
+                    Guardar Motivo
                   </button>
                 </div>
-              ))}
+                <div className="drawer-quick-tags">
+                  <span className="quick-tags-label">Sugeridos:</span>
+                  <button type="button" onClick={() => setCustomReason('Feriado Nacional / Patrio')}>Feriado Patrio</button>
+                  <button type="button" onClick={() => setCustomReason('Receso de Primavera')}>Receso de Primavera</button>
+                  <button type="button" onClick={() => setCustomReason('Día del Maestro')}>Día del Maestro</button>
+                  <button type="button" onClick={() => setCustomReason('Día del Estudiante')}>Día del Estudiante</button>
+                  <button type="button" onClick={() => setCustomReason('Receso Escolar')}>Receso Escolar</button>
+                </div>
+              </div>
             </div>
           )}
+
+          {/* Summary of Non-School Days */}
+          <div className="non-school-summary-box">
+            <div className="summary-box-title">
+              <Info size={15} className="text-primary" />
+              <span>Días marcados sin clases para este mes:</span>
+            </div>
+
+            {nonSchoolDays.length === 0 ? (
+              <p className="no-days-msg">Todos los días hábiles del mes tienen clases normales.</p>
+            ) : (
+              <div className="non-school-chips-list">
+                {nonSchoolDays.map((d) => (
+                  <div key={d.day} className="non-school-chip">
+                    <span className="chip-day">Día {d.day}:</span>
+                    <span 
+                      className="chip-reason"
+                      onClick={() => {
+                        setEditingReasonDay(d.day);
+                        setCustomReason(d.reason || '');
+                      }}
+                      title="Clic para editar motivo"
+                    >
+                      {d.reason || 'Sin clases'}
+                    </span>
+                    <button 
+                      type="button" 
+                      className="chip-remove" 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleRemoveNonSchoolDay(d.day);
+                      }}
+                      title="Eliminar este día sin clases"
+                    >
+                      <X size={13} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Global Sync Notice */}
@@ -346,7 +359,7 @@ export default function DiasSinClasesModal({
               className="sync-checkbox"
             />
             <span>
-              <strong>Sincronizar automáticamente con el apartado "Observaciones"</strong> (para que el Bot de IA / WhatsApp sepa que no hay clases en estas fechas y avise a los padres).
+              <strong>Sincronizar automáticamente con el apartado "Observaciones"</strong> (para que el Bot de WhatsApp avise a los padres que no hay clases en estas fechas).
             </span>
           </label>
         </div>
@@ -357,9 +370,10 @@ export default function DiasSinClasesModal({
             type="button" 
             className="btn btn-outline btn-reset-defaults"
             onClick={handleResetToDefaults}
-            title="Restablecer feriados por defecto"
+            title="Restablecer valores por defecto"
           >
-            Restablecer Feriados Iniciales
+            <RotateCcw size={14} />
+            <span>Feriados Iniciales</span>
           </button>
 
           <div className="footer-right-buttons">
@@ -389,6 +403,7 @@ export default function DiasSinClasesModal({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
