@@ -142,6 +142,15 @@ export default function CobrosView() {
   const [syncingAbsences, setSyncingAbsences] = useState(false);
   const [activeNoteModal, setActiveNoteModal] = useState(null); // { rowId, dayKey, dayLabel, studentName, currentValue, currentNote }
   const lastSyncedMonthRef = useRef('');
+  const pressedKeysRef = useRef(new Set());
+
+  useEffect(() => {
+    const handleWindowBlur = () => {
+      pressedKeysRef.current.clear();
+    };
+    window.addEventListener('blur', handleWindowBlur);
+    return () => window.removeEventListener('blur', handleWindowBlur);
+  }, []);
   
   // Get active day columns for the selected month
   const currentMonthDays = useMemo(() => {
@@ -1189,7 +1198,12 @@ export default function CobrosView() {
     document.body.removeChild(link);
   };
 
-  // Manejador de navegación con flechas de teclado tipo Excel en la tabla
+  const handleTableKeyUp = useCallback((e) => {
+    pressedKeysRef.current.delete(e.key);
+    pressedKeysRef.current.delete(e.code);
+  }, []);
+
+  // Manejador de navegación ultra rápido y diagonal con teclado tipo Excel en la tabla
   const handleTableKeyDown = useCallback((e) => {
     const target = e.target;
     if (!target || target.tagName !== 'INPUT') return;
@@ -1202,44 +1216,52 @@ export default function CobrosView() {
     const c = parseInt(cAttr, 10);
     if (isNaN(r) || isNaN(c)) return;
 
-    const isDayCell = target.classList.contains('cell-day-input');
-    const { key, shiftKey } = e;
+    pressedKeysRef.current.add(e.key);
+    pressedKeysRef.current.add(e.code);
 
+    const { key, shiftKey, code } = e;
     const maxC = 7 + currentMonthDays.length;
     let targetR = r;
     let targetC = c;
     let shouldNavigate = false;
 
-    if (key === 'ArrowUp' || (key === 'Enter' && shiftKey)) {
+    const pressed = pressedKeysRef.current;
+    const isDown = pressed.has('ArrowDown') || pressed.has('Numpad2');
+    const isUp = pressed.has('ArrowUp') || pressed.has('Numpad8');
+    const isLeft = pressed.has('ArrowLeft') || pressed.has('Numpad4');
+    const isRight = pressed.has('ArrowRight') || pressed.has('Numpad6');
+
+    // 1. Navegación Diagonal (Teclas NumPad, Teclas de Página/Fin/Inicio y combinaciones simultáneas de flechas)
+    if ((isDown && isRight) || key === 'PageDown' || code === 'Numpad3' || code === 'NumpadPgDn') {
+      targetR = r + 1;
+      targetC = c + 1;
+      shouldNavigate = true;
+    } else if ((isDown && isLeft) || key === 'End' || code === 'Numpad1' || code === 'NumpadEnd') {
+      targetR = r + 1;
+      targetC = c - 1;
+      shouldNavigate = true;
+    } else if ((isUp && isRight) || key === 'PageUp' || code === 'Numpad9' || code === 'NumpadPgUp') {
+      targetR = r - 1;
+      targetC = c + 1;
+      shouldNavigate = true;
+    } else if ((isUp && isLeft) || key === 'Home' || code === 'Numpad7' || code === 'NumpadHome') {
+      targetR = r - 1;
+      targetC = c - 1;
+      shouldNavigate = true;
+    }
+    // 2. Navegación Cardinal (Arriba, Abajo, Izquierda, Derecha, Enter, Tab)
+    else if (key === 'ArrowUp' || (key === 'Enter' && shiftKey)) {
       targetR = r - 1;
       shouldNavigate = true;
     } else if (key === 'ArrowDown' || (key === 'Enter' && !shiftKey)) {
       targetR = r + 1;
       shouldNavigate = true;
     } else if (key === 'ArrowLeft') {
-      if (isDayCell) {
-        targetC = c - 1;
-        shouldNavigate = true;
-      } else {
-        const isAllSelected = target.selectionStart === 0 && target.selectionEnd === target.value.length;
-        const isAtStart = target.selectionStart === 0 && target.selectionEnd === 0;
-        if (isAllSelected || isAtStart) {
-          targetC = c - 1;
-          shouldNavigate = true;
-        }
-      }
+      targetC = c - 1;
+      shouldNavigate = true;
     } else if (key === 'ArrowRight') {
-      if (isDayCell) {
-        targetC = c + 1;
-        shouldNavigate = true;
-      } else {
-        const isAllSelected = target.selectionStart === 0 && target.selectionEnd === target.value.length;
-        const isAtEnd = target.selectionStart === target.value.length && target.selectionEnd === target.value.length;
-        if (isAllSelected || isAtEnd) {
-          targetC = c + 1;
-          shouldNavigate = true;
-        }
-      }
+      targetC = c + 1;
+      shouldNavigate = true;
     } else if (key === 'Tab') {
       if (shiftKey) {
         if (c > 0) {
@@ -1260,12 +1282,30 @@ export default function CobrosView() {
     }
 
     if (shouldNavigate) {
+      e.preventDefault();
+      e.stopPropagation();
+
+      // Restringir a los límites reales de la grilla
+      targetR = Math.max(0, Math.min(filteredData.length - 1, targetR));
+      targetC = Math.max(0, Math.min(maxC, targetC));
+
       const nextInput = document.querySelector(`input[data-r="${targetR}"][data-c="${targetC}"]`);
       if (nextInput) {
-        e.preventDefault();
         nextInput.focus();
         nextInput.select();
         nextInput.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+
+        // Garantizar selección activa inmediata y persistente para escribir a máxima velocidad
+        requestAnimationFrame(() => {
+          if (document.activeElement === nextInput) {
+            nextInput.select();
+          }
+        });
+        setTimeout(() => {
+          if (document.activeElement === nextInput) {
+            nextInput.select();
+          }
+        }, 15);
       }
     }
   }, [currentMonthDays.length, filteredData.length]);
@@ -1562,8 +1602,8 @@ export default function CobrosView() {
             <p>Cargando registros de Cobros...</p>
           </div>
         ) : (
-          <div className="excel-table-container">
-            <table className="excel-table" onKeyDown={handleTableKeyDown}>
+          <div className="excel-table-container" onKeyDown={handleTableKeyDown} onKeyUp={handleTableKeyUp}>
+            <table className="excel-table" onKeyDown={handleTableKeyDown} onKeyUp={handleTableKeyUp}>
               <thead>
                 <tr className="main-header-row">
                   <th rowSpan={2} className="col-nro">Nro.</th>
@@ -1609,6 +1649,7 @@ export default function CobrosView() {
                             data-r={index}
                             data-c={0}
                             onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             onChange={(e) => {
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
@@ -1626,6 +1667,7 @@ export default function CobrosView() {
                             data-r={index}
                             data-c={1}
                             onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             onChange={(e) => {
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
@@ -1643,6 +1685,7 @@ export default function CobrosView() {
                             data-r={index}
                             data-c={2}
                             onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             onChange={(e) => {
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
@@ -1660,6 +1703,7 @@ export default function CobrosView() {
                             data-r={index}
                             data-c={3}
                             onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
                               const newData = [...data];
@@ -1678,6 +1722,7 @@ export default function CobrosView() {
                             data-r={index}
                             data-c={4}
                             onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
                               const newData = [...data];
@@ -1696,6 +1741,7 @@ export default function CobrosView() {
                             data-r={index}
                             data-c={5}
                             onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
                               const newData = [...data];
@@ -1755,6 +1801,7 @@ export default function CobrosView() {
                                   data-r={index}
                                   data-c={6 + dIdx}
                                   onFocus={(e) => e.target.select()}
+                                  onClick={(e) => e.target.select()}
                                   onChange={(e) => {
                                     const newData = [...data];
                                     const idx = newData.findIndex(r => r.id === row.id);
@@ -1826,6 +1873,7 @@ export default function CobrosView() {
                               data-r={index}
                               data-c={6 + currentMonthDays.length}
                               onFocus={(e) => e.target.select()}
+                              onClick={(e) => e.target.select()}
                               placeholder="0"
                               onChange={(e) => {
                                 const newData = [...data];
@@ -1876,6 +1924,7 @@ export default function CobrosView() {
                             data-r={index}
                             data-c={7 + currentMonthDays.length}
                             onFocus={(e) => e.target.select()}
+                            onClick={(e) => e.target.select()}
                             placeholder="0"
                             onChange={(e) => {
                               const newData = [...data];
