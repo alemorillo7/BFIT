@@ -71,3 +71,41 @@
     pointer-events: auto;
   }
 }
+
+/* Complete layout hide when Cobros is in Fullscreen mode */
+body.cobros-fullscreen-active .sidebar-wrapper,
+body.cobros-fullscreen-active .sidebar,
+body.cobros-fullscreen-active .sidebar-overlay,
+body.cobros-fullscreen-active .header {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+  visibility: hidden !important;
+}
+
+body.cobros-fullscreen-active .layout-container {
+  display: block !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body.cobros-fullscreen-active .main-content {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+body.cobros-fullscreen-active .content-area {
+  width: 100vw !important;
+  height: 100vh !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+  transform: none !important;
+  animation: none !important;
+}

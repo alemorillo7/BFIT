@@ -165,6 +165,17 @@ export default function CobrosView() {
   }, []);
 
   useEffect(() => {
+    if (isFullscreen) {
+      document.body.classList.add('cobros-fullscreen-active');
+    } else {
+      document.body.classList.remove('cobros-fullscreen-active');
+    }
+    return () => {
+      document.body.classList.remove('cobros-fullscreen-active');
+    };
+  }, [isFullscreen]);
+
+  useEffect(() => {
     const handleFullscreenChange = () => {
       if (!document.fullscreenElement) {
         setIsFullscreen(false);
