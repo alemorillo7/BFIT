@@ -1357,3 +1357,59 @@ body.cobros-fullscreen-active .content-area {
   animation: none !important;
   background-color: #ffffff !important;
 }
+
+/* Locked cell inputs in fullscreen mode */
+.cell-input--locked {
+  cursor: default !important;
+  background-color: rgba(241, 245, 249, 0.45) !important;
+  color: #475569 !important;
+  user-select: none !important;
+}
+
+.cell-input--locked:focus {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Días Sin Clases buttons */
+.btn-dias-sin-clases {
+  height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #0369a1 !important;
+  background-color: #f0f9ff !important;
+  border-color: #bae6fd !important;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-dias-sin-clases:hover:not(:disabled) {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  border-color: #0284c7 !important;
+}
+
+.btn-fullscreen-dias {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #e0f2fe;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-fullscreen-dias:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}

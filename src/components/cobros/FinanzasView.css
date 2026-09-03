@@ -5,6 +5,93 @@
   width: 100%;
 }
 
+/* Top Header with Month Selector */
+.finanzas-top-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1.15rem 1.5rem;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-sm);
+}
+
+.finanzas-header-title {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.finanzas-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+  color: #2563eb;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.finanzas-header-title h1 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.finanzas-subtitle {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  margin: 0.15rem 0 0 0;
+}
+
+.finanzas-month-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  background: #f8fafc;
+  padding: 0.45rem 0.85rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #cbd5e1;
+}
+
+.finanzas-month-picker .picker-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.finanzas-month-select {
+  padding: 0.35rem 0.65rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #1e293b;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  background: #ffffff;
+  cursor: pointer;
+}
+
+.debt-filters-row {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.debt-search-input {
+  padding: 0.35rem 0.75rem;
+  font-size: 0.8rem;
+  border-radius: var(--radius-md);
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  width: 220px;
+}
+
 /* 1. KPI Grid */
 .kpi-grid {
   display: grid;

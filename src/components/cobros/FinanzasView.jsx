@@ -11,13 +11,18 @@ import {
   UserX,
   Copy,
   Check,
-  CheckCheck
+  CheckCheck,
+  GraduationCap,
+  Sparkles,
+  UtensilsCrossed
 } from 'lucide-react';
 import './FinanzasView.css';
 
 export default function FinanzasView({ 
   allMonthData, 
   selectedMonth, 
+  onChangeMonth,
+  monthsList,
   monthLabel, 
   turnsList, 
   workingDays, 
@@ -26,9 +31,10 @@ export default function FinanzasView({
   onSettleAllDebts 
 }) {
   const [selectedTurnFilter, setSelectedTurnFilter] = useState('ALL');
+  const [searchTerm, setSearchTerm] = useState('');
   const [copiedId, setCopiedId] = useState(null);
 
-  // Financial KPIs Calculations
+  // Financial KPIs Calculations (based 100% on real cobros rows)
   const metrics = useMemo(() => {
     const totalWorkingDays = workingDays.length;
     let totalAlumnos = allMonthData.length;
@@ -135,11 +141,44 @@ export default function FinanzasView({
     });
   }, [allMonthData, turnsList, workingDays, getPricePerPlate]);
 
+  // Course Breakdown
+  const courseBreakdown = useMemo(() => {
+    const map = new Map();
+    allMonthData.forEach(r => {
+      const c = r.curso || 'Sin Curso';
+      if (!map.has(c)) {
+        map.set(c, { curso: c, count: 0, platos: 0, facturado: 0, cobrado: 0, deuda: 0 });
+      }
+      const entry = map.get(c);
+      const fact = Number(r.platos_vendidos_bs || 0);
+      const cob = Number(r.pagos_bs || 0);
+      const net = cob - fact;
+
+      entry.count += 1;
+      entry.platos += Number(r.platos_vendidos || 0);
+      entry.facturado += fact;
+      entry.cobrado += cob;
+      if (net < 0) entry.deuda += Math.abs(net);
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.facturado - a.facturado);
+  }, [allMonthData]);
+
   // Filtered debt list
   const filteredDebtStudents = useMemo(() => {
-    if (selectedTurnFilter === 'ALL') return metrics.inDebtStudents;
-    return metrics.inDebtStudents.filter(s => s.turno === selectedTurnFilter);
-  }, [metrics.inDebtStudents, selectedTurnFilter]);
+    let list = metrics.inDebtStudents;
+    if (selectedTurnFilter !== 'ALL') {
+      list = list.filter(s => s.turno === selectedTurnFilter);
+    }
+    if (searchTerm.trim()) {
+      const query = searchTerm.toLowerCase();
+      list = list.filter(s => 
+        (s.alumno && s.alumno.toLowerCase().includes(query)) ||
+        (s.curso && s.curso.toLowerCase().includes(query))
+      );
+    }
+    return list;
+  }, [metrics.inDebtStudents, selectedTurnFilter, searchTerm]);
 
   // Max daily count for chart scaling
   const maxDailyCount = useMemo(() => {
@@ -156,11 +195,40 @@ export default function FinanzasView({
 
   return (
     <div className="finanzas-container animate-fade-in">
+      {/* Top Header Bar with Month Switcher */}
+      <div className="finanzas-top-header premium-card">
+        <div className="finanzas-header-title">
+          <div className="finanzas-icon-badge">
+            <TrendingUp size={22} />
+          </div>
+          <div>
+            <h1>Resumen Financiero e Ingresos</h1>
+            <p className="finanzas-subtitle">
+              Balances contables en tiempo real extraídos de la planilla de cobros de <strong>{monthLabel}</strong>
+            </p>
+          </div>
+        </div>
+
+        <div className="finanzas-month-picker">
+          <Calendar size={18} className="text-primary" />
+          <span className="picker-label">Mes en consulta:</span>
+          <select
+            value={selectedMonth}
+            onChange={(e) => onChangeMonth && onChangeMonth(e.target.value)}
+            className="finanzas-month-select"
+          >
+            {monthsList && monthsList.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* 1. KPI Cards Grid */}
       <div className="kpi-grid">
         <div className="kpi-card kpi-card--primary">
           <div className="kpi-header">
-            <span className="kpi-title">Cobros Recibidos</span>
+            <span className="kpi-title">Ingresos Totales Cobrados</span>
             <div className="kpi-icon-badge bg-emerald"><DollarSign size={20} /></div>
           </div>
           <div className="kpi-value text-emerald">{metrics.totalCobradoBs.toLocaleString()} <span className="kpi-unit">Bs</span></div>
@@ -171,34 +239,34 @@ export default function FinanzasView({
 
         <div className="kpi-card kpi-card--info">
           <div className="kpi-header">
-            <span className="kpi-title">Consumo Facturado</span>
-            <div className="kpi-icon-badge bg-blue"><TrendingUp size={20} /></div>
+            <span className="kpi-title">Total Platos Consumidos (Bs)</span>
+            <div className="kpi-icon-badge bg-blue"><UtensilsCrossed size={20} /></div>
           </div>
           <div className="kpi-value text-blue">{metrics.totalFacturadoBs.toLocaleString()} <span className="kpi-unit">Bs</span></div>
           <div className="kpi-footer">
-            <span>{metrics.totalPlatosVendidos} platos consumidos</span>
+            <span>{metrics.totalPlatosVendidos} platos servidos a alumnos</span>
           </div>
         </div>
 
         <div className="kpi-card kpi-card--danger">
           <div className="kpi-header">
-            <span className="kpi-title">Saldo Pendiente (Deuda)</span>
+            <span className="kpi-title">Saldo Pendiente por Cobrar</span>
             <div className="kpi-icon-badge bg-red"><AlertTriangle size={20} /></div>
           </div>
           <div className="kpi-value text-red">{metrics.totalDeudaBs.toLocaleString()} <span className="kpi-unit">Bs</span></div>
           <div className="kpi-footer">
-            <span>{metrics.inDebtStudents.length} alumnos con saldo en contra</span>
+            <span>{metrics.inDebtStudents.length} alumnos con saldo negativo</span>
           </div>
         </div>
 
         <div className="kpi-card kpi-card--warning">
           <div className="kpi-header">
-            <span className="kpi-title">Ingreso Estimado Mes</span>
+            <span className="kpi-title">Tasa de Cobranza</span>
             <div className="kpi-icon-badge bg-amber"><PieChart size={20} /></div>
           </div>
-          <div className="kpi-value text-amber">{metrics.totalEstimadoMesCompletoBs.toLocaleString()} <span className="kpi-unit">Bs</span></div>
+          <div className="kpi-value text-amber">{metrics.collectionRate}%</div>
           <div className="kpi-footer">
-            <span>Proyección 100% asistencia ({workingDays.length} días)</span>
+            <span>{metrics.totalCobradoBs} Bs cobrados de {metrics.totalFacturadoBs} Bs</span>
           </div>
         </div>
       </div>
@@ -208,7 +276,7 @@ export default function FinanzasView({
         <div className="section-header">
           <div className="section-title">
             <Clock size={18} className="text-primary" />
-            <h2>Rendimiento Financiero por Turno</h2>
+            <h2>Rendimiento Financiero por Turno ({monthLabel})</h2>
           </div>
           <span className="section-badge">{allMonthData.length} Alumnos en Total</span>
         </div>
@@ -219,12 +287,12 @@ export default function FinanzasView({
               <tr>
                 <th>Turno</th>
                 <th className="text-center">Alumnos</th>
-                <th className="text-center">Platos</th>
+                <th className="text-center">Platos Servidos</th>
                 <th className="text-right">Consumo (Bs)</th>
                 <th className="text-right">Cobrado (Bs)</th>
-                <th className="text-right">Pendiente (Bs)</th>
+                <th className="text-right">Saldo Pendiente (Bs)</th>
                 <th className="text-right">Proyección Mes (Bs)</th>
-                <th className="text-center">% Recaudación</th>
+                <th className="text-center">% Cobrado</th>
               </tr>
             </thead>
             <tbody>
@@ -259,7 +327,51 @@ export default function FinanzasView({
         </div>
       </div>
 
-      {/* 3. Daily Consumption Activity Chart */}
+      {/* 3. Course Breakdown Grid */}
+      <div className="finanzas-section premium-card">
+        <div className="section-header">
+          <div className="section-title">
+            <GraduationCap size={18} className="text-primary" />
+            <h2>Consumo y Cobros por Curso</h2>
+          </div>
+          <span className="section-badge">{courseBreakdown.length} Cursos Activos</span>
+        </div>
+
+        <div className="table-responsive">
+          <table className="finanzas-table">
+            <thead>
+              <tr>
+                <th>Curso / Grado</th>
+                <th className="text-center">Alumnos</th>
+                <th className="text-center">Platos Servidos</th>
+                <th className="text-right">Consumo (Bs)</th>
+                <th className="text-right">Cobrado (Bs)</th>
+                <th className="text-right">Saldo Pendiente (Bs)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {courseBreakdown.map(c => (
+                <tr key={c.curso}>
+                  <td className="font-semibold"><span className="badge-course">{c.curso}</span></td>
+                  <td className="text-center">{c.count}</td>
+                  <td className="text-center">{c.platos}</td>
+                  <td className="text-right text-blue font-semibold">{c.facturado.toLocaleString()} Bs</td>
+                  <td className="text-right text-emerald font-semibold">{c.cobrado.toLocaleString()} Bs</td>
+                  <td className="text-right">
+                    {c.deuda > 0 ? (
+                      <span className="badge-deuda font-semibold">-{c.deuda.toLocaleString()} Bs</span>
+                    ) : (
+                      <span className="text-emerald font-semibold">0 Bs ✓</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 4. Daily Consumption Activity Chart */}
       <div className="finanzas-section premium-card">
         <div className="section-header">
           <div className="section-title">
@@ -290,13 +402,13 @@ export default function FinanzasView({
         </div>
       </div>
 
-      {/* 4. Pending Debt Management List */}
+      {/* 5. Pending Debt Management List */}
       <div className="finanzas-section premium-card">
         <div className="section-header">
           <div className="section-title-wrapper">
             <div className="section-title">
               <UserX size={18} className="text-red" />
-              <h2>Alumnos con Saldo Pendiente por Cobrar</h2>
+              <h2>Alumnos con Saldo Pendiente por Cobrar ({monthLabel})</h2>
             </div>
             {onSettleAllDebts && filteredDebtStudents.length > 0 && (
               <button 
@@ -309,32 +421,43 @@ export default function FinanzasView({
               </button>
             )}
           </div>
-          <div className="filter-turn-tabs">
-            <button 
-              className={`turn-tab-btn ${selectedTurnFilter === 'ALL' ? 'active' : ''}`}
-              onClick={() => setSelectedTurnFilter('ALL')}
-            >
-              Todos ({metrics.inDebtStudents.length})
-            </button>
-            {turnsList.map(t => {
-              const count = metrics.inDebtStudents.filter(s => s.turno === t.value).length;
-              return (
-                <button 
-                  key={t.value} 
-                  className={`turn-tab-btn ${selectedTurnFilter === t.value ? 'active' : ''}`}
-                  onClick={() => setSelectedTurnFilter(t.value)}
-                >
-                  {t.value} ({count})
-                </button>
-              );
-            })}
+          
+          <div className="debt-filters-row">
+            <input
+              type="text"
+              placeholder="Buscar alumno o curso..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="debt-search-input"
+            />
+
+            <div className="filter-turn-tabs">
+              <button 
+                className={`turn-tab-btn ${selectedTurnFilter === 'ALL' ? 'active' : ''}`}
+                onClick={() => setSelectedTurnFilter('ALL')}
+              >
+                Todos ({metrics.inDebtStudents.length})
+              </button>
+              {turnsList.map(t => {
+                const count = metrics.inDebtStudents.filter(s => s.turno === t.value).length;
+                return (
+                  <button 
+                    key={t.value} 
+                    className={`turn-tab-btn ${selectedTurnFilter === t.value ? 'active' : ''}`}
+                    onClick={() => setSelectedTurnFilter(t.value)}
+                  >
+                    {t.value} ({count})
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </div>
 
         {filteredDebtStudents.length === 0 ? (
           <div className="no-debt-message">
             <CheckCircle2 size={36} className="text-emerald" />
-            <p>¡Excelente! No hay alumnos con saldo pendiente en este turno.</p>
+            <p>¡Excelente! No hay alumnos con saldo pendiente en esta selección.</p>
           </div>
         ) : (
           <div className="table-responsive">
@@ -369,7 +492,7 @@ export default function FinanzasView({
                           title="Copiar mensaje de aviso para WhatsApp"
                         >
                           {copiedId === student.id ? <Check size={14} className="text-emerald" /> : <Copy size={14} />}
-                          <span>{copiedId === student.id ? 'Copiado' : 'Aviso'}</span>
+                          <span>{copiedId === student.id ? 'Copiado' : 'Aviso WhatsApp'}</span>
                         </button>
                         {onSettleStudent && (
                           <button 
@@ -392,4 +515,3 @@ export default function FinanzasView({
     </div>
   );
 }
-

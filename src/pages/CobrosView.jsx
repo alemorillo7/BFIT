@@ -28,8 +28,10 @@ import {
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
 import { exportFullExcelWorkbook } from '../components/cobros/cobrosExport';
+import { getDynamicWorkingDays, getDynamicMonthNotice } from '../services/calendarService';
 import FinanzasView from '../components/cobros/FinanzasView';
 import ImportarExcelView from '../components/cobros/ImportarExcelView';
+import DiasSinClasesModal from '../components/cobros/DiasSinClasesModal';
 import './CobrosView.css';
 
 const monthsList = [
@@ -62,66 +64,6 @@ const colorOptions = [
   { value: 'Naranja', label: 'Naranja' }
 ];
 
-// Helper to generate Monday-Friday weekdays for a given 'YYYY-MM'
-const getWorkingDaysOfMonth = (yearMonth) => {
-  const [yearStr, monthStr] = yearMonth.split('-');
-  const year = parseInt(yearStr, 10);
-  const month = parseInt(monthStr, 10);
-  
-  const date = new Date(year, month - 1, 1);
-  const days = [];
-  const dayNames = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
-  
-  while (date.getMonth() === month - 1) {
-    const dayOfWeek = date.getDay();
-    // Exclude weekends (Saturday = 6, Sunday = 0)
-    if (dayOfWeek !== 0 && dayOfWeek !== 6) {
-      const dayNum = date.getDate();
-      days.push({
-        key: String(dayNum), // e.g. "3"
-        label: `${dayNames[dayOfWeek]} ${dayNum}`, // e.g. "L 3"
-        dayNum: dayNum
-      });
-    }
-    date.setDate(date.getDate() + 1);
-  }
-  
-  // Specific override for August: skip Aug 6 & Aug 7 holidays
-  if (month === 8 || yearMonth === '2026-08') {
-    return days.filter(d => d.dayNum !== 6 && d.dayNum !== 7);
-  }
-  
-  // Specific override for September: skip Wed 2, Fri 18, and Mon 21 - Fri 25 (recess/holidays)
-  if (month === 9 || yearMonth === '2026-09' || String(yearMonth).endsWith('-09')) {
-    return days.filter(d => d.dayNum !== 2 && d.dayNum !== 18 && !(d.dayNum >= 21 && d.dayNum <= 25));
-  }
-  
-  return days;
-};
-
-// Global non-school days & month observations helper
-const getMonthGlobalNotice = (yearMonth, workingDaysCount) => {
-  if (yearMonth === '2026-09' || String(yearMonth).endsWith('-09')) {
-    return {
-      title: 'Observación Global de Septiembre 2026',
-      text: 'Días sin clases: Miércoles 2, Viernes 18, y Semana de Primavera / Receso (21 al 25 Sep). Total: 15 días hábiles de cobro.',
-      type: 'info'
-    };
-  }
-  if (yearMonth === '2026-08' || String(yearMonth).endsWith('-08')) {
-    return {
-      title: 'Observación Global de Agosto 2026',
-      text: 'Días sin clases: Jueves 6 y Viernes 7 de Agosto (Feriados Patrios). Total: 19 días hábiles de cobro.',
-      type: 'info'
-    };
-  }
-  return {
-    title: 'Días Hábiles del Mes',
-    text: `Total de días hábiles de cobro (Lunes a Viernes): ${workingDaysCount} días.`,
-    type: 'default'
-  };
-};
-
 // Helper to get real current month default (e.g. '2026-09')
 const getCurrentMonthDefault = () => {
   const now = new Date();
@@ -145,8 +87,18 @@ export default function CobrosView() {
   const [syncingAbsences, setSyncingAbsences] = useState(false);
   const [activeNoteModal, setActiveNoteModal] = useState(null); // { rowId, dayKey, dayLabel, studentName, currentValue, currentNote }
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDiasModalOpen, setIsDiasModalOpen] = useState(false);
+  const [calendarUpdateKey, setCalendarUpdateKey] = useState(0);
   const lastSyncedMonthRef = useRef('');
   const pressedKeysRef = useRef(new Set());
+
+  useEffect(() => {
+    const handleCalendarChange = () => {
+      setCalendarUpdateKey(k => k + 1);
+    };
+    window.addEventListener('bfit-calendar-updated', handleCalendarChange);
+    return () => window.removeEventListener('bfit-calendar-updated', handleCalendarChange);
+  }, []);
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen(prev => {
@@ -205,10 +157,10 @@ export default function CobrosView() {
     return () => window.removeEventListener('blur', handleWindowBlur);
   }, []);
   
-  // Get active day columns for the selected month
+  // Get active day columns for the selected month dynamically from calendar service
   const currentMonthDays = useMemo(() => {
-    return getWorkingDaysOfMonth(selectedMonth);
-  }, [selectedMonth]);
+    return getDynamicWorkingDays(selectedMonth);
+  }, [selectedMonth, calendarUpdateKey]);
 
   // Load data for the selected month
   const loadData = useCallback(async () => {
@@ -1338,9 +1290,10 @@ export default function CobrosView() {
       e.preventDefault();
       e.stopPropagation();
 
-      // Restringir a los límites reales de la grilla
+      // Restringir a los límites reales de la grilla (en pantalla completa sólo navega celdas de datos c >= 6)
+      const minC = isFullscreen ? 6 : 0;
       targetR = Math.max(0, Math.min(filteredData.length - 1, targetR));
-      targetC = Math.max(0, Math.min(maxC, targetC));
+      targetC = Math.max(minC, Math.min(maxC, targetC));
 
       const nextInput = document.querySelector(`input[data-r="${targetR}"][data-c="${targetC}"]`);
       if (nextInput) {
@@ -1361,7 +1314,7 @@ export default function CobrosView() {
         }, 15);
       }
     }
-  }, [currentMonthDays.length, filteredData.length]);
+  }, [currentMonthDays.length, filteredData.length, isFullscreen]);
 
   return (
     <div className={`cobros-container ${isFullscreen ? 'cobros-container--fullscreen' : ''}`}>
@@ -1376,6 +1329,15 @@ export default function CobrosView() {
             >
               <ArrowLeft size={18} />
               <span>Volver al Panel</span>
+            </button>
+
+            <button 
+              className="btn-fullscreen-dias"
+              onClick={() => setIsDiasModalOpen(true)}
+              title="Configurar calendario de días sin clases, feriados y recesos"
+            >
+              <Calendar size={15} />
+              <span>Días Sin Clases</span>
             </button>
 
             <div className="fullscreen-info-badge">
@@ -1454,6 +1416,8 @@ export default function CobrosView() {
         <FinanzasView
           allMonthData={data}
           selectedMonth={selectedMonth}
+          onChangeMonth={(newMonth) => setSelectedMonth(newMonth)}
+          monthsList={monthsList}
           monthLabel={monthsList.find(m => m.value === selectedMonth)?.label}
           turnsList={turnsList}
           workingDays={currentMonthDays}
@@ -1627,6 +1591,15 @@ export default function CobrosView() {
                     <span>Sincronizar</span>
                   </button>
 
+                  <button 
+                    className="btn btn-outline btn-dias-sin-clases"
+                    onClick={() => setIsDiasModalOpen(true)}
+                    title="Configurar calendario de días sin clases, feriados y recesos"
+                  >
+                    <Calendar size={16} />
+                    <span>Días Sin Clases</span>
+                  </button>
+
                   <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
                     <Download size={16} />
                     <span>CSV</span>
@@ -1759,16 +1732,22 @@ export default function CobrosView() {
                             value={row.alumno || ''}
                             data-r={index}
                             data-c={0}
+                            readOnly={isFullscreen}
+                            tabIndex={isFullscreen ? -1 : 0}
                             onFocus={(e) => e.target.select()}
                             onClick={(e) => e.target.select()}
                             onChange={(e) => {
+                              if (isFullscreen) return;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
                               newData[idx].alumno = e.target.value;
                               setData(newData);
                             }}
-                            onBlur={(e) => handleCellChange(row.id, 'alumno', e.target.value)}
-                            className="cell-input text-bold"
+                            onBlur={(e) => {
+                              if (!isFullscreen) handleCellChange(row.id, 'alumno', e.target.value);
+                            }}
+                            className={`cell-input text-bold ${isFullscreen ? 'cell-input--locked' : ''}`}
+                            title={isFullscreen ? 'Bloqueado en Pantalla Completa (Sal de pantalla completa para modificar datos del alumno)' : ''}
                           />
                         </td>
                         <td className="cell-curso">
@@ -1777,16 +1756,22 @@ export default function CobrosView() {
                             value={row.curso || ''}
                             data-r={index}
                             data-c={1}
+                            readOnly={isFullscreen}
+                            tabIndex={isFullscreen ? -1 : 0}
                             onFocus={(e) => e.target.select()}
                             onClick={(e) => e.target.select()}
                             onChange={(e) => {
+                              if (isFullscreen) return;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
                               newData[idx].curso = e.target.value;
                               setData(newData);
                             }}
-                            onBlur={(e) => handleCellChange(row.id, 'curso', e.target.value)}
-                            className="cell-input text-center"
+                            onBlur={(e) => {
+                              if (!isFullscreen) handleCellChange(row.id, 'curso', e.target.value);
+                            }}
+                            className={`cell-input text-center ${isFullscreen ? 'cell-input--locked' : ''}`}
+                            title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
                           />
                         </td>
                         <td className="cell-turno">
@@ -1795,16 +1780,22 @@ export default function CobrosView() {
                             value={row.turno || ''}
                             data-r={index}
                             data-c={2}
+                            readOnly={isFullscreen}
+                            tabIndex={isFullscreen ? -1 : 0}
                             onFocus={(e) => e.target.select()}
                             onClick={(e) => e.target.select()}
                             onChange={(e) => {
+                              if (isFullscreen) return;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
                               newData[idx].turno = e.target.value;
                               setData(newData);
                             }}
-                            onBlur={(e) => handleCellChange(row.id, 'turno', e.target.value)}
-                            className="cell-input text-center"
+                            onBlur={(e) => {
+                              if (!isFullscreen) handleCellChange(row.id, 'turno', e.target.value);
+                            }}
+                            className={`cell-input text-center ${isFullscreen ? 'cell-input--locked' : ''}`}
+                            title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
                           />
                         </td>
                         <td className="cell-date">
@@ -1813,17 +1804,23 @@ export default function CobrosView() {
                             value={row.fecha_inicio || ''}
                             data-r={index}
                             data-c={3}
+                            readOnly={isFullscreen}
+                            tabIndex={isFullscreen ? -1 : 0}
                             onFocus={(e) => e.target.select()}
                             onClick={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
+                              if (isFullscreen) return;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
                               newData[idx].fecha_inicio = e.target.value;
                               setData(newData);
                             }}
-                            onBlur={(e) => handleCellChange(row.id, 'fecha_inicio', e.target.value)}
-                            className="cell-input text-center"
+                            onBlur={(e) => {
+                              if (!isFullscreen) handleCellChange(row.id, 'fecha_inicio', e.target.value);
+                            }}
+                            className={`cell-input text-center ${isFullscreen ? 'cell-input--locked' : ''}`}
+                            title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
                           />
                         </td>
                         <td className="cell-date">
@@ -1832,17 +1829,23 @@ export default function CobrosView() {
                             value={row.fecha_fin || ''}
                             data-r={index}
                             data-c={4}
+                            readOnly={isFullscreen}
+                            tabIndex={isFullscreen ? -1 : 0}
                             onFocus={(e) => e.target.select()}
                             onClick={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
+                              if (isFullscreen) return;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
                               newData[idx].fecha_fin = e.target.value;
                               setData(newData);
                             }}
-                            onBlur={(e) => handleCellChange(row.id, 'fecha_fin', e.target.value)}
-                            className="cell-input text-center"
+                            onBlur={(e) => {
+                              if (!isFullscreen) handleCellChange(row.id, 'fecha_fin', e.target.value);
+                            }}
+                            className={`cell-input text-center ${isFullscreen ? 'cell-input--locked' : ''}`}
+                            title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
                           />
                         </td>
                         <td className="cell-obs">
@@ -1851,17 +1854,23 @@ export default function CobrosView() {
                             value={row.observaciones || ''}
                             data-r={index}
                             data-c={5}
+                            readOnly={isFullscreen}
+                            tabIndex={isFullscreen ? -1 : 0}
                             onFocus={(e) => e.target.select()}
                             onClick={(e) => e.target.select()}
                             placeholder="-"
                             onChange={(e) => {
+                              if (isFullscreen) return;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
                               newData[idx].observaciones = e.target.value;
                               setData(newData);
                             }}
-                            onBlur={(e) => handleCellChange(row.id, 'observaciones', e.target.value)}
-                            className="cell-input"
+                            onBlur={(e) => {
+                              if (!isFullscreen) handleCellChange(row.id, 'observaciones', e.target.value);
+                            }}
+                            className={`cell-input ${isFullscreen ? 'cell-input--locked' : ''}`}
+                            title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
                           />
                         </td>
                         
@@ -2195,6 +2204,18 @@ export default function CobrosView() {
           </div>
         </div>
       )}
+
+      {/* 5. Dias Sin Clases & Feriados Configuration Modal */}
+      <DiasSinClasesModal
+        isOpen={isDiasModalOpen}
+        onClose={() => setIsDiasModalOpen(false)}
+        currentMonth={selectedMonth}
+        monthsList={monthsList}
+        onCalendarSaved={(month) => {
+          setSelectedMonth(month);
+          loadData();
+        }}
+      />
     </div>
   );
 }
