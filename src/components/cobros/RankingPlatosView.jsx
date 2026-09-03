@@ -117,32 +117,83 @@ export default function RankingPlatosView({
       }
     });
 
-    // 4. Extract specific day note choices from Cobros spreadsheet
-    let totalPlatesAggregated = 0;
+    // Filter change requests strictly for the selected month (e.g. '2026-09')
+    const monthCambios = cambiosData.filter(c => {
+      if (!c.fecha) return true;
+      const f = String(c.fecha).trim();
+      const [yearStr, monthStr] = selectedMonth.split('-');
+      return f.includes(selectedMonth) || (f.includes(`-${monthStr}-`) && f.includes(yearStr)) || f.includes(`/${monthStr}/`);
+    });
+
+    // 1. Build a daily menu lookup for this specific month's working days
+    const dayNamesMap = { 1: 'Lunes', 2: 'Martes', 3: 'Miércoles', 4: 'Jueves', 5: 'Viernes' };
+    const dailyScheduledDishes = {}; // dayKey -> { trad, fit }
+
+    workingDays.forEach(wd => {
+      const [yearStr, monthStr] = selectedMonth.split('-');
+      const date = new Date(parseInt(yearStr, 10), parseInt(monthStr, 10) - 1, wd.dayNum);
+      const dayOfWeek = date.getDay(); // 1 = Mon, 5 = Fri
+      const dayName = dayNamesMap[dayOfWeek] || '';
+      const weekNumber = String(Math.min(4, Math.max(1, Math.ceil(wd.dayNum / 7))));
+
+      // Find scheduled traditional menu
+      const matchTrad = menuTradicionalData.find(m => 
+        String(m.semana || '').includes(weekNumber) && 
+        String(m.dia || '').toLowerCase().includes(dayName.toLowerCase())
+      );
+      const tradDish = matchTrad ? (matchTrad.segundo || matchTrad.sopa || matchTrad.guarnicion) : null;
+
+      // Find scheduled fit menu
+      const matchFit = menuFitData.find(m => 
+        String(m.semana || '').includes(weekNumber) && 
+        String(m.dia || '').toLowerCase().includes(dayName.toLowerCase())
+      );
+      const fitDish = matchFit ? matchFit.segundo : null;
+
+      dailyScheduledDishes[wd.key] = {
+        trad: tradDish,
+        fit: fitDish
+      };
+
+      if (tradDish) ensureDish(tradDish, 'TRADICIONAL');
+      if (fitDish) ensureDish(`${fitDish} (FIT)`, 'FIT');
+    });
+
+    // 2. Count actual student plate consumptions from Cobros spreadsheet for selectedMonth
     allMonthData.forEach(student => {
       const studentTurn = student.turno || '11:50';
       const studentCourse = student.curso || 'General';
 
       if (student.asistencias) {
-        Object.entries(student.asistencias).forEach(([key, val]) => {
-          if (!key.endsWith('_nota')) {
-            const sVal = String(val || '').trim().toUpperCase();
-            if (sVal && sVal !== '0' && sVal !== 'F') {
-              // Valid attendance plate
-              const noteKey = `${key}_nota`;
-              const specificNote = student.asistencias[noteKey];
-              totalPlatesAggregated += 1;
+        workingDays.forEach(wd => {
+          const val = student.asistencias[wd.key];
+          const sVal = String(val || '').trim().toUpperCase();
 
-              if (specificNote && String(specificNote).trim()) {
-                const noteText = String(specificNote).trim();
-                const isFit = noteText.toUpperCase().includes('FIT');
-                const cat = isFit ? 'FIT' : 'ALTERNATIVO';
-                const entry = ensureDish(noteText, cat);
-                if (entry) {
-                  entry.count += 1;
-                  entry.turns[studentTurn] = (entry.turns[studentTurn] || 0) + 1;
-                  entry.courses[studentCourse] = (entry.courses[studentCourse] || 0) + 1;
-                }
+          // If student attended and consumed lunch (not absent 'F' or '0')
+          if (sVal && sVal !== '0' && sVal !== 'F') {
+            const plateQty = isNaN(Number(sVal)) ? 1 : Number(sVal);
+            const noteKey = `${wd.key}_nota`;
+            const specificNote = student.asistencias[noteKey];
+
+            if (specificNote && String(specificNote).trim()) {
+              // Custom requested dish/diet
+              const noteText = String(specificNote).trim();
+              const isFit = noteText.toUpperCase().includes('FIT');
+              const entry = ensureDish(noteText, isFit ? 'FIT' : 'ALTERNATIVO');
+              if (entry) {
+                entry.count += plateQty;
+                entry.turns[studentTurn] = (entry.turns[studentTurn] || 0) + plateQty;
+                entry.courses[studentCourse] = (entry.courses[studentCourse] || 0) + plateQty;
+              }
+            } else {
+              // Standard scheduled dish for that day of the month
+              const scheduled = dailyScheduledDishes[wd.key];
+              const dishName = scheduled?.trad || `Menú del Día (${wd.label})`;
+              const entry = ensureDish(dishName, 'TRADICIONAL');
+              if (entry) {
+                entry.count += plateQty;
+                entry.turns[studentTurn] = (entry.turns[studentTurn] || 0) + plateQty;
+                entry.courses[studentCourse] = (entry.courses[studentCourse] || 0) + plateQty;
               }
             }
           }
@@ -150,8 +201,8 @@ export default function RankingPlatosView({
       }
     });
 
-    // 5. Aggregate Menu Change Requests from WhatsApp Bot (Registros_Cambios)
-    cambiosData.forEach(c => {
+    // 3. Aggregate Menu Change Requests filtered by this month
+    monthCambios.forEach(c => {
       if (c.plato_elegido) {
         const chosen = ensureDish(c.plato_elegido, 'ALTERNATIVO');
         if (chosen) {
