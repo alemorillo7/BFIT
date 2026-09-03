@@ -114,6 +114,34 @@
   border: 1px solid var(--color-border);
 }
 
+.empty-podium-card {
+  background: var(--color-surface);
+  border: 1px dashed var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 0.5rem;
+}
+
+.empty-podium-card h3 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.empty-podium-card p {
+  font-size: 0.8rem;
+  color: var(--color-text-muted);
+  max-width: 500px;
+  margin: 0;
+  line-height: 1.4;
+}
+
 .podium-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);

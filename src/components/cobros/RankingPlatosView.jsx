@@ -221,43 +221,19 @@ export default function RankingPlatosView({
       }
     });
 
-    // If counts are sparse, populate realistic historical popularity based on school menu dishes
-    const fallbackDishes = [
-      { name: 'Milanesa de Pollo con Papas Fritas y Arroz', count: 184, category: 'TRADICIONAL', bestTurn: '12:00' },
-      { name: 'Tallarines a la Mantequilla con Salchichas', count: 162, category: 'TRADICIONAL', bestTurn: '11:50' },
-      { name: 'Hamburguesas Caseras con Puré de Papas', count: 148, category: 'TRADICIONAL', bestTurn: '12:40' },
-      { name: 'Pollo al Horno con Verduras Salteadas', count: 135, category: 'FIT', bestTurn: '13:05' },
-      { name: 'Albóndigas de Carne en Salsa de Tomate', count: 124, category: 'TRADICIONAL', bestTurn: '11:25' },
-      { name: 'Pechuga a la Plancha con Arroz Integral y Ensalada', count: 110, category: 'FIT', bestTurn: '13:05' },
-      { name: 'Nuggets de Pollo Caseros con Ensalada Rusa', count: 96, category: 'TRADICIONAL', bestTurn: '11:50' },
-      { name: 'Lasaña de Carne y Queso Mozzarella', count: 88, category: 'TRADICIONAL', bestTurn: '12:00' },
-      { name: 'Sopa de Letras y Verduras con Pollo', count: 75, category: 'TRADICIONAL', bestTurn: '11:25' },
-      { name: 'Milanesa de Carne con Ensalada Mixta', count: 68, category: 'ALTERNATIVO', bestTurn: '12:40' },
-      { name: 'Pastel de Choclo Casero', count: 54, category: 'TRADICIONAL', bestTurn: '12:00' },
-      { name: 'Wrap de Pollo FIT con Palta', count: 46, category: 'FIT', bestTurn: '13:05' }
-    ];
-
-    fallbackDishes.forEach(fb => {
-      const entry = ensureDish(fb.name, fb.category);
-      if (entry && entry.count === 0) {
-        entry.count = fb.count;
-        entry.turns[fb.bestTurn] = Math.round(fb.count * 0.45);
-        entry.turns['11:50'] = Math.round(fb.count * 0.25);
-        entry.turns['12:40'] = Math.round(fb.count * 0.20);
-        entry.turns['13:05'] = Math.round(fb.count * 0.10);
-      }
-    });
-
     // Convert map to sorted array
     let dishesList = Array.from(dishCounts.values());
+
+    // Calculate total plates served in this month
+    const totalMonthPlates = dishesList.reduce((sum, d) => sum + d.count, 0);
 
     // Calculate maximum count for percentage calculation
     const maxCount = Math.max(...dishesList.map(d => d.count), 1);
 
     // Compute favorite turn and score for each dish
     dishesList = dishesList.map(dish => {
-      let bestTurn = '11:50';
-      let maxTurnCount = -1;
+      let bestTurn = '-';
+      let maxTurnCount = 0;
       Object.entries(dish.turns).forEach(([t, cnt]) => {
         if (cnt > maxTurnCount) {
           maxTurnCount = cnt;
@@ -265,25 +241,32 @@ export default function RankingPlatosView({
         }
       });
 
-      const popularityRate = Math.min(100, Math.round((dish.count / maxCount) * 100));
+      const popularityRate = totalMonthPlates > 0 && dish.count > 0 
+        ? Math.min(100, Math.round((dish.count / maxCount) * 100))
+        : 0;
 
       return {
         ...dish,
-        bestTurn,
+        bestTurn: bestTurn === '-' ? (turnsList?.[0]?.value || '11:50') : bestTurn,
         popularityRate
       };
     });
 
     dishesList.sort((a, b) => b.count - a.count);
 
+    const hasData = totalMonthPlates > 0;
+    const top3Dishes = hasData ? dishesList.filter(d => d.count > 0).slice(0, 3) : [];
+
     return {
       allDishes: dishesList,
-      top3: dishesList.slice(0, 3),
-      alternativosRanking: dishesList.filter(d => d.category === 'ALTERNATIVO' || d.changeRequests > 0).slice(0, 8),
-      fitRanking: dishesList.filter(d => d.category === 'FIT').slice(0, 8),
+      top3: top3Dishes,
+      alternativosRanking: dishesList.filter(d => (d.category === 'ALTERNATIVO' || d.changeRequests > 0) && d.count > 0).slice(0, 8),
+      fitRanking: dishesList.filter(d => d.category === 'FIT' && d.count > 0).slice(0, 8),
+      totalMonthPlates,
+      hasData,
       maxCount
     };
-  }, [allMonthData, menuTradicionalData, menuFitData, platosAlternativosData, cambiosData]);
+  }, [allMonthData, menuTradicionalData, menuFitData, platosAlternativosData, cambiosData, workingDays, selectedMonth, turnsList]);
 
   // Filtered dishes according to UI filters
   const filteredDishes = useMemo(() => {
@@ -346,95 +329,103 @@ export default function RankingPlatosView({
           <span className="badge-subtitle">Platos con mayor demanda y preferencia</span>
         </div>
 
-        <div className="podium-grid">
-          {/* #2 Plata */}
-          {rankingAnalysis.top3[1] && (
-            <div className="podium-card podium-card--silver">
-              <div className="podium-medal-badge medal-silver">
-                <Medal size={28} />
-                <span className="podium-rank-number">2°</span>
-              </div>
-              <span className="podium-tag">Segundo Lugar</span>
-              <h3 className="podium-dish-name">{rankingAnalysis.top3[1].name}</h3>
-              <div className="podium-stats">
-                <div className="stat-pill">
-                  <Utensils size={14} />
-                  <strong>{rankingAnalysis.top3[1].count}</strong> platos servidos
+        {!rankingAnalysis.hasData ? (
+          <div className="empty-podium-card">
+            <Utensils size={36} className="text-muted" />
+            <h3>Sin consumos de platos en {monthLabel}</h3>
+            <p>Aún no hay registros de asistencia ni consumos cargados para este mes en la planilla de cobros. A medida que marques asistencias día a día, el podio y el ranking se calcularán automáticamente con datos 100% reales.</p>
+          </div>
+        ) : (
+          <div className="podium-grid">
+            {/* #2 Plata */}
+            {rankingAnalysis.top3[1] && (
+              <div className="podium-card podium-card--silver">
+                <div className="podium-medal-badge medal-silver">
+                  <Medal size={28} />
+                  <span className="podium-rank-number">2°</span>
                 </div>
-                <div className="stat-pill">
-                  <Clock size={14} />
-                  Turno favorito: <strong>{rankingAnalysis.top3[1].bestTurn}</strong>
+                <span className="podium-tag">Segundo Lugar</span>
+                <h3 className="podium-dish-name">{rankingAnalysis.top3[1].name}</h3>
+                <div className="podium-stats">
+                  <div className="stat-pill">
+                    <Utensils size={14} />
+                    <strong>{rankingAnalysis.top3[1].count}</strong> platos servidos
+                  </div>
+                  <div className="stat-pill">
+                    <Clock size={14} />
+                    Turno favorito: <strong>{rankingAnalysis.top3[1].bestTurn}</strong>
+                  </div>
+                </div>
+                <div className="podium-progress">
+                  <div 
+                    className="podium-progress-fill bg-blue" 
+                    style={{ width: `${rankingAnalysis.top3[1].popularityRate}%` }} 
+                  />
                 </div>
               </div>
-              <div className="podium-progress">
-                <div 
-                  className="podium-progress-fill bg-blue" 
-                  style={{ width: `${rankingAnalysis.top3[1].popularityRate}%` }} 
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* #1 Oro */}
-          {rankingAnalysis.top3[0] && (
-            <div className="podium-card podium-card--gold">
-              <div className="crown-badge">
-                <Flame size={16} />
-                <span>PLATO ESTRELLA N°1</span>
-              </div>
-              <div className="podium-medal-badge medal-gold">
-                <Trophy size={36} />
-                <span className="podium-rank-number">1°</span>
-              </div>
-              <span className="podium-tag tag-gold">¡El Favorito de Todos!</span>
-              <h3 className="podium-dish-name text-gold">{rankingAnalysis.top3[0].name}</h3>
-              <div className="podium-stats">
-                <div className="stat-pill stat-pill--gold">
-                  <Utensils size={15} />
-                  <strong>{rankingAnalysis.top3[0].count}</strong> platos servidos
+            {/* #1 Oro */}
+            {rankingAnalysis.top3[0] && (
+              <div className="podium-card podium-card--gold">
+                <div className="crown-badge">
+                  <Flame size={16} />
+                  <span>PLATO ESTRELLA N°1</span>
                 </div>
-                <div className="stat-pill stat-pill--gold">
-                  <Clock size={15} />
-                  Turno favorito: <strong>{rankingAnalysis.top3[0].bestTurn}</strong>
+                <div className="podium-medal-badge medal-gold">
+                  <Trophy size={36} />
+                  <span className="podium-rank-number">1°</span>
+                </div>
+                <span className="podium-tag tag-gold">¡El Favorito de Todos!</span>
+                <h3 className="podium-dish-name text-gold">{rankingAnalysis.top3[0].name}</h3>
+                <div className="podium-stats">
+                  <div className="stat-pill stat-pill--gold">
+                    <Utensils size={15} />
+                    <strong>{rankingAnalysis.top3[0].count}</strong> platos servidos
+                  </div>
+                  <div className="stat-pill stat-pill--gold">
+                    <Clock size={15} />
+                    Turno favorito: <strong>{rankingAnalysis.top3[0].bestTurn}</strong>
+                  </div>
+                </div>
+                <div className="podium-progress">
+                  <div 
+                    className="podium-progress-fill bg-gold" 
+                    style={{ width: `${rankingAnalysis.top3[0].popularityRate}%` }} 
+                  />
                 </div>
               </div>
-              <div className="podium-progress">
-                <div 
-                  className="podium-progress-fill bg-gold" 
-                  style={{ width: `${rankingAnalysis.top3[0].popularityRate}%` }} 
-                />
-              </div>
-            </div>
-          )}
+            )}
 
-          {/* #3 Bronce */}
-          {rankingAnalysis.top3[2] && (
-            <div className="podium-card podium-card--bronze">
-              <div className="podium-medal-badge medal-bronze">
-                <Award size={28} />
-                <span className="podium-rank-number">3°</span>
-              </div>
-              <span className="podium-tag">Tercer Lugar</span>
-              <h3 className="podium-dish-name">{rankingAnalysis.top3[2].name}</h3>
-              <div className="podium-stats">
-                <div className="stat-pill">
-                  <Utensils size={14} />
-                  <strong>{rankingAnalysis.top3[2].count}</strong> platos servidos
+            {/* #3 Bronce */}
+            {rankingAnalysis.top3[2] && (
+              <div className="podium-card podium-card--bronze">
+                <div className="podium-medal-badge medal-bronze">
+                  <Award size={28} />
+                  <span className="podium-rank-number">3°</span>
                 </div>
-                <div className="stat-pill">
-                  <Clock size={14} />
-                  Turno favorito: <strong>{rankingAnalysis.top3[2].bestTurn}</strong>
+                <span className="podium-tag">Tercer Lugar</span>
+                <h3 className="podium-dish-name">{rankingAnalysis.top3[2].name}</h3>
+                <div className="podium-stats">
+                  <div className="stat-pill">
+                    <Utensils size={14} />
+                    <strong>{rankingAnalysis.top3[2].count}</strong> platos servidos
+                  </div>
+                  <div className="stat-pill">
+                    <Clock size={14} />
+                    Turno favorito: <strong>{rankingAnalysis.top3[2].bestTurn}</strong>
+                  </div>
+                </div>
+                <div className="podium-progress">
+                  <div 
+                    className="podium-progress-fill bg-amber" 
+                    style={{ width: `${rankingAnalysis.top3[2].popularityRate}%` }} 
+                  />
                 </div>
               </div>
-              <div className="podium-progress">
-                <div 
-                  className="podium-progress-fill bg-amber" 
-                  style={{ width: `${rankingAnalysis.top3[2].popularityRate}%` }} 
-                />
-              </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 2. Filtros y Tabla General de Ranking */}
