@@ -24,7 +24,9 @@ import {
   Minimize2,
   ArrowLeft,
   X,
-  Trophy
+  Trophy,
+  Lock,
+  Unlock
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
@@ -79,7 +81,7 @@ const getCurrentMonthDefault = () => {
 export default function CobrosView() {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('planilla'); // 'planilla' | 'finanzas' | 'importar'
+  const [activeTab, setActiveTab] = useState('planilla'); // 'planilla' | 'finanzas' | 'importar' | 'ranking'
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthDefault);
   const [selectedTurn, setSelectedTurn] = useState('11:50');
   const [searchTerm, setSearchTerm] = useState('');
@@ -90,9 +92,17 @@ export default function CobrosView() {
   const [activeNoteModal, setActiveNoteModal] = useState(null); // { rowId, dayKey, dayLabel, studentName, currentValue, currentNote }
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDiasModalOpen, setIsDiasModalOpen] = useState(false);
+  const [isScrollLocked, setIsScrollLocked] = useState(false);
   const [calendarUpdateKey, setCalendarUpdateKey] = useState(0);
+  const tableContainerRef = useRef(null);
   const lastSyncedMonthRef = useRef('');
   const pressedKeysRef = useRef(new Set());
+
+  useEffect(() => {
+    if (isScrollLocked && tableContainerRef.current) {
+      tableContainerRef.current.scrollLeft = 0;
+    }
+  }, [isScrollLocked]);
 
   useEffect(() => {
     const handleCalendarChange = () => {
@@ -1301,7 +1311,10 @@ export default function CobrosView() {
       if (nextInput) {
         nextInput.focus();
         nextInput.select();
-        nextInput.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+        nextInput.scrollIntoView({ 
+          block: 'nearest', 
+          inline: isScrollLocked ? 'none' : 'nearest' 
+        });
 
         // Garantizar selección activa inmediata y persistente para escribir a máxima velocidad
         requestAnimationFrame(() => {
@@ -1316,7 +1329,7 @@ export default function CobrosView() {
         }, 15);
       }
     }
-  }, [currentMonthDays.length, filteredData.length, isFullscreen]);
+  }, [currentMonthDays.length, filteredData.length, isFullscreen, isScrollLocked]);
 
   return (
     <div className={`cobros-container ${isFullscreen ? 'cobros-container--fullscreen' : ''}`}>
@@ -1331,6 +1344,15 @@ export default function CobrosView() {
             >
               <ArrowLeft size={18} />
               <span>Volver al Panel</span>
+            </button>
+
+            <button 
+              className={`btn-fullscreen-lock ${isScrollLocked ? 'btn-fullscreen-lock--active' : ''}`}
+              onClick={() => setIsScrollLocked(prev => !prev)}
+              title={isScrollLocked ? 'Pantalla fija activada (Clic para desbloquear movimiento lateral)' : 'Fijar pantalla (Bloquea el movimiento hacia los lados)'}
+            >
+              {isScrollLocked ? <Lock size={15} /> : <Unlock size={15} />}
+              <span>{isScrollLocked ? 'Pantalla Fijada' : 'Fijar Pantalla'}</span>
             </button>
 
             <button 
@@ -1631,6 +1653,15 @@ export default function CobrosView() {
                     <span>Ranking Platos</span>
                   </button>
 
+                  <button 
+                    className={`btn btn-outline btn-scroll-lock ${isScrollLocked ? 'active' : ''}`}
+                    onClick={() => setIsScrollLocked(prev => !prev)}
+                    title={isScrollLocked ? 'Pantalla fijada (Clic para permitir desplazamiento lateral)' : 'Fijar pantalla (Bloquea la barra lateral para que no se mueva)'}
+                  >
+                    {isScrollLocked ? <Lock size={16} /> : <Unlock size={16} />}
+                    <span>{isScrollLocked ? 'Fijada' : 'Fijar'}</span>
+                  </button>
+
                   <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
                     <Download size={16} />
                     <span>CSV</span>
@@ -1717,7 +1748,12 @@ export default function CobrosView() {
             <p>Cargando registros de Cobros...</p>
           </div>
         ) : (
-          <div className="excel-table-container" onKeyDown={handleTableKeyDown} onKeyUp={handleTableKeyUp}>
+          <div 
+            ref={tableContainerRef}
+            className={`excel-table-container ${isScrollLocked ? 'excel-table-container--scroll-locked' : ''}`} 
+            onKeyDown={handleTableKeyDown} 
+            onKeyUp={handleTableKeyUp}
+          >
             <table className="excel-table" onKeyDown={handleTableKeyDown} onKeyUp={handleTableKeyUp}>
               <thead>
                 <tr className="main-header-row">

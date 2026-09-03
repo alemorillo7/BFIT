@@ -1435,3 +1435,71 @@ body.cobros-fullscreen-active .content-area {
   background: rgba(255, 255, 255, 0.25);
   color: #ffffff;
 }
+
+/* Screen Lock / Fixed Screen in Fullscreen */
+.btn-fullscreen-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-fullscreen-lock:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.btn-fullscreen-lock--active {
+  background: #f59e0b !important;
+  color: #78350f !important;
+  border-color: #d97706 !important;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.btn-fullscreen-lock--active:hover {
+  background: #d97706 !important;
+  color: #ffffff !important;
+}
+
+/* Toolbar scroll lock button */
+.btn-scroll-lock {
+  height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569 !important;
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.btn-scroll-lock:hover {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.btn-scroll-lock.active {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+  border-color: #f59e0b !important;
+  font-weight: 700;
+}
+
+/* Locked scroll container */
+.excel-table-container--scroll-locked {
+  overflow-x: hidden !important;
+}
