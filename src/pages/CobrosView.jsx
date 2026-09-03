@@ -23,13 +23,15 @@ import {
   Maximize2,
   Minimize2,
   ArrowLeft,
-  X
+  X,
+  Trophy
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
 import { exportFullExcelWorkbook } from '../components/cobros/cobrosExport';
 import { getDynamicWorkingDays, getDynamicMonthNotice } from '../services/calendarService';
 import FinanzasView from '../components/cobros/FinanzasView';
+import RankingPlatosView from '../components/cobros/RankingPlatosView';
 import ImportarExcelView from '../components/cobros/ImportarExcelView';
 import DiasSinClasesModal from '../components/cobros/DiasSinClasesModal';
 import './CobrosView.css';
@@ -1391,6 +1393,14 @@ export default function CobrosView() {
             </button>
 
             <button 
+              className={`cobros-tab-btn ${activeTab === 'ranking' ? 'active' : ''}`}
+              onClick={() => setActiveTab('ranking')}
+            >
+              <Trophy size={16} />
+              <span>Ranking de Platos</span>
+            </button>
+
+            <button 
               className={`cobros-tab-btn ${activeTab === 'importar' ? 'active' : ''}`}
               onClick={() => setActiveTab('importar')}
             >
@@ -1424,6 +1434,18 @@ export default function CobrosView() {
           getPricePerPlate={getPricePerPlate}
           onSettleStudent={handleSettleStudentDebt}
           onSettleAllDebts={handleSettleAllDebts}
+        />
+      )}
+
+      {activeTab === 'ranking' && (
+        <RankingPlatosView
+          allMonthData={data}
+          selectedMonth={selectedMonth}
+          onChangeMonth={(newMonth) => setSelectedMonth(newMonth)}
+          monthsList={monthsList}
+          monthLabel={monthsList.find(m => m.value === selectedMonth)?.label}
+          turnsList={turnsList}
+          workingDays={currentMonthDays}
         />
       )}
 
@@ -1598,6 +1620,15 @@ export default function CobrosView() {
                   >
                     <Calendar size={16} />
                     <span>Días Sin Clases</span>
+                  </button>
+
+                  <button 
+                    className="btn btn-outline btn-ranking-quick"
+                    onClick={() => setActiveTab('ranking')}
+                    title="Ver cuáles platos y comidas se vendieron más para planificar el menú"
+                  >
+                    <Trophy size={16} />
+                    <span>Ranking Platos</span>
                   </button>
 
                   <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
