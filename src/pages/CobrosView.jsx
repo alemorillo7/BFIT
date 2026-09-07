@@ -1401,6 +1401,21 @@ export default function CobrosView() {
           </div>
 
           <div className="fullscreen-top-right">
+            <div className="fullscreen-shortcuts-guide" aria-label="Guía rápida de códigos de Cobros">
+              <span className="shortcuts-guide-title">GUÍA:</span>
+              <span className="shortcut-guide-item shortcut-guide-item--lunch" title="Registra solo un almuerzo">
+                <kbd>1</kbd><span>Almuerzo</span>
+              </span>
+              <span className="shortcut-guide-item shortcut-guide-item--both" title={`Registra almuerzo y descuenta una merienda de ${SNACK_PRICE_BS} Bs`}>
+                <kbd>4</kbd><span>Almuerzo + Merienda −{SNACK_PRICE_BS} Bs</span>
+              </span>
+              <span className="shortcut-guide-item shortcut-guide-item--snack" title={`Registra solo una merienda y descuenta ${SNACK_PRICE_BS} Bs`}>
+                <kbd>M</kbd><span>Merienda −{SNACK_PRICE_BS} Bs</span>
+              </span>
+              <span className="shortcut-guide-item shortcut-guide-item--absence" title="Registra falta; no descuenta nada">
+                <kbd>F</kbd><span>Falta</span>
+              </span>
+            </div>
             <div 
               className="fullscreen-plates-badge"
               title={`Total de platos vendidos en el ${turnsList.find(t => t.value === selectedTurn)?.label}, según la planilla de cobros del mes seleccionado`}

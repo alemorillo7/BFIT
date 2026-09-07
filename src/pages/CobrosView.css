@@ -1339,6 +1339,64 @@
   gap: 0.75rem;
 }
 
+.fullscreen-shortcuts-guide {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.22rem 0.45rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: var(--radius-md);
+  background: rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.shortcuts-guide-title {
+  color: #94a3b8;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  margin-right: 0.1rem;
+}
+
+.shortcut-guide-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.08rem 0.22rem;
+  border-radius: 4px;
+  font-size: 0.67rem;
+  font-weight: 700;
+}
+
+.shortcut-guide-item kbd {
+  min-width: 1rem;
+  padding: 0.04rem 0.18rem;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  background: rgba(15, 23, 42, 0.55);
+  color: inherit;
+  font-family: inherit;
+  font-size: 0.66rem;
+  font-weight: 900;
+  line-height: 1.1;
+  text-align: center;
+}
+
+.shortcut-guide-item--lunch { color: #86efac; }
+.shortcut-guide-item--both { color: #fcd34d; }
+.shortcut-guide-item--snack { color: #d8b4fe; }
+.shortcut-guide-item--absence { color: #fca5a5; }
+
+@media (max-width: 1450px) {
+  .fullscreen-shortcuts-guide .shortcut-guide-item span {
+    display: none;
+  }
+
+  .fullscreen-shortcuts-guide {
+    gap: 0.18rem;
+  }
+}
+
 .fullscreen-plates-badge {
   display: inline-flex;
   align-items: center;
