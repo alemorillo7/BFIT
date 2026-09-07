@@ -1375,15 +1375,6 @@ export default function CobrosView() {
               <span>{isScrollLocked ? 'Pantalla Fijada' : 'Fijar Pantalla'}</span>
             </button>
 
-            <button 
-              className="btn-fullscreen-dias"
-              onClick={() => setIsDiasModalOpen(true)}
-              title="Configurar calendario de días sin clases, feriados y recesos"
-            >
-              <Calendar size={15} />
-              <span>Días Sin Clases</span>
-            </button>
-
             <div className="fullscreen-info-badge">
               <TableIcon size={15} />
               <span className="fullscreen-badge-title">Planilla de Cobros</span>

@@ -1593,26 +1593,6 @@ body.cobros-fullscreen-active .content-area {
   border-color: #0284c7 !important;
 }
 
-.btn-fullscreen-dias {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.4rem;
-  background: rgba(255, 255, 255, 0.15);
-  color: #e0f2fe;
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  padding: 0.3rem 0.75rem;
-  border-radius: var(--radius-md);
-  font-size: 0.78rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.15s ease;
-}
-
-.btn-fullscreen-dias:hover {
-  background: rgba(255, 255, 255, 0.25);
-  color: #ffffff;
-}
-
 /* Screen Lock / Fixed Screen in Fullscreen */
 .btn-fullscreen-lock {
   display: inline-flex;
