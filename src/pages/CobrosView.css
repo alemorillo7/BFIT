@@ -709,49 +709,55 @@
   border: 1px solid #fecaca;
 }
 
-/* Table Row Hovers & Colored Variants (Colors apply to ALL cells, preserving red faltas) */
-.excel-row:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta) {
-  background-color: #f8fafc;
+/* Table Row Hovers & Colored Variants (Colors apply solidly and permanently to ALL cells, preserving special day highlights) */
+.excel-row:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #f1f5f9;
 }
 
-.excel-row.row-color--verde td:not(:has(.cell-day-input--falta)):not(.cell-day--falta) {
-  background-color: #f0fdf4 !important;
+/* VERDE: Color visible fijo y nítido tipo Excel (#c6efce) */
+.excel-row.row-color--verde td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #c6efce !important;
+}
+.excel-row.row-color--verde:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #a7f3d0 !important;
 }
 
-.excel-row.row-color--verde:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta) {
-  background-color: #dcfce7 !important;
+/* AZUL: Color visible fijo y nítido tipo Excel (#bdd7ee) */
+.excel-row.row-color--azul td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #bdd7ee !important;
+}
+.excel-row.row-color--azul:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #93c5fd !important;
 }
 
-.excel-row.row-color--azul td:not(:has(.cell-day-input--falta)) {
-  background-color: #eff6ff !important;
+/* AMARILLO: Color visible fijo y nítido (#fef08a) */
+.excel-row.row-color--amarillo td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #fef08a !important;
+}
+.excel-row.row-color--amarillo:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #fde047 !important;
 }
 
-.excel-row.row-color--azul:hover td:not(:has(.cell-day-input--falta)) {
-  background-color: #dbeafe !important;
+/* FFF2CC: Amarillo clásico Excel (#fff2cc) */
+.excel-row.row-color--fff2cc td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #fff2cc !important;
+}
+.excel-row.row-color--fff2cc:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #fef08a !important;
 }
 
-.excel-row.row-color--amarillo td:not(:has(.cell-day-input--falta)) {
-  background-color: #fefce8 !important;
+/* NARANJA: Color visible fijo y nítido tipo Excel (#fce4d6) */
+.excel-row.row-color--naranja td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #fce4d6 !important;
+}
+.excel-row.row-color--naranja:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+  background-color: #fed7aa !important;
 }
 
-.excel-row.row-color--amarillo:hover td:not(:has(.cell-day-input--falta)) {
-  background-color: #fef9c3 !important;
-}
-
-.excel-row.row-color--fff2cc td:not(:has(.cell-day-input--falta)) {
-  background-color: #fffbeb !important;
-}
-
-.excel-row.row-color--fff2cc:hover td:not(:has(.cell-day-input--falta)) {
-  background-color: #fef3c7 !important;
-}
-
-.excel-row.row-color--naranja td:not(:has(.cell-day-input--falta)) {
-  background-color: #fff7ed !important;
-}
-
-.excel-row.row-color--naranja:hover td:not(:has(.cell-day-input--falta)) {
-  background-color: #ffedd5 !important;
+/* Asegurar que los inputs y celdas fijadas respeten el color sin opacarlo */
+.excel-row[class*="row-color--"] .cell-input,
+.excel-row[class*="row-color--"] .cell-input--locked {
+  background-color: transparent !important;
 }
 
 /* Balance & Quick Pay in Cell */
