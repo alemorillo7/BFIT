@@ -226,6 +226,14 @@ export default function CobrosView() {
     };
   }, [currentMonthDays]);
 
+  const paintFullMonth = useCallback((asistencias) => {
+    const updatedAsistencias = { ...(asistencias || {}) };
+    currentMonthDays.forEach((day) => {
+      updatedAsistencias[`${day.key}_color`] = 'Verde';
+    });
+    return updatedAsistencias;
+  }, [currentMonthDays]);
+
   // Load data for the selected month
   const loadData = useCallback(async () => {
     try {
@@ -497,46 +505,6 @@ export default function CobrosView() {
     }
   };
 
-  // Change row color
-  const handleColorChange = async (rowId, colorValue) => {
-    const rowIndex = data.findIndex(r => r.id === rowId);
-    if (rowIndex === -1) return;
-
-    const oldRow = data[rowIndex];
-    const updatedRow = { ...oldRow, color: colorValue };
-
-    const newData = [...data];
-    newData[rowIndex] = updatedRow;
-    setData(newData);
-
-    setSavingRows(prev => {
-      const next = new Set(prev);
-      next.add(rowId);
-      return next;
-    });
-
-    try {
-      const { error } = await supabaseCobros
-        .from('cobros')
-        .update({ color: colorValue })
-        .eq('id', rowId);
-
-      if (error) throw error;
-    } catch (err) {
-      console.error('Error updating color:', err);
-      const revertedData = [...data];
-      revertedData[rowIndex] = oldRow;
-      setData(revertedData);
-      alert('Error al actualizar el color de la fila.');
-    } finally {
-      setSavingRows(prev => {
-        const next = new Set(prev);
-        next.delete(rowId);
-        return next;
-      });
-    }
-  };
-
   // Add new empty student row
   const handleAddRow = async () => {
     const newRecord = {
@@ -632,10 +600,11 @@ export default function CobrosView() {
     const pricePerPlate = getPricePerPlate(row.curso);
     const fullMonthAmount = workingDaysCount * pricePerPlate;
 
+    const updatedAsistencias = paintFullMonth(row.asistencias);
     const updatedRow = {
       ...row,
       pagos_bs: fullMonthAmount,
-      color: 'Verde'
+      asistencias: updatedAsistencias
     };
 
     const newData = [...data];
@@ -653,7 +622,7 @@ export default function CobrosView() {
         .from('cobros')
         .update({
           pagos_bs: fullMonthAmount,
-          color: 'Verde',
+          asistencias: updatedAsistencias,
           updated_at: new Date().toISOString()
         })
         .eq('id', rowId);
@@ -743,18 +712,19 @@ export default function CobrosView() {
       for (const st of turnStudents) {
         const price = getPricePerPlate(st.curso);
         const fullMonthAmount = workingDaysCount * price;
+        const updatedAsistencias = paintFullMonth(st.asistencias);
 
         const { error } = await supabaseCobros
           .from('cobros')
           .update({
             pagos_bs: fullMonthAmount,
-            color: 'Verde',
+            asistencias: updatedAsistencias,
             updated_at: new Date().toISOString()
           })
           .eq('id', st.id);
 
         if (error) throw error;
-        updatedRows.push({ ...st, pagos_bs: fullMonthAmount, color: 'Verde' });
+        updatedRows.push({ ...st, pagos_bs: fullMonthAmount, asistencias: updatedAsistencias });
       }
 
       setData(prev => prev.map(item => {
@@ -896,19 +866,18 @@ export default function CobrosView() {
       
       // Create empty records for the selected month across all turns
       const newRecords = studentsToCopy.map(s => {
-        const isMerienda = String(s.observaciones || '').toLowerCase().includes('merienda');
         const price = getPricePerPlate(s.curso);
         const pagosBs = prepayMonth ? (workingDaysCount * price) : 0;
-        const color = isMerienda ? 'Amarillo' : (prepayMonth ? 'Verde' : null);
+        const asistencias = prepayMonth ? paintFullMonth({}) : {};
         
         return {
           alumno: s.alumno,
           curso: s.curso,
           turno: s.turno,
           observaciones: s.observaciones,
-          color: color,
+          color: null,
           mes: selectedMonth,
-          asistencias: {},
+          asistencias,
           platos_vendidos: 0,
           platos_vendidos_bs: 0,
           pagos_bs: pagosBs,
@@ -1972,7 +1941,6 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-balance-input">CARGAR PAGO (BS)</th>
                   <th rowSpan={2} className="col-balance">SALDO ALMUERZO</th>
                   {showMeriendasCol && <th rowSpan={2} className="col-balance-input">PAGO MERIENDA (BS)</th>}
-                  <th rowSpan={2} className="col-color">COLOR</th>
                   <th rowSpan={2} className="col-actions">ACCIONES</th>
                 </tr>
                 <tr className="days-header-row">
@@ -1985,12 +1953,11 @@ export default function CobrosView() {
                 {filteredData.length > 0 ? (
                   filteredData.map((row, index) => {
                     const isSaving = savingRows.has(row.id);
-                    const rowColorClass = row.color ? `row-color--${row.color.toLowerCase()}` : '';
                     
                     return (
                       <tr 
                         key={row.id} 
-                        className={`excel-row ${rowColorClass} ${isSaving ? 'row-saving' : ''}`}
+                        className={`excel-row ${isSaving ? 'row-saving' : ''}`}
                       >
                         <td className="cell-nro text-center">{index + 1}</td>
                         <td className="cell-alumno">
@@ -2330,21 +2297,6 @@ export default function CobrosView() {
                           </td>
                         )}
 
-                        {/* Row Color dot picker */}
-                        <td className="cell-color">
-                          <div className="color-dots-picker">
-                            {colorOptions.map(option => (
-                              <button
-                                key={option.value}
-                                onClick={() => handleColorChange(row.id, option.value)}
-                                className={`color-dot dot-${option.value.toLowerCase() || 'none'} ${row.color === option.value ? 'active' : ''}`}
-                                title={option.label}
-                                type="button"
-                              />
-                            ))}
-                          </div>
-                        </td>
-
                         {/* Actions */}
                         <td className="cell-actions text-center">
                           <div className="action-row">
@@ -2366,7 +2318,7 @@ export default function CobrosView() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={11 + currentMonthDays.length + (showMeriendasCol ? 1 : 0)} className="empty-state">
+                    <td colSpan={10 + currentMonthDays.length + (showMeriendasCol ? 1 : 0)} className="empty-state">
                       No se encontraron registros de cobros.
                     </td>
                   </tr>
@@ -2399,7 +2351,6 @@ export default function CobrosView() {
                     <td className="daily-totals-cell"></td>
                     <td className="daily-totals-cell"></td>
                     {showMeriendasCol && <td className="daily-totals-cell"></td>}
-                    <td className="daily-totals-cell"></td>
                     <td className="daily-totals-cell"></td>
                   </tr>
                 </tfoot>
