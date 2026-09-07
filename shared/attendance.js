@@ -1,5 +1,10 @@
 export const SNACK_PRICE_BS = 17;
 
+export function courseSupportsSnack(course) {
+  const normalizedCourse = String(course ?? '').trim().toUpperCase();
+  return !normalizedCourse.endsWith('S') && !normalizedCourse.includes('SECUNDARIA');
+}
+
 /** Normalizes a value typed in a daily Cobros cell. */
 export function normalizeAttendanceCode(value) {
   return String(value ?? '').trim().toUpperCase();

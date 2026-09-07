@@ -37,7 +37,7 @@ import FinanzasView from '../components/cobros/FinanzasView';
 import RankingPlatosView from '../components/cobros/RankingPlatosView';
 import ImportarExcelView from '../components/cobros/ImportarExcelView';
 import DiasSinClasesModal from '../components/cobros/DiasSinClasesModal';
-import { getAttendanceConsumption, normalizeAttendanceCode, SNACK_PRICE_BS } from '../../shared/attendance';
+import { courseSupportsSnack, getAttendanceConsumption, normalizeAttendanceCode, SNACK_PRICE_BS } from '../../shared/attendance';
 import './CobrosView.css';
 
 const monthsList = [
@@ -198,7 +198,7 @@ export default function CobrosView() {
       if (currentDaysKeys.includes(dayKey)) {
         const consumption = getAttendanceConsumption(asistencias[dayKey]);
         plates += consumption.lunches;
-        meriendas += consumption.snacks;
+        meriendas += courseSupportsSnack(course) ? consumption.snacks : 0;
       }
     });
     
@@ -1178,14 +1178,46 @@ export default function CobrosView() {
     return matchSearch && matchCourse && matchTurn;
   });
 
+  // Determinar si el turno actual es de Secundaria (12:40 y 13:05) o no tiene cursos de merienda
+  const isTurnoSecundaria = useMemo(() => {
+    if (selectedTurn === '12:40' || selectedTurn === '13:05') return true;
+    const turnStudents = data.filter(r => r.turno === selectedTurn);
+    return turnStudents.length > 0 && turnStudents.every(r => !courseSupportsSnack(r.curso));
+  }, [selectedTurn, data]);
+
+  const showMeriendasCol = !isTurnoSecundaria;
+
   // Summary statistics for current turn
   const summaryStats = useMemo(() => {
     const turnData = data.filter(r => r.turno === selectedTurn);
     const totalPlatos = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
     const totalBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
     const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
-    return { totalPlatos, totalBs, inDebtCount };
-  }, [data, selectedTurn]);
+
+    // Platos vendidos HOY (día actual) en el turno seleccionado
+    const now = new Date();
+    const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    const isCurrentMonth = selectedMonth === currentYM;
+    const todayDayKey = String(now.getDate());
+
+    const platosHoy = isCurrentMonth
+      ? turnData.reduce((acc, r) => {
+          const consumption = getAttendanceConsumption(r.asistencias?.[todayDayKey]);
+          return acc + consumption.lunches;
+        }, 0)
+      : null;
+
+    // Totales diarios de platos para la fila de resumen (historial diario guardado)
+    const targetRows = filteredData.length > 0 ? filteredData : turnData;
+    const dailyPlateTotals = currentMonthDays.map(d => {
+      return targetRows.reduce((acc, r) => {
+        const consumption = getAttendanceConsumption(r.asistencias?.[d.key]);
+        return acc + consumption.lunches;
+      }, 0);
+    });
+
+    return { totalPlatos, totalBs, inDebtCount, platosHoy, dailyPlateTotals, isCurrentMonth, todayDayKey };
+  }, [data, filteredData, selectedTurn, selectedMonth, currentMonthDays]);
 
   // Unique list of courses for filter dropdown
   const uniqueCourses = useMemo(() => {
@@ -1409,10 +1441,13 @@ export default function CobrosView() {
             </div>
             <div 
               className="fullscreen-plates-badge"
-              title={`Total de platos vendidos en el ${turnsList.find(t => t.value === selectedTurn)?.label}, según la planilla de cobros del mes seleccionado`}
+              title={summaryStats.platosHoy !== null
+                ? `Platos vendidos hoy (día ${summaryStats.todayDayKey}) en ${turnsList.find(t => t.value === selectedTurn)?.label}`
+                : `Total platos vendidos en ${turnsList.find(t => t.value === selectedTurn)?.label} (${monthsList.find(m => m.value === selectedMonth)?.label})`
+              }
             >
               <Utensils size={14} className="badge-icon" />
-              <span className="badge-count">{summaryStats.totalPlatos}</span>
+              <span className="badge-count">{summaryStats.platosHoy !== null ? summaryStats.platosHoy : summaryStats.totalPlatos}</span>
               <span className="badge-label">Platos Vendidos</span>
             </div>
             <button 
@@ -1800,7 +1835,7 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-total">PLATOS EN BS</th>
                   <th rowSpan={2} className="col-balance-input">CARGAR PAGO (BS)</th>
                   <th rowSpan={2} className="col-balance">SALDO ALMUERZO</th>
-                  <th rowSpan={2} className="col-balance-input">PAGO MERIENDA (BS)</th>
+                  {showMeriendasCol && <th rowSpan={2} className="col-balance-input">PAGO MERIENDA (BS)</th>}
                   <th rowSpan={2} className="col-color">COLOR</th>
                   <th rowSpan={2} className="col-actions">ACCIONES</th>
                 </tr>
@@ -2136,46 +2171,52 @@ export default function CobrosView() {
                         })()}
 
                         {/* Pago y saldo neto de Merienda */}
-                        <td className="cell-balance-input cell-merienda-wrapper">
-                          <div className="merienda-input-box">
-                            <input
-                              type="number"
-                              value={row.saldo_merienditas || ''}
-                              data-r={index}
-                              data-c={7 + currentMonthDays.length}
-                              onFocus={(e) => e.target.select()}
-                              onClick={(e) => e.target.select()}
-                              placeholder="0"
-                              title="Pago cargado para meriendas (Bs)"
-                              onChange={(e) => {
-                                const newData = [...data];
-                                const idx = newData.findIndex(r => r.id === row.id);
-                                newData[idx].saldo_merienditas = e.target.value;
-                                setData(newData);
-                              }}
-                              onBlur={(e) => handleCellChange(row.id, 'saldo_merienditas', e.target.value)}
-                              className="cell-balance-input-field text-center text-bold text-info"
-                            />
-                            {(() => {
-                              const meriendasCount = Number(row.meriendas_consumidas || 0);
-                              const pagos = Number(row.saldo_merienditas || 0);
-                              if (meriendasCount > 0) {
-                                const costo = meriendasCount * SNACK_PRICE_BS;
-                                const saldoNeto = pagos - costo;
-                                const isPositive = saldoNeto >= 0;
-                                return (
-                                  <span
-                                    className={`merienda-net-pill ${isPositive ? 'merienda-net-pill--positive' : 'merienda-net-pill--negative'}`}
-                                    title={`${meriendasCount} merienda(s) consumida(s) (-${costo} Bs). Pago: ${pagos} Bs.`}
-                                  >
-                                    {saldoNeto >= 0 ? `+${saldoNeto}` : saldoNeto} Bs
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </div>
-                        </td>
+                        {showMeriendasCol && (
+                          <td className="cell-balance-input cell-merienda-wrapper">
+                            {courseSupportsSnack(row.curso) ? (
+                              <div className="merienda-input-box">
+                                <input
+                                  type="number"
+                                  value={row.saldo_merienditas || ''}
+                                  data-r={index}
+                                  data-c={7 + currentMonthDays.length}
+                                  onFocus={(e) => e.target.select()}
+                                  onClick={(e) => e.target.select()}
+                                  placeholder="0"
+                                  title="Pago cargado para meriendas (Bs)"
+                                  onChange={(e) => {
+                                    const newData = [...data];
+                                    const idx = newData.findIndex(r => r.id === row.id);
+                                    newData[idx].saldo_merienditas = e.target.value;
+                                    setData(newData);
+                                  }}
+                                  onBlur={(e) => handleCellChange(row.id, 'saldo_merienditas', e.target.value)}
+                                  className="cell-balance-input-field text-center text-bold text-info"
+                                />
+                                {(() => {
+                                  const meriendasCount = Number(row.meriendas_consumidas || 0);
+                                  const pagos = Number(row.saldo_merienditas || 0);
+                                  if (meriendasCount > 0) {
+                                    const costo = meriendasCount * SNACK_PRICE_BS;
+                                    const saldoNeto = pagos - costo;
+                                    const isPositive = saldoNeto >= 0;
+                                    return (
+                                      <span
+                                        className={`merienda-net-pill ${isPositive ? 'merienda-net-pill--positive' : 'merienda-net-pill--negative'}`}
+                                        title={`${meriendasCount} merienda(s) consumida(s) (-${costo} Bs). Pago: ${pagos} Bs.`}
+                                      >
+                                        {saldoNeto >= 0 ? `+${saldoNeto}` : saldoNeto} Bs
+                                      </span>
+                                    );
+                                  }
+                                  return null;
+                                })()}
+                              </div>
+                            ) : (
+                              <span className="merienda-not-applicable" title="Las meriendas no aplican para cursos de Secundaria">No aplica</span>
+                            )}
+                          </td>
+                        )}
 
                         {/* Row Color dot picker */}
                         <td className="cell-color">
@@ -2213,12 +2254,44 @@ export default function CobrosView() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={31 + currentMonthDays.length} className="empty-state">
+                    <td colSpan={13 + currentMonthDays.length + (showMeriendasCol ? 1 : 0)} className="empty-state">
                       No se encontraron registros de cobros.
                     </td>
                   </tr>
                 )}
               </tbody>
+
+              {/* Resumen inferior: Historial de Platos Vendidos por Día */}
+              {filteredData.length > 0 && (
+                <tfoot className="excel-table-footer">
+                  <tr className="daily-totals-row">
+                    <td colSpan={7} className="daily-totals-label">
+                      <Utensils size={13} className="daily-totals-icon" />
+                      <span>TOTAL PLATOS / DÍA</span>
+                    </td>
+                    {summaryStats.dailyPlateTotals.map((count, i) => (
+                      <td 
+                        key={`total-day-${i}`} 
+                        className={`daily-totals-cell ${count > 0 ? 'daily-totals-cell--active' : ''}`}
+                        title={`${currentMonthDays[i]?.label}: ${count} platos vendidos`}
+                      >
+                        {count > 0 ? count : '-'}
+                      </td>
+                    ))}
+                    <td className="daily-totals-cell daily-totals-total" title="Total platos vendidos en el mes">
+                      {summaryStats.totalPlatos}
+                    </td>
+                    <td className="daily-totals-cell daily-totals-total-bs" title="Total importe en Bs">
+                      {summaryStats.totalBs} Bs
+                    </td>
+                    <td className="daily-totals-cell"></td>
+                    <td className="daily-totals-cell"></td>
+                    {showMeriendasCol && <td className="daily-totals-cell"></td>}
+                    <td className="daily-totals-cell"></td>
+                    <td className="daily-totals-cell"></td>
+                  </tr>
+                </tfoot>
+              )}
             </table>
           </div>
         )}

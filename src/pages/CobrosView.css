@@ -1339,6 +1339,15 @@
   gap: 0.75rem;
 }
 
+.merienda-not-applicable {
+  display: block;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  font-style: italic;
+  font-weight: 700;
+  text-align: center;
+}
+
 .fullscreen-shortcuts-guide {
   display: inline-flex;
   align-items: center;
@@ -1644,6 +1653,56 @@ body.cobros-fullscreen-active .content-area {
   cursor: pointer;
 }
 
+.btn-fullscreen-lock {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 255, 255, 0.15);
+  color: #f1f5f9;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  padding: 0.3rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-fullscreen-lock:hover {
+  background: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.btn-fullscreen-lock--active {
+  background: #f59e0b !important;
+  color: #78350f !important;
+  border-color: #d97706 !important;
+  font-weight: 700;
+  box-shadow: 0 0 10px rgba(245, 158, 11, 0.5);
+}
+
+.btn-fullscreen-lock--active:hover {
+  background: #d97706 !important;
+  color: #ffffff !important;
+}
+
+/* Toolbar scroll lock button */
+.btn-scroll-lock {
+  height: 34px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #475569 !important;
+  background-color: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
 .btn-scroll-lock:hover {
   background-color: #f1f5f9 !important;
   color: #0f172a !important;
@@ -1659,4 +1718,108 @@ body.cobros-fullscreen-active .content-area {
 /* Locked scroll container */
 .excel-table-container--scroll-locked {
   overflow-x: hidden !important;
+}
+
+/* ==========================================================================
+   Fila Resumen de Platos Vendidos por Día (Footer de la planilla)
+   ========================================================================== */
+.excel-table-footer {
+  position: sticky;
+  bottom: 0;
+  z-index: 15;
+}
+
+.daily-totals-row {
+  background: #f8fafc;
+  border-top: 2px solid #cbd5e1;
+  font-weight: 700;
+}
+
+.daily-totals-label {
+  padding: 0.5rem 0.75rem !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  color: #1e293b !important;
+  background: #f1f5f9 !important;
+  text-align: right !important;
+  letter-spacing: 0.03em;
+  border-right: 2px solid #cbd5e1 !important;
+  white-space: nowrap;
+}
+
+.daily-totals-icon {
+  display: inline-block;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+  color: #0284c7;
+}
+
+.daily-totals-cell {
+  text-align: center !important;
+  font-size: 0.8rem !important;
+  font-weight: 600 !important;
+  color: #64748b;
+  padding: 0.35rem 0.15rem !important;
+  border: 1px solid #e2e8f0 !important;
+  background: #f8fafc;
+  user-select: none;
+}
+
+.daily-totals-cell--active {
+  background: #dcfce7 !important;
+  color: #15803d !important;
+  font-weight: 800 !important;
+  border: 1px solid #86efac !important;
+}
+
+.daily-totals-total {
+  background: #e0f2fe !important;
+  color: #0369a1 !important;
+  font-weight: 800 !important;
+  font-size: 0.85rem !important;
+  text-align: center !important;
+  border-left: 2px solid #cbd5e1 !important;
+}
+
+.daily-totals-total-bs {
+  background: #f0fdf4 !important;
+  color: #15803d !important;
+  font-weight: 800 !important;
+  font-size: 0.82rem !important;
+  text-align: center !important;
+}
+
+/* En pantalla completa con tema oscuro */
+.cobros-container--fullscreen .daily-totals-row {
+  background: #0f172a;
+  border-top: 2px solid rgba(255, 255, 255, 0.15);
+}
+
+.cobros-container--fullscreen .daily-totals-label {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-right: 2px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.cobros-container--fullscreen .daily-totals-cell {
+  background: #0f172a;
+  color: #94a3b8;
+  border-color: rgba(255, 255, 255, 0.08) !important;
+}
+
+.cobros-container--fullscreen .daily-totals-cell--active {
+  background: rgba(34, 197, 94, 0.22) !important;
+  color: #4ade80 !important;
+  border-color: rgba(74, 222, 128, 0.4) !important;
+}
+
+.cobros-container--fullscreen .daily-totals-total {
+  background: rgba(56, 189, 248, 0.2) !important;
+  color: #38bdf8 !important;
+  border-left: 2px solid rgba(255, 255, 255, 0.15) !important;
+}
+
+.cobros-container--fullscreen .daily-totals-total-bs {
+  background: rgba(34, 197, 94, 0.18) !important;
+  color: #4ade80 !important;
 }

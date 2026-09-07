@@ -1,6 +1,6 @@
 import { supabaseCobrosAdmin } from './_lib/supabaseCobros.js';
 import { json, methodNotAllowed, withErrorHandling } from './_lib/http.js';
-import { getAttendanceConsumption, isAttendanceDayKey, SNACK_PRICE_BS } from '../shared/attendance.js';
+import { courseSupportsSnack, getAttendanceConsumption, isAttendanceDayKey, SNACK_PRICE_BS } from '../shared/attendance.js';
 
 export const config = { runtime: 'edge' };
 
@@ -60,10 +60,12 @@ export default withErrorHandling(async (request) => {
     const saldoBs = pagosBs - platosVendidosBs;
 
     // Calculate meriendas: days with '4' (Almuerzo+Merienda) or 'M' (Solo Merienda)
-    const diasMerienda = Object.keys(asistencias).reduce((total, dayKey) => (
-      isAttendanceDayKey(dayKey) ? total + getAttendanceConsumption(asistencias[dayKey]).snacks : total
-    ), 0);
-    const pagosMerienditas = Number(record.saldo_merienditas || 0);
+    const diasMerienda = courseSupportsSnack(record.curso)
+      ? Object.keys(asistencias).reduce((total, dayKey) => (
+        isAttendanceDayKey(dayKey) ? total + getAttendanceConsumption(asistencias[dayKey]).snacks : total
+      ), 0)
+      : 0;
+    const pagosMerienditas = courseSupportsSnack(record.curso) ? Number(record.saldo_merienditas || 0) : 0;
     const costoMerienditas = diasMerienda * SNACK_PRICE_BS;
     const saldoMerienditasNeto = pagosMerienditas - costoMerienditas;
 
