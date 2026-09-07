@@ -317,13 +317,23 @@ export default function CobrosView() {
         const numVal = Number(value || 0);
         updatedRow[key] = numVal;
         if (key === 'pagos_bs') {
-          const net = numVal - Number(updatedRow.platos_vendidos_bs || 0);
-          updatedRow.color = isMerienda(updatedRow.observaciones) ? 'Amarillo' : (net >= 0 ? 'Verde' : 'Azul');
+          const hasActivity = Number(updatedRow.platos_vendidos || 0) > 0 || numVal > 0;
+          if (!hasActivity) {
+            updatedRow.color = '';
+          } else if (isMerienda(updatedRow.observaciones)) {
+            updatedRow.color = 'Amarillo';
+          } else {
+            const net = numVal - Number(updatedRow.platos_vendidos_bs || 0);
+            updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+          }
         }
       } else {
         updatedRow[key] = value;
         if (key === 'observaciones') {
-          if (isMerienda(value)) {
+          const hasActivity = Number(updatedRow.platos_vendidos || 0) > 0 || Number(updatedRow.pagos_bs || 0) > 0;
+          if (!hasActivity) {
+            updatedRow.color = '';
+          } else if (isMerienda(value)) {
             updatedRow.color = 'Amarillo';
           } else {
             const net = Number(updatedRow.pagos_bs || 0) - Number(updatedRow.platos_vendidos_bs || 0);
@@ -352,8 +362,15 @@ export default function CobrosView() {
       updatedRow.asistencias = newAsistencias;
       const totals = calculateRowTotals(newAsistencias, updatedRow.curso);
       updatedRow = { ...updatedRow, ...totals };
-      const net = Number(updatedRow.pagos_bs || 0) - totals.platos_vendidos_bs;
-      updatedRow.color = isMerienda(updatedRow.observaciones) ? 'Amarillo' : (net >= 0 ? 'Verde' : 'Azul');
+      const hasActivity = totals.platos_vendidos > 0 || Number(updatedRow.pagos_bs || 0) > 0;
+      if (!hasActivity) {
+        updatedRow.color = '';
+      } else if (isMerienda(updatedRow.observaciones)) {
+        updatedRow.color = 'Amarillo';
+      } else {
+        const net = Number(updatedRow.pagos_bs || 0) - totals.platos_vendidos_bs;
+        updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
+      }
 
       // Real-time two-way synchronization of absences (Faltas) with Google Sheets
       const formattedDate = `${selectedMonth}-${String(key).padStart(2, '0')}`;
