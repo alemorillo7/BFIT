@@ -72,11 +72,11 @@ const colorOptions = [
 ];
 
 const dayPaintColorValues = {
-  FFF2CC: '#fff2cc',
-  Verde: '#c6efce',
-  Azul: '#bdd7ee',
-  Amarillo: '#fef3c7',
-  Naranja: '#fed7aa'
+  FFF2CC: '#fde047',
+  Verde: '#86efac',
+  Azul: '#93c5fd',
+  Amarillo: '#fcd34d',
+  Naranja: '#fdba74'
 };
 
 const getDayPaintColor = (color) => dayPaintColorValues[color] || color;
@@ -2154,11 +2154,17 @@ export default function CobrosView() {
                                   data-r={index}
                                   data-c={4 + dIdx}
                                   onFocus={(e) => e.target.select()}
-                                  onClick={(e) => {
+                                  onMouseDown={(e) => {
                                     if (isDayPaintMode) {
                                       e.preventDefault();
                                       e.stopPropagation();
                                       handlePaintDay(row.id, d.key);
+                                    }
+                                  }}
+                                  onClick={(e) => {
+                                    if (isDayPaintMode) {
+                                      e.preventDefault();
+                                      e.stopPropagation();
                                       return;
                                     }
                                     e.target.select();
