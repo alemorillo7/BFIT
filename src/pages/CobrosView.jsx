@@ -1403,16 +1403,16 @@ export default function CobrosView() {
           <div className="fullscreen-top-right">
             <div className="fullscreen-shortcuts-guide" aria-label="Guía rápida de códigos de Cobros">
               <span className="shortcuts-guide-title">GUÍA:</span>
-              <span className="shortcut-guide-item shortcut-guide-item--lunch" title="Registra solo un almuerzo">
+              <span className="shortcut-guide-item shortcut-guide-item--lunch" tabIndex={0} data-tooltip="Solo almuerzo: suma 1 plato">
                 <kbd>1</kbd><span>Almuerzo</span>
               </span>
-              <span className="shortcut-guide-item shortcut-guide-item--both" title={`Registra almuerzo y descuenta una merienda de ${SNACK_PRICE_BS} Bs`}>
+              <span className="shortcut-guide-item shortcut-guide-item--both" tabIndex={0} data-tooltip={`Almuerzo + merienda: suma 1 plato y descuenta ${SNACK_PRICE_BS} Bs`}>
                 <kbd>4</kbd><span>Almuerzo + Merienda −{SNACK_PRICE_BS} Bs</span>
               </span>
-              <span className="shortcut-guide-item shortcut-guide-item--snack" title={`Registra solo una merienda y descuenta ${SNACK_PRICE_BS} Bs`}>
+              <span className="shortcut-guide-item shortcut-guide-item--snack" tabIndex={0} data-tooltip={`Solo merienda: descuenta ${SNACK_PRICE_BS} Bs, sin sumar almuerzo`}>
                 <kbd>M</kbd><span>Merienda −{SNACK_PRICE_BS} Bs</span>
               </span>
-              <span className="shortcut-guide-item shortcut-guide-item--absence" title="Registra falta; no descuenta nada">
+              <span className="shortcut-guide-item shortcut-guide-item--absence" tabIndex={0} data-tooltip="Falta: no suma ni descuenta nada">
                 <kbd>F</kbd><span>Falta</span>
               </span>
             </div>

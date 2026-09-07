@@ -1359,13 +1359,57 @@
 }
 
 .shortcut-guide-item {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
-  padding: 0.08rem 0.22rem;
+  min-height: 1.45rem;
+  padding: 0.08rem 0.32rem;
   border-radius: 4px;
   font-size: 0.67rem;
   font-weight: 700;
+  cursor: help;
+  outline: none;
+  transition: background-color 0.15s ease, transform 0.15s ease;
+}
+
+.shortcut-guide-item:hover,
+.shortcut-guide-item:focus-visible {
+  background: rgba(255, 255, 255, 0.12);
+  transform: translateY(-1px);
+}
+
+.shortcut-guide-item::after {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 0.45rem);
+  left: 50%;
+  width: max-content;
+  max-width: 15rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid #475569;
+  border-radius: 6px;
+  background: #0f172a;
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.28);
+  color: #f8fafc;
+  content: attr(data-tooltip);
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.25;
+  opacity: 0;
+  pointer-events: none;
+  text-align: center;
+  transform: translate(-50%, -0.2rem);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  visibility: hidden;
+  white-space: normal;
+}
+
+.shortcut-guide-item:hover::after,
+.shortcut-guide-item:focus-visible::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+  visibility: visible;
 }
 
 .shortcut-guide-item kbd {
