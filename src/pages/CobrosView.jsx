@@ -26,7 +26,8 @@ import {
   X,
   Trophy,
   Lock,
-  Unlock
+  Unlock,
+  Utensils
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
@@ -174,37 +175,6 @@ export default function CobrosView() {
     return getDynamicWorkingDays(selectedMonth);
   }, [selectedMonth, calendarUpdateKey]);
 
-  // Load data for the selected month
-  const loadData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setErrorMessage(null);
-      const { data: cobrosData, error } = await supabaseCobros
-        .from('cobros')
-        .select('*')
-        .eq('mes', selectedMonth)
-        .order('alumno', { ascending: true })
-        .limit(5000);
-        
-      if (error) throw error;
-      setData(cobrosData || []);
-    } catch (err) {
-      console.error('Error loading cobros:', err);
-      setErrorMessage('Error al cargar datos de Cobros desde Supabase.');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedMonth]);
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      loadData();
-    }, 0);
-
-    return () => window.clearTimeout(timer);
-  }, [loadData]);
-
-
   // Compute pricing based on course name
   const getPricePerPlate = (course) => {
     const norm = String(course || '').toUpperCase();
@@ -226,7 +196,8 @@ export default function CobrosView() {
       if (currentDaysKeys.includes(dayKey)) {
         const val = String(asistencias[dayKey] || '').trim().toUpperCase();
         if (val && val !== '0' && val !== 'F') {
-          plates += 1;
+          const num = Number(val);
+          plates += (!isNaN(num) && num > 0) ? num : 1;
         }
       }
     });
@@ -237,6 +208,46 @@ export default function CobrosView() {
       platos_vendidos_bs: plates * price
     };
   }, [currentMonthDays]);
+
+  // Load data for the selected month
+  const loadData = useCallback(async () => {
+    try {
+      setLoading(true);
+      setErrorMessage(null);
+      const { data: cobrosData, error } = await supabaseCobros
+        .from('cobros')
+        .select('*')
+        .eq('mes', selectedMonth)
+        .order('alumno', { ascending: true })
+        .limit(5000);
+        
+      if (error) throw error;
+      
+      // Enrich each row with accurate real-time plates calculation
+      const enrichedData = (cobrosData || []).map(row => {
+        const totals = calculateRowTotals(row.asistencias, row.curso);
+        return {
+          ...row,
+          platos_vendidos: totals.platos_vendidos,
+          platos_vendidos_bs: totals.platos_vendidos_bs
+        };
+      });
+      setData(enrichedData);
+    } catch (err) {
+      console.error('Error loading cobros:', err);
+      setErrorMessage('Error al cargar datos de Cobros desde Supabase.');
+    } finally {
+      setLoading(false);
+    }
+  }, [selectedMonth, calculateRowTotals]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      loadData();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [loadData]);
 
   // Save or delete observation note for a specific day and student
   const handleSaveDayNote = async (rowId, dayKey, noteText) => {
@@ -1171,6 +1182,11 @@ export default function CobrosView() {
     return { totalStudents, totalPlatos, totalBs, inDebtCount };
   }, [data, selectedTurn]);
 
+  // Total plates sold for currently filtered data (turn or search)
+  const totalPlatosTurno = useMemo(() => {
+    return filteredData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
+  }, [filteredData]);
+
   // Unique list of courses for filter dropdown
   const uniqueCourses = useMemo(() => {
     const courses = data.map(r => String(r.curso || '').trim()).filter(Boolean);
@@ -1381,7 +1397,15 @@ export default function CobrosView() {
           </div>
 
           <div className="fullscreen-top-right">
-            <span className="fullscreen-student-count">{filteredData.length} Alumnos</span>
+            <div 
+              className="fullscreen-plates-badge"
+              title={`Total: ${totalPlatosTurno} platos consumidos por ${filteredData.length} alumnos en este turno`}
+            >
+              <Utensils size={14} className="badge-icon" />
+              <span className="badge-count">{totalPlatosTurno}</span>
+              <span className="badge-label">Platos Vendidos</span>
+              <span className="badge-sub-students">({filteredData.length} Alumnos)</span>
+            </div>
             <button 
               className="btn-fullscreen-exit"
               onClick={toggleFullscreen}
