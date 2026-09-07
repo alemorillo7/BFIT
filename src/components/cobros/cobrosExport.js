@@ -1,4 +1,5 @@
 import * as XLSX from 'xlsx';
+import { SNACK_PRICE_BS } from '../../../shared/attendance';
 
 /**
  * Exports all turns and a general financial summary for the selected month to an .xlsx file.
@@ -113,6 +114,8 @@ export const exportFullExcelWorkbook = (allMonthData, selectedMonth, workingDays
       'IMPORTE (BS)',
       'PAGOS (BS)',
       'SALDO ALMUERZO (BS)',
+      'PAGO MERIENDA (BS)',
+      'MERIENDAS CONSUMIDAS',
       'SALDO MERIENDA (BS)',
       'ESTADO / COLOR'
     );
@@ -137,13 +140,18 @@ export const exportFullExcelWorkbook = (allMonthData, selectedMonth, workingDays
       });
 
       const netBalance = Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0);
+      const meriendas = Number(row.meriendas_consumidas || 0);
+      const pagoMerienda = Number(row.saldo_merienditas || 0);
+      const saldoMerienda = pagoMerienda - (meriendas * SNACK_PRICE_BS);
 
       dataRow.push(
         row.platos_vendidos || 0,
         row.platos_vendidos_bs || 0,
         row.pagos_bs || 0,
         netBalance,
-        row.saldo_merienditas || 0,
+        pagoMerienda,
+        meriendas,
+        saldoMerienda,
         row.color || (netBalance >= 0 ? 'Verde (Al día)' : 'Azul (Debe)')
       );
 
@@ -159,9 +167,11 @@ export const exportFullExcelWorkbook = (allMonthData, selectedMonth, workingDays
       const sumVentasBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
       const sumPagosBs = turnData.reduce((acc, r) => acc + Number(r.pagos_bs || 0), 0);
       const sumNet = sumPagosBs - sumVentasBs;
-      const sumMeriendas = turnData.reduce((acc, r) => acc + Number(r.saldo_merienditas || 0), 0);
+      const sumPagoMeriendas = turnData.reduce((acc, r) => acc + Number(r.saldo_merienditas || 0), 0);
+      const sumMeriendasConsumidas = turnData.reduce((acc, r) => acc + Number(r.meriendas_consumidas || 0), 0);
+      const sumSaldoMeriendas = sumPagoMeriendas - (sumMeriendasConsumidas * SNACK_PRICE_BS);
 
-      footerRow.push(sumPlatos, sumVentasBs, sumPagosBs, sumNet, sumMeriendas, '');
+      footerRow.push(sumPlatos, sumVentasBs, sumPagosBs, sumNet, sumPagoMeriendas, sumMeriendasConsumidas, sumSaldoMeriendas, '');
       rows.push([]);
       rows.push(footerRow);
     }
@@ -181,6 +191,8 @@ export const exportFullExcelWorkbook = (allMonthData, selectedMonth, workingDays
       { wch: 16 },
       { wch: 14 },
       { wch: 14 },
+      { wch: 18 },
+      { wch: 18 },
       { wch: 18 },
       { wch: 18 },
       { wch: 16 }

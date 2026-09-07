@@ -1,5 +1,6 @@
 import { supabaseCobrosAdmin } from './_lib/supabaseCobros.js';
 import { badRequest, json, methodNotAllowed, withErrorHandling } from './_lib/http.js';
+import { getAttendanceConsumption, isAttendanceDayKey, SNACK_PRICE_BS } from '../shared/attendance.js';
 
 export const config = { runtime: 'edge' };
 
@@ -79,11 +80,12 @@ export default withErrorHandling(async (request) => {
   const formattedResults = records.map(record => {
     const asistencias = record.asistencias || {};
     
-    // Extract the calendar days that have active meals (value is not '0')
+    // Extract only actual day cells with a lunch or snack; notes are JSON keys too.
     const diasConsumidos = Object.keys(asistencias)
       .filter(dayKey => {
-        const val = String(asistencias[dayKey]).trim().toUpperCase();
-        return val && val !== '0' && val !== 'F';
+        if (!isAttendanceDayKey(dayKey)) return false;
+        const consumption = getAttendanceConsumption(asistencias[dayKey]);
+        return consumption.lunches > 0 || consumption.snacks > 0;
       })
       .sort((a, b) => parseInt(a, 10) - parseInt(b, 10)); // Sort numerically
 
@@ -95,7 +97,14 @@ export default withErrorHandling(async (request) => {
     const pagosBs = Number(record.pagos_bs || 0);
     const platosVendidosBs = Number(record.platos_vendidos_bs || 0);
     const saldoBs = pagosBs - platosVendidosBs;
-    const saldoMerienditas = Number(record.saldo_merienditas || 0);
+
+    // Calculate meriendas: days with '4' (Almuerzo+Merienda) or 'M' (Solo Merienda)
+    const diasMerienda = Object.keys(asistencias).reduce((total, dayKey) => (
+      isAttendanceDayKey(dayKey) ? total + getAttendanceConsumption(asistencias[dayKey]).snacks : total
+    ), 0);
+    const pagosMerienditas = Number(record.saldo_merienditas || 0);
+    const costoMerienditas = diasMerienda * SNACK_PRICE_BS;
+    const saldoMerienditasNeto = pagosMerienditas - costoMerienditas;
 
     let infoSaldo;
     if (saldoBs > 0) {
@@ -106,8 +115,14 @@ export default withErrorHandling(async (request) => {
       infoSaldo = `Tiene saldo al día en almuerzos (0 Bs) en ${record.mes}.`;
     }
 
-    if (saldoMerienditas !== 0) {
-      infoSaldo += ` Saldo en meriendas: ${saldoMerienditas} Bs.`;
+    if (diasMerienda > 0 || pagosMerienditas > 0) {
+      if (saldoMerienditasNeto > 0) {
+        infoSaldo += ` Saldo a favor en meriendas: ${saldoMerienditasNeto} Bs. (${diasMerienda} meriendas consumidas).`;
+      } else if (saldoMerienditasNeto < 0) {
+        infoSaldo += ` Saldo en contra en meriendas: ${Math.abs(saldoMerienditasNeto)} Bs. (${diasMerienda} meriendas consumidas).`;
+      } else {
+        infoSaldo += ` Saldo al día en meriendas (0 Bs).`;
+      }
     }
 
     return {
@@ -122,7 +137,9 @@ export default withErrorHandling(async (request) => {
       platos_vendidos: record.platos_vendidos || 0,
       platos_vendidos_bs: record.platos_vendidos_bs || 0,
       pagos_bs: pagosBs,
-      saldo_merienditas: saldoMerienditas,
+      saldo_merienditas: saldoMerienditasNeto,
+      pagos_merienditas: pagosMerienditas,
+      meriendas_consumidas: diasMerienda,
       dias_consumidos: diasConsumidos, // e.g. ["3", "10", "13"]
       saldo_bs: saldoBs,
       color: record.color || null,

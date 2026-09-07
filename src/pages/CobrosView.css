@@ -654,6 +654,61 @@
   background-color: #fee2e2 !important;
 }
 
+.cell-day-input--both {
+  font-weight: 900 !important;
+  color: #b45309 !important;
+}
+
+.cell-day--both,
+.cell-day:has(.cell-day-input--both) {
+  background-color: #fef3c7 !important;
+}
+
+.cell-day-input--merienda {
+  font-weight: 900 !important;
+  color: #7e22ce !important;
+}
+
+.cell-day--merienda,
+.cell-day:has(.cell-day-input--merienda) {
+  background-color: #f3e8ff !important;
+}
+
+.cell-merienda-wrapper {
+  position: relative;
+  vertical-align: middle;
+}
+
+.merienda-input-box {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+}
+
+.merienda-net-pill {
+  display: inline-block;
+  font-size: 0.62rem;
+  font-weight: 800;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.merienda-net-pill--positive {
+  background-color: #dcfce7;
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
+
+.merienda-net-pill--negative {
+  background-color: #fee2e2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
+
 /* Table Row Hovers & Colored Variants (Colors apply to ALL cells, preserving red faltas) */
 .excel-row:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta) {
   background-color: #f8fafc;
@@ -1311,22 +1366,6 @@
 
 .fullscreen-plates-badge .badge-label {
   color: #e2e8f0;
-}
-
-.fullscreen-plates-badge .badge-sub-students {
-  font-size: 0.72rem;
-  color: #94a3b8;
-  font-weight: 500;
-  margin-left: 0.15rem;
-}
-
-.fullscreen-student-count {
-  font-size: 0.78rem;
-  font-weight: 600;
-  color: #94a3b8;
-  background: rgba(255, 255, 255, 0.08);
-  padding: 0.25rem 0.6rem;
-  border-radius: 4px;
 }
 
 .btn-fullscreen-exit {

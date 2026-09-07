@@ -37,6 +37,7 @@ import FinanzasView from '../components/cobros/FinanzasView';
 import RankingPlatosView from '../components/cobros/RankingPlatosView';
 import ImportarExcelView from '../components/cobros/ImportarExcelView';
 import DiasSinClasesModal from '../components/cobros/DiasSinClasesModal';
+import { getAttendanceConsumption, normalizeAttendanceCode, SNACK_PRICE_BS } from '../../shared/attendance';
 import './CobrosView.css';
 
 const monthsList = [
@@ -187,6 +188,7 @@ export default function CobrosView() {
   // Calculate totals for a row
   const calculateRowTotals = useCallback((asistencias, course) => {
     let plates = 0;
+    let meriendas = 0;
     const currentDaysKeys = currentMonthDays.map(d => d.key);
     
     Object.keys(asistencias || {}).forEach(dayKey => {
@@ -194,18 +196,20 @@ export default function CobrosView() {
       
       // Only count days that actually belong to the current month's columns
       if (currentDaysKeys.includes(dayKey)) {
-        const val = String(asistencias[dayKey] || '').trim().toUpperCase();
-        if (val && val !== '0' && val !== 'F') {
-          const num = Number(val);
-          plates += (!isNaN(num) && num > 0) ? num : 1;
-        }
+        const consumption = getAttendanceConsumption(asistencias[dayKey]);
+        plates += consumption.lunches;
+        meriendas += consumption.snacks;
       }
     });
     
     const price = getPricePerPlate(course);
+    const meriendas_bs = meriendas * SNACK_PRICE_BS;
+
     return {
       platos_vendidos: plates,
-      platos_vendidos_bs: plates * price
+      platos_vendidos_bs: plates * price,
+      meriendas_consumidas: meriendas,
+      meriendas_consumidas_bs: meriendas_bs
     };
   }, [currentMonthDays]);
 
@@ -223,13 +227,15 @@ export default function CobrosView() {
         
       if (error) throw error;
       
-      // Enrich each row with accurate real-time plates calculation
+      // Enrich each row with accurate real-time plates and merienda calculations
       const enrichedData = (cobrosData || []).map(row => {
         const totals = calculateRowTotals(row.asistencias, row.curso);
         return {
           ...row,
           platos_vendidos: totals.platos_vendidos,
-          platos_vendidos_bs: totals.platos_vendidos_bs
+          platos_vendidos_bs: totals.platos_vendidos_bs,
+          meriendas_consumidas: totals.meriendas_consumidas,
+          meriendas_consumidas_bs: totals.meriendas_consumidas_bs
         };
       });
       setData(enrichedData);
@@ -333,9 +339,9 @@ export default function CobrosView() {
     } else {
       // It is a day cell change
       const newAsistencias = { ...(oldRow.asistencias || {}) };
-      const cleanedVal = String(value || '').trim();
-      const oldDayVal = String(newAsistencias[key] || '').trim().toUpperCase();
-      const newDayVal = cleanedVal.toUpperCase();
+      const cleanedVal = normalizeAttendanceCode(value);
+      const oldDayVal = normalizeAttendanceCode(newAsistencias[key]);
+      const newDayVal = cleanedVal;
       
       if (cleanedVal === '') {
         delete newAsistencias[key];
@@ -1175,17 +1181,11 @@ export default function CobrosView() {
   // Summary statistics for current turn
   const summaryStats = useMemo(() => {
     const turnData = data.filter(r => r.turno === selectedTurn);
-    const totalStudents = turnData.length;
     const totalPlatos = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
     const totalBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
     const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
-    return { totalStudents, totalPlatos, totalBs, inDebtCount };
+    return { totalPlatos, totalBs, inDebtCount };
   }, [data, selectedTurn]);
-
-  // Total plates sold for currently filtered data (turn or search)
-  const totalPlatosTurno = useMemo(() => {
-    return filteredData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
-  }, [filteredData]);
 
   // Unique list of courses for filter dropdown
   const uniqueCourses = useMemo(() => {
@@ -1214,7 +1214,11 @@ export default function CobrosView() {
       exportRow['Importe Total (Bs)'] = row.platos_vendidos_bs;
       exportRow['Pago Almuerzo (Bs)'] = row.pagos_bs || 0;
       exportRow['Saldo Almuerzo (Bs)'] = Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0);
-      exportRow['Saldo Merienda (Bs)'] = row.saldo_merienditas || 0;
+      const meriendas = Number(row.meriendas_consumidas || 0);
+      const pagoMerienda = Number(row.saldo_merienditas || 0);
+      exportRow['Pago Merienda (Bs)'] = pagoMerienda;
+      exportRow['Meriendas Consumidas'] = meriendas;
+      exportRow['Saldo Merienda (Bs)'] = pagoMerienda - (meriendas * SNACK_PRICE_BS);
       
       return exportRow;
     });
@@ -1399,12 +1403,11 @@ export default function CobrosView() {
           <div className="fullscreen-top-right">
             <div 
               className="fullscreen-plates-badge"
-              title={`Total: ${totalPlatosTurno} platos consumidos por ${filteredData.length} alumnos en este turno`}
+              title={`Total de platos vendidos en el ${turnsList.find(t => t.value === selectedTurn)?.label}, según la planilla de cobros del mes seleccionado`}
             >
               <Utensils size={14} className="badge-icon" />
-              <span className="badge-count">{totalPlatosTurno}</span>
+              <span className="badge-count">{summaryStats.totalPlatos}</span>
               <span className="badge-label">Platos Vendidos</span>
-              <span className="badge-sub-students">({filteredData.length} Alumnos)</span>
             </div>
             <button 
               className="btn-fullscreen-exit"
@@ -1530,10 +1533,6 @@ export default function CobrosView() {
 
                   {/* Quick summary stats chips */}
                   <div className="stats-chips-container">
-                    <div className="stat-chip">
-                      <span className="stat-label">Alumnos:</span>
-                      <span className="stat-value">{summaryStats.totalStudents}</span>
-                    </div>
                     <div className="stat-chip">
                       <span className="stat-label">Platos:</span>
                       <span className="stat-value text-primary">{summaryStats.totalPlatos}</span>
@@ -1795,7 +1794,7 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-total">PLATOS EN BS</th>
                   <th rowSpan={2} className="col-balance-input">CARGAR PAGO (BS)</th>
                   <th rowSpan={2} className="col-balance">SALDO ALMUERZO</th>
-                  <th rowSpan={2} className="col-balance-input">SALDO MERIENDA (BS)</th>
+                  <th rowSpan={2} className="col-balance-input">PAGO MERIENDA (BS)</th>
                   <th rowSpan={2} className="col-color">COLOR</th>
                   <th rowSpan={2} className="col-actions">ACCIONES</th>
                 </tr>
@@ -1969,13 +1968,16 @@ export default function CobrosView() {
                         {currentMonthDays.map((d, dIdx) => {
                           const val = row.asistencias?.[d.key] || '';
                           const note = row.asistencias?.[`${d.key}_nota`] || '';
-                          const isFalta = String(val).toUpperCase() === 'F';
+                          const sVal = normalizeAttendanceCode(val);
+                          const isFalta = sVal === 'F';
+                          const isBoth = sVal === '4';
+                          const isSoloMerienda = sVal === 'M';
                           const hasNote = Boolean(note && String(note).trim());
 
                           return (
                             <td 
                               key={d.key} 
-                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''}`}
+                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''}`}
                               onClick={(e) => {
                                 const inp = e.currentTarget.querySelector('input');
                                 if (inp && document.activeElement !== inp) {
@@ -2023,9 +2025,9 @@ export default function CobrosView() {
                                     setData(newData);
                                   }}
                                   onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
-                                  className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''}`}
-                                  maxLength={10}
-                                  title={hasNote ? `Observación: ${note} (Doble clic para editar)` : 'Doble clic o clic derecho para agregar observación al día'}
+                                  className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''} ${isBoth ? 'cell-day-input--both' : ''} ${isSoloMerienda ? 'cell-day-input--merienda' : ''}`}
+                                  maxLength={1}
+                                  title={isBoth ? `4 = Almuerzo + Merienda (-${SNACK_PRICE_BS} Bs)` : (isSoloMerienda ? `M = Solo Merienda (-${SNACK_PRICE_BS} Bs)` : (hasNote ? `Observación: ${note} (Doble clic para editar)` : '1 = Almuerzo, 4 = Almuerzo + Merienda, M = Merienda, F = Falta'))}
                                 />
 
                                 {/* Red corner comment marker button / trigger */}
@@ -2127,25 +2129,46 @@ export default function CobrosView() {
                           );
                         })()}
 
-                        {/* Saldo Merienda */}
-                        <td className="cell-balance-input">
-                          <input
-                            type="number"
-                            value={row.saldo_merienditas || ''}
-                            data-r={index}
-                            data-c={7 + currentMonthDays.length}
-                            onFocus={(e) => e.target.select()}
-                            onClick={(e) => e.target.select()}
-                            placeholder="0"
-                            onChange={(e) => {
-                              const newData = [...data];
-                              const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].saldo_merienditas = e.target.value;
-                              setData(newData);
-                            }}
-                            onBlur={(e) => handleCellChange(row.id, 'saldo_merienditas', e.target.value)}
-                            className="cell-balance-input-field text-center text-bold text-info"
-                          />
+                        {/* Pago y saldo neto de Merienda */}
+                        <td className="cell-balance-input cell-merienda-wrapper">
+                          <div className="merienda-input-box">
+                            <input
+                              type="number"
+                              value={row.saldo_merienditas || ''}
+                              data-r={index}
+                              data-c={7 + currentMonthDays.length}
+                              onFocus={(e) => e.target.select()}
+                              onClick={(e) => e.target.select()}
+                              placeholder="0"
+                              title="Pago cargado para meriendas (Bs)"
+                              onChange={(e) => {
+                                const newData = [...data];
+                                const idx = newData.findIndex(r => r.id === row.id);
+                                newData[idx].saldo_merienditas = e.target.value;
+                                setData(newData);
+                              }}
+                              onBlur={(e) => handleCellChange(row.id, 'saldo_merienditas', e.target.value)}
+                              className="cell-balance-input-field text-center text-bold text-info"
+                            />
+                            {(() => {
+                              const meriendasCount = Number(row.meriendas_consumidas || 0);
+                              const pagos = Number(row.saldo_merienditas || 0);
+                              if (meriendasCount > 0) {
+                                const costo = meriendasCount * SNACK_PRICE_BS;
+                                const saldoNeto = pagos - costo;
+                                const isPositive = saldoNeto >= 0;
+                                return (
+                                  <span
+                                    className={`merienda-net-pill ${isPositive ? 'merienda-net-pill--positive' : 'merienda-net-pill--negative'}`}
+                                    title={`${meriendasCount} merienda(s) consumida(s) (-${costo} Bs). Pago: ${pagos} Bs.`}
+                                  >
+                                    {saldoNeto >= 0 ? `+${saldoNeto}` : saldoNeto} Bs
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                         </td>
 
                         {/* Row Color dot picker */}
