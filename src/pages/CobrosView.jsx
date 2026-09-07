@@ -71,6 +71,16 @@ const colorOptions = [
   { value: 'Naranja', label: 'Naranja' }
 ];
 
+const dayPaintColorValues = {
+  FFF2CC: '#fff2cc',
+  Verde: '#c6efce',
+  Azul: '#bdd7ee',
+  Amarillo: '#fef3c7',
+  Naranja: '#fed7aa'
+};
+
+const getDayPaintColor = (color) => dayPaintColorValues[color] || color;
+
 // Helper to get real current month default (e.g. '2026-09')
 const getCurrentMonthDefault = () => {
   const now = new Date();
@@ -97,7 +107,7 @@ export default function CobrosView() {
   const [isDiasModalOpen, setIsDiasModalOpen] = useState(false);
   const [isScrollLocked, setIsScrollLocked] = useState(false);
   const [isDayPaintMode, setIsDayPaintMode] = useState(false);
-  const [selectedDayPaintColor, setSelectedDayPaintColor] = useState('#86efac');
+  const [selectedDayPaintColor, setSelectedDayPaintColor] = useState('Verde');
   const [calendarUpdateKey, setCalendarUpdateKey] = useState(0);
   const tableContainerRef = useRef(null);
   const lastSyncedMonthRef = useRef('');
@@ -1489,17 +1499,21 @@ export default function CobrosView() {
               </button>
               {isDayPaintMode && (
                 <>
-                  <label className="day-paint-color-picker" title="Elegir color para los días seleccionados">
-                    <span>Color</span>
-                    <input
-                      type="color"
-                      value={selectedDayPaintColor || '#86efac'}
-                      onChange={(e) => setSelectedDayPaintColor(e.target.value)}
-                    />
-                  </label>
-                  <button type="button" className="btn-day-paint-clear" onClick={() => setSelectedDayPaintColor('')} title="Quitar color al hacer clic en una casilla">
-                    Quitar
-                  </button>
+                  <div className="day-paint-palette" aria-label="Elegir color para pintar días">
+                    {colorOptions.map(option => (
+                      <button
+                        key={option.value || 'clear'}
+                        type="button"
+                        className={`day-paint-swatch ${selectedDayPaintColor === option.value ? 'day-paint-swatch--selected' : ''} ${!option.value ? 'day-paint-swatch--clear' : ''}`}
+                        style={option.value ? { '--swatch-color': getDayPaintColor(option.value) } : undefined}
+                        onClick={() => setSelectedDayPaintColor(option.value)}
+                        title={option.label}
+                        aria-label={option.label}
+                      >
+                        {!option.value && '×'}
+                      </button>
+                    ))}
+                  </div>
                 </>
               )}
             </div>
@@ -1798,17 +1812,21 @@ export default function CobrosView() {
                     </button>
                     {isDayPaintMode && (
                       <>
-                        <label className="day-paint-color-picker" title="Elegir color para los días seleccionados">
-                          <span>Color</span>
-                          <input
-                            type="color"
-                            value={selectedDayPaintColor || '#86efac'}
-                            onChange={(e) => setSelectedDayPaintColor(e.target.value)}
-                          />
-                        </label>
-                        <button type="button" className="btn-day-paint-clear" onClick={() => setSelectedDayPaintColor('')} title="Quitar color al hacer clic en una casilla">
-                          Quitar
-                        </button>
+                        <div className="day-paint-palette" aria-label="Elegir color para pintar días">
+                          {colorOptions.map(option => (
+                            <button
+                              key={option.value || 'clear'}
+                              type="button"
+                              className={`day-paint-swatch ${selectedDayPaintColor === option.value ? 'day-paint-swatch--selected' : ''} ${!option.value ? 'day-paint-swatch--clear' : ''}`}
+                              style={option.value ? { '--swatch-color': getDayPaintColor(option.value) } : undefined}
+                              onClick={() => setSelectedDayPaintColor(option.value)}
+                              title={option.label}
+                              aria-label={option.label}
+                            >
+                              {!option.value && '×'}
+                            </button>
+                          ))}
+                        </div>
                       </>
                     )}
                   </div>
@@ -2093,7 +2111,7 @@ export default function CobrosView() {
                             <td 
                               key={d.key} 
                               className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''} ${isPainted ? 'cell-day--painted' : ''} ${isDayPaintMode ? 'cell-day--paint-mode' : ''}`}
-                              style={isPainted ? { '--day-paint-color': dayPaintColor } : undefined}
+                              style={isPainted ? { '--day-paint-color': getDayPaintColor(dayPaintColor) } : undefined}
                               onClick={(e) => {
                                 if (isDayPaintMode) {
                                   e.preventDefault();
