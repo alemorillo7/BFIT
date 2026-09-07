@@ -1289,7 +1289,7 @@ export default function CobrosView() {
     pressedKeysRef.current.add(e.code);
 
     const { key, shiftKey, code } = e;
-    const maxC = 7 + currentMonthDays.length;
+    const maxC = 5 + currentMonthDays.length;
     let targetR = r;
     let targetC = c;
     let shouldNavigate = false;
@@ -1825,8 +1825,6 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-alumno">ALUMNO</th>
                   <th rowSpan={2} className="col-curso">CURSO</th>
                   <th rowSpan={2} className="col-turno">TURNO</th>
-                  <th rowSpan={2} className="col-date">FECHA INICIO</th>
-                  <th rowSpan={2} className="col-date">FECHA FIN</th>
                   <th rowSpan={2} className="col-obs">OBSERVACIONES</th>
                   <th colSpan={currentMonthDays.length} className="col-month-header">
                     {monthsList.find(m => m.value === selectedMonth)?.label.toUpperCase()} - {turnsList.find(t => t.value === selectedTurn)?.label.toUpperCase()}
@@ -1929,62 +1927,12 @@ export default function CobrosView() {
                             title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
                           />
                         </td>
-                        <td className="cell-date">
-                          <input
-                            type="text"
-                            value={row.fecha_inicio || ''}
-                            data-r={index}
-                            data-c={3}
-                            readOnly={isFullscreen}
-                            tabIndex={isFullscreen ? -1 : 0}
-                            onFocus={(e) => e.target.select()}
-                            onClick={(e) => e.target.select()}
-                            placeholder="-"
-                            onChange={(e) => {
-                              if (isFullscreen) return;
-                              const newData = [...data];
-                              const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].fecha_inicio = e.target.value;
-                              setData(newData);
-                            }}
-                            onBlur={(e) => {
-                              if (!isFullscreen) handleCellChange(row.id, 'fecha_inicio', e.target.value);
-                            }}
-                            className={`cell-input text-center ${isFullscreen ? 'cell-input--locked' : ''}`}
-                            title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
-                          />
-                        </td>
-                        <td className="cell-date">
-                          <input
-                            type="text"
-                            value={row.fecha_fin || ''}
-                            data-r={index}
-                            data-c={4}
-                            readOnly={isFullscreen}
-                            tabIndex={isFullscreen ? -1 : 0}
-                            onFocus={(e) => e.target.select()}
-                            onClick={(e) => e.target.select()}
-                            placeholder="-"
-                            onChange={(e) => {
-                              if (isFullscreen) return;
-                              const newData = [...data];
-                              const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].fecha_fin = e.target.value;
-                              setData(newData);
-                            }}
-                            onBlur={(e) => {
-                              if (!isFullscreen) handleCellChange(row.id, 'fecha_fin', e.target.value);
-                            }}
-                            className={`cell-input text-center ${isFullscreen ? 'cell-input--locked' : ''}`}
-                            title={isFullscreen ? 'Bloqueado en Pantalla Completa' : ''}
-                          />
-                        </td>
                         <td className="cell-obs">
                           <input
                             type="text"
                             value={row.observaciones || ''}
                             data-r={index}
-                            data-c={5}
+                            data-c={3}
                             readOnly={isFullscreen}
                             tabIndex={isFullscreen ? -1 : 0}
                             onFocus={(e) => e.target.select()}
@@ -2053,7 +2001,7 @@ export default function CobrosView() {
                                   type="text"
                                   value={val}
                                   data-r={index}
-                                  data-c={6 + dIdx}
+                                  data-c={4 + dIdx}
                                   onFocus={(e) => e.target.select()}
                                   onClick={(e) => e.target.select()}
                                   onChange={(e) => {
@@ -2125,7 +2073,7 @@ export default function CobrosView() {
                               type="number"
                               value={row.pagos_bs || ''}
                               data-r={index}
-                              data-c={6 + currentMonthDays.length}
+                              data-c={4 + currentMonthDays.length}
                               onFocus={(e) => e.target.select()}
                               onClick={(e) => e.target.select()}
                               placeholder="0"
@@ -2179,7 +2127,7 @@ export default function CobrosView() {
                                   type="number"
                                   value={row.saldo_merienditas || ''}
                                   data-r={index}
-                                  data-c={7 + currentMonthDays.length}
+                                  data-c={5 + currentMonthDays.length}
                                   onFocus={(e) => e.target.select()}
                                   onClick={(e) => e.target.select()}
                                   placeholder="0"
@@ -2254,7 +2202,7 @@ export default function CobrosView() {
                   })
                 ) : (
                   <tr>
-                    <td colSpan={13 + currentMonthDays.length + (showMeriendasCol ? 1 : 0)} className="empty-state">
+                    <td colSpan={11 + currentMonthDays.length + (showMeriendasCol ? 1 : 0)} className="empty-state">
                       No se encontraron registros de cobros.
                     </td>
                   </tr>
@@ -2265,7 +2213,7 @@ export default function CobrosView() {
               {filteredData.length > 0 && (
                 <tfoot className="excel-table-footer">
                   <tr className="daily-totals-row">
-                    <td colSpan={7} className="daily-totals-label">
+                    <td colSpan={5} className="daily-totals-label">
                       <Utensils size={13} className="daily-totals-icon" />
                       <span>TOTAL PLATOS / DÍA</span>
                     </td>
