@@ -27,7 +27,8 @@ import {
   Trophy,
   Lock,
   Unlock,
-  Utensils
+  Utensils,
+  Paintbrush
 } from 'lucide-react';
 import * as Papa from 'papaparse';
 import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
@@ -95,6 +96,8 @@ export default function CobrosView() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDiasModalOpen, setIsDiasModalOpen] = useState(false);
   const [isScrollLocked, setIsScrollLocked] = useState(false);
+  const [isDayPaintMode, setIsDayPaintMode] = useState(false);
+  const [selectedDayPaintColor, setSelectedDayPaintColor] = useState('#86efac');
   const [calendarUpdateKey, setCalendarUpdateKey] = useState(0);
   const tableContainerRef = useRef(null);
   const lastSyncedMonthRef = useRef('');
@@ -302,6 +305,51 @@ export default function CobrosView() {
     }
   };
 
+  // Marks a specific consumed day with the color selected by the user. This is
+  // visual payment tracking only; it never changes the meals or money totals.
+  const handlePaintDay = async (rowId, dayKey) => {
+    const rowIndex = data.findIndex(r => r.id === rowId);
+    if (rowIndex === -1) return;
+
+    const oldRow = data[rowIndex];
+    const consumption = getAttendanceConsumption(oldRow.asistencias?.[dayKey]);
+    const hasConsumedItem = consumption.lunches > 0 || (courseSupportsSnack(oldRow.curso) && consumption.snacks > 0);
+    if (!hasConsumedItem) return;
+
+    const newAsistencias = { ...(oldRow.asistencias || {}) };
+    if (selectedDayPaintColor) {
+      newAsistencias[`${dayKey}_color`] = selectedDayPaintColor;
+    } else {
+      delete newAsistencias[`${dayKey}_color`];
+    }
+
+    const updatedRow = { ...oldRow, asistencias: newAsistencias };
+    const newData = [...data];
+    newData[rowIndex] = updatedRow;
+    setData(newData);
+    setSavingRows(prev => new Set(prev).add(rowId));
+
+    try {
+      const { error } = await supabaseCobros
+        .from('cobros')
+        .update({ asistencias: newAsistencias, updated_at: new Date().toISOString() })
+        .eq('id', rowId);
+      if (error) throw error;
+    } catch (err) {
+      console.error('Error painting paid day:', err);
+      const revertedData = [...data];
+      revertedData[rowIndex] = oldRow;
+      setData(revertedData);
+      alert('No se pudo guardar el color del día.');
+    } finally {
+      setSavingRows(prev => {
+        const next = new Set(prev);
+        next.delete(rowId);
+        return next;
+      });
+    }
+  };
+
   // Handle cell changes and auto-save
   const handleCellChange = async (rowId, key, value) => {
     const rowIndex = data.findIndex(r => r.id === rowId);
@@ -357,6 +405,11 @@ export default function CobrosView() {
         delete newAsistencias[key];
       } else {
         newAsistencias[key] = cleanedVal;
+      }
+
+      const consumption = getAttendanceConsumption(cleanedVal);
+      if (consumption.lunches === 0 && (!courseSupportsSnack(updatedRow.curso) || consumption.snacks === 0)) {
+        delete newAsistencias[`${key}_color`];
       }
       
       updatedRow.asistencias = newAsistencias;
@@ -1424,6 +1477,33 @@ export default function CobrosView() {
               <span>{isScrollLocked ? 'Pantalla Fijada' : 'Fijar Pantalla'}</span>
             </button>
 
+            <div className={`day-paint-controls ${isDayPaintMode ? 'day-paint-controls--active' : ''}`}>
+              <button
+                type="button"
+                className="btn-day-paint"
+                onClick={() => setIsDayPaintMode(prev => !prev)}
+                title={isDayPaintMode ? 'Modo pintar activo: haz clic en un día consumido para aplicarle el color' : 'Activar modo para pintar días cancelados'}
+              >
+                <Paintbrush size={15} />
+                <span>{isDayPaintMode ? 'Pintando días' : 'Pintar días'}</span>
+              </button>
+              {isDayPaintMode && (
+                <>
+                  <label className="day-paint-color-picker" title="Elegir color para los días seleccionados">
+                    <span>Color</span>
+                    <input
+                      type="color"
+                      value={selectedDayPaintColor || '#86efac'}
+                      onChange={(e) => setSelectedDayPaintColor(e.target.value)}
+                    />
+                  </label>
+                  <button type="button" className="btn-day-paint-clear" onClick={() => setSelectedDayPaintColor('')} title="Quitar color al hacer clic en una casilla">
+                    Quitar
+                  </button>
+                </>
+              )}
+            </div>
+
             <div className="fullscreen-info-badge">
               <TableIcon size={15} />
               <span className="fullscreen-badge-title">Planilla de Cobros</span>
@@ -1706,6 +1786,33 @@ export default function CobrosView() {
                     <span>Mes Completo</span>
                   </button>
 
+                  <div className={`day-paint-controls day-paint-controls--panel ${isDayPaintMode ? 'day-paint-controls--active' : ''}`}>
+                    <button
+                      type="button"
+                      className="btn-day-paint"
+                      onClick={() => setIsDayPaintMode(prev => !prev)}
+                      title={isDayPaintMode ? 'Modo pintar activo: haz clic en un día consumido para aplicarle el color' : 'Activar modo para pintar días cancelados'}
+                    >
+                      <Paintbrush size={16} />
+                      <span>{isDayPaintMode ? 'Pintando días' : 'Pintar días'}</span>
+                    </button>
+                    {isDayPaintMode && (
+                      <>
+                        <label className="day-paint-color-picker" title="Elegir color para los días seleccionados">
+                          <span>Color</span>
+                          <input
+                            type="color"
+                            value={selectedDayPaintColor || '#86efac'}
+                            onChange={(e) => setSelectedDayPaintColor(e.target.value)}
+                          />
+                        </label>
+                        <button type="button" className="btn-day-paint-clear" onClick={() => setSelectedDayPaintColor('')} title="Quitar color al hacer clic en una casilla">
+                          Quitar
+                        </button>
+                      </>
+                    )}
+                  </div>
+
                   <button 
                     className="btn btn-outline btn-sync-data" 
                     onClick={() => syncObservationsAndAbsencesGlobally(selectedMonth, false)} 
@@ -1978,13 +2085,21 @@ export default function CobrosView() {
                           const isFalta = sVal === 'F';
                           const isBoth = sVal === '4';
                           const isSoloMerienda = sVal === 'M';
+                          const dayPaintColor = row.asistencias?.[`${d.key}_color`] || '';
+                          const isPainted = Boolean(dayPaintColor);
                           const hasNote = Boolean(note && String(note).trim());
 
                           return (
                             <td 
                               key={d.key} 
-                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''}`}
+                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''} ${isPainted ? 'cell-day--painted' : ''} ${isDayPaintMode ? 'cell-day--paint-mode' : ''}`}
+                              style={isPainted ? { '--day-paint-color': dayPaintColor } : undefined}
                               onClick={(e) => {
+                                if (isDayPaintMode) {
+                                  e.preventDefault();
+                                  handlePaintDay(row.id, d.key);
+                                  return;
+                                }
                                 const inp = e.currentTarget.querySelector('input');
                                 if (inp && document.activeElement !== inp) {
                                   inp.focus();
@@ -2003,6 +2118,7 @@ export default function CobrosView() {
                                 });
                               }}
                               onDoubleClick={() => {
+                                if (isDayPaintMode) return;
                                 setActiveNoteModal({
                                   rowId: row.id,
                                   dayKey: d.key,
@@ -2020,7 +2136,15 @@ export default function CobrosView() {
                                   data-r={index}
                                   data-c={4 + dIdx}
                                   onFocus={(e) => e.target.select()}
-                                  onClick={(e) => e.target.select()}
+                                  onClick={(e) => {
+                                    if (isDayPaintMode) {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handlePaintDay(row.id, d.key);
+                                      return;
+                                    }
+                                    e.target.select();
+                                  }}
                                   onChange={(e) => {
                                     const newData = [...data];
                                     const idx = newData.findIndex(r => r.id === row.id);
@@ -2033,7 +2157,7 @@ export default function CobrosView() {
                                   onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
                                   className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''} ${isBoth ? 'cell-day-input--both' : ''} ${isSoloMerienda ? 'cell-day-input--merienda' : ''}`}
                                   maxLength={1}
-                                  title={isBoth ? `4 = Almuerzo + Merienda (-${SNACK_PRICE_BS} Bs)` : (isSoloMerienda ? `M = Solo Merienda (-${SNACK_PRICE_BS} Bs)` : (hasNote ? `Observación: ${note} (Doble clic para editar)` : '1 = Almuerzo, 4 = Almuerzo + Merienda, M = Merienda, F = Falta'))}
+                                  title={isDayPaintMode ? (selectedDayPaintColor ? 'Clic para aplicar el color elegido a este día' : 'Clic para quitar el color de este día') : (isBoth ? `4 = Almuerzo + Merienda (-${SNACK_PRICE_BS} Bs)` : (isSoloMerienda ? `M = Solo Merienda (-${SNACK_PRICE_BS} Bs)` : (hasNote ? `Observación: ${note} (Doble clic para editar)` : '1 = Almuerzo, 4 = Almuerzo + Merienda, M = Merienda, F = Falta')))}
                                 />
 
                                 {/* Red corner comment marker button / trigger */}

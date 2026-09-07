@@ -608,6 +608,7 @@
 
 /* Day cell grid box */
 .cell-day {
+  position: relative;
   padding: 0 !important;
   text-align: center;
   border: 1px solid #475569 !important; /* Clearly marked black/dark grid border */
@@ -674,6 +675,30 @@
   background-color: #f3e8ff !important;
 }
 
+.cell-day--painted,
+.cell-day--painted:has(.cell-day-input) {
+  background-color: var(--day-paint-color) !important;
+}
+
+.cell-day--painted::after {
+  content: '✓';
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  color: #166534;
+  font-size: 0.58rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.cell-day--paint-mode {
+  cursor: crosshair;
+}
+
+.cell-day--paint-mode .cell-day-input {
+  cursor: crosshair;
+}
+
 .cell-merienda-wrapper {
   position: relative;
   vertical-align: middle;
@@ -707,6 +732,70 @@
   background-color: #fee2e2;
   color: #b91c1c;
   border: 1px solid #fecaca;
+}
+
+.day-paint-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.btn-day-paint,
+.btn-day-paint-clear,
+.day-paint-color-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.32rem;
+  min-height: 2rem;
+  border: 1px solid #cbd5e1;
+  border-radius: var(--radius-md);
+  background: #ffffff;
+  color: #334155;
+  padding: 0.3rem 0.55rem;
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.btn-day-paint,
+.btn-day-paint-clear {
+  cursor: pointer;
+}
+
+.btn-day-paint:hover,
+.btn-day-paint-clear:hover {
+  border-color: #2563eb;
+  color: #1d4ed8;
+}
+
+.day-paint-controls--active .btn-day-paint {
+  border-color: #2563eb;
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.day-paint-color-picker input {
+  width: 1.3rem;
+  height: 1.3rem;
+  border: 0;
+  border-radius: 4px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.fullscreen-top-bar .btn-day-paint,
+.fullscreen-top-bar .btn-day-paint-clear,
+.fullscreen-top-bar .day-paint-color-picker {
+  min-height: 1.8rem;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+}
+
+.fullscreen-top-bar .day-paint-controls--active .btn-day-paint {
+  border-color: #60a5fa;
+  background: #1d4ed8;
+  color: #ffffff;
 }
 
 /* Table Row Hovers & Colored Variants (Colors apply solidly and permanently to ALL cells, preserving special day highlights) */
