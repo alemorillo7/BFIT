@@ -1080,6 +1080,10 @@
   justify-content: center;
 }
 
+.cell-day--painted .cell-day-wrapper {
+  min-height: 28px;
+}
+
 /* Red Excel Comment Triangle Indicator in upper-right corner */
 .btn-day-note-marker {
   position: absolute;

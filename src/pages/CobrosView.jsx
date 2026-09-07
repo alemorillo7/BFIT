@@ -315,17 +315,13 @@ export default function CobrosView() {
     }
   };
 
-  // Marks a specific consumed day with the color selected by the user. This is
-  // visual payment tracking only; it never changes the meals or money totals.
+  // Marks a specific day with the color selected by the user. This is visual
+  // tracking only; it never changes the meals or money totals.
   const handlePaintDay = async (rowId, dayKey) => {
     const rowIndex = data.findIndex(r => r.id === rowId);
     if (rowIndex === -1) return;
 
     const oldRow = data[rowIndex];
-    const consumption = getAttendanceConsumption(oldRow.asistencias?.[dayKey]);
-    const hasConsumedItem = consumption.lunches > 0 || (courseSupportsSnack(oldRow.curso) && consumption.snacks > 0);
-    if (!hasConsumedItem) return;
-
     const newAsistencias = { ...(oldRow.asistencias || {}) };
     if (selectedDayPaintColor) {
       newAsistencias[`${dayKey}_color`] = selectedDayPaintColor;
@@ -2147,7 +2143,10 @@ export default function CobrosView() {
                                 });
                               }}
                             >
-                              <div className="cell-day-wrapper">
+                              <div
+                                className="cell-day-wrapper"
+                                style={isPainted ? { backgroundColor: getDayPaintColor(dayPaintColor) } : undefined}
+                              >
                                 <input
                                   type="text"
                                   value={val}
