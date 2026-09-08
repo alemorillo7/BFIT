@@ -55,6 +55,7 @@ const monthsList = [
 ];
 
 const turnsList = [
+  { value: 'ALL', label: '🌐 Todos los Turnos (Global)' },
   { value: '11:50', label: 'Turno 11:50' },
   { value: '11:25', label: 'Turno 11:25' },
   { value: '12:00', label: 'Turno 12:00' },
@@ -558,7 +559,7 @@ export default function CobrosView() {
       fecha_fin: null,
       observaciones: null,
       mes: selectedMonth,
-      turno: selectedTurn,
+      turno: selectedTurn === 'ALL' ? '11:50' : selectedTurn,
       asistencias: {},
       platos_vendidos: 0,
       platos_vendidos_bs: 0,
@@ -1262,13 +1263,14 @@ export default function CobrosView() {
     const matchCourse = courseFilter === '' || 
       String(row.curso).toLowerCase().includes(courseFilter.toLowerCase());
       
-    const matchTurn = isSearching || row.turno === selectedTurn;
+    const matchTurn = isSearching || selectedTurn === 'ALL' || row.turno === selectedTurn;
       
     return matchSearch && matchCourse && matchTurn;
   });
 
   // Determinar si el turno actual es de Secundaria (12:40 y 13:05) o no tiene cursos de merienda
   const isTurnoSecundaria = useMemo(() => {
+    if (selectedTurn === 'ALL') return false;
     if (selectedTurn === '12:40' || selectedTurn === '13:05') return true;
     const turnStudents = data.filter(r => r.turno === selectedTurn);
     return turnStudents.length > 0 && turnStudents.every(r => !courseSupportsSnack(r.curso));
@@ -1278,7 +1280,7 @@ export default function CobrosView() {
 
   // Summary statistics for current turn
   const summaryStats = useMemo(() => {
-    const turnData = data.filter(r => r.turno === selectedTurn);
+    const turnData = selectedTurn === 'ALL' ? data : data.filter(r => r.turno === selectedTurn);
     const totalPlatos = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
     const totalBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
     const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
@@ -1556,7 +1558,7 @@ export default function CobrosView() {
               <span className="fullscreen-badge-sep">&bull;</span>
               <span className="fullscreen-badge-month">{monthsList.find(m => m.value === selectedMonth)?.label}</span>
               <span className="fullscreen-badge-sep">&bull;</span>
-              <span className="fullscreen-badge-turn">{turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn}</span>
+              <span className="fullscreen-badge-turn">{selectedTurn === 'ALL' ? '🌐 Todos los Turnos' : (turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn)}</span>
               {courseFilter && (
                 <>
                   <span className="fullscreen-badge-sep">&bull;</span>
@@ -1709,8 +1711,12 @@ export default function CobrosView() {
                   <div className="title-section">
                     <div className="title-with-badge">
                       <h1>Planilla de Cobros</h1>
-                      <span className="badge-turn-indicator">
-                        {turnsList.find(t => t.value === selectedTurn)?.label}
+                      <span 
+                        className="badge-turn-indicator badge-turn-indicator--clickable"
+                        onClick={() => setSelectedTurn(prev => prev === 'ALL' ? '11:50' : 'ALL')}
+                        title="Clic para alternar entre este turno y Todos los Turnos (Global)"
+                      >
+                        {selectedTurn === 'ALL' ? '🌐 Todos los Turnos' : (turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn)}
                       </span>
                       {syncingAbsences && (
                         <div className="sync-badge">
@@ -2047,7 +2053,7 @@ export default function CobrosView() {
                   <th rowSpan={2} className="col-turno">TURNO</th>
                   <th rowSpan={2} className="col-obs">OBSERVACIONES</th>
                   <th colSpan={currentMonthDays.length} className="col-month-header">
-                    {monthsList.find(m => m.value === selectedMonth)?.label.toUpperCase()} - {turnsList.find(t => t.value === selectedTurn)?.label.toUpperCase()}
+                    {monthsList.find(m => m.value === selectedMonth)?.label.toUpperCase()} - {selectedTurn === 'ALL' ? 'TODOS LOS TURNOS (GLOBAL)' : (turnsList.find(t => t.value === selectedTurn)?.label.toUpperCase() || selectedTurn)}
                   </th>
                   <th rowSpan={2} className="col-total">PLATOS VENDIDOS</th>
                   <th rowSpan={2} className="col-total">PLATOS EN BS</th>

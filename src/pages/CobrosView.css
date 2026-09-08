@@ -2165,3 +2165,16 @@ body.cobros-fullscreen-active .content-area {
     display: none !important;
   }
 }
+
+.badge-turn-indicator--clickable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.badge-turn-indicator--clickable:hover {
+  background-color: #fef08a !important;
+  border-color: #facc15 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+}
