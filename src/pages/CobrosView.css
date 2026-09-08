@@ -824,7 +824,7 @@
 }
 
 /* Table Row Hovers & Colored Variants (Colors apply solidly and permanently to ALL cells, preserving special day highlights) */
-.excel-row:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row:hover td:not(.cell-day--painted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #f1f5f9;
 }
 
@@ -1998,4 +1998,16 @@ body.cobros-fullscreen-active .content-area {
 .excel-row.row-color--naranja td.cell-day.cell-day--painted,
 .excel-row.row-color--fff2cc td.cell-day.cell-day--painted {
   background-color: var(--day-paint-color) !important;
+}
+
+/* El 4 (Almuerzo + Merienda) SIEMPRE se pinta de amarillo automáticamente */
+.excel-row td.cell-day.cell-day--both,
+.excel-row:hover td.cell-day.cell-day--both,
+.excel-row td.cell-day:has(.cell-day-input--both),
+.excel-row:hover td.cell-day:has(.cell-day-input--both) {
+  background-color: #fef08a !important;
+}
+.excel-row td.cell-day.cell-day--both .cell-day-wrapper,
+.excel-row td.cell-day:has(.cell-day-input--both) .cell-day-wrapper {
+  background-color: #fef08a !important;
 }

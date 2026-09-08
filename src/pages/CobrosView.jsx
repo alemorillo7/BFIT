@@ -421,11 +421,11 @@ export default function CobrosView() {
         newAsistencias[key] = cleanedVal;
       }
 
-      const consumption = getAttendanceConsumption(cleanedVal);
-      if (consumption.lunches === 0 && (!courseSupportsSnack(updatedRow.curso) || consumption.snacks === 0)) {
-        delete newAsistencias[`${key}_color`];
+      // Si pone 4 (Almuerzo + Merienda), se pinta de amarillo automáticamente
+      if (cleanedVal === '4') {
+        newAsistencias[`${key}_color`] = 'Amarillo';
       }
-      
+
       updatedRow.asistencias = newAsistencias;
       const totals = calculateRowTotals(newAsistencias, updatedRow.curso);
       updatedRow = { ...updatedRow, ...totals };
@@ -2066,15 +2066,16 @@ export default function CobrosView() {
                           const isFalta = sVal === 'F';
                           const isBoth = sVal === '4';
                           const isSoloMerienda = sVal === 'M';
-                          const dayPaintColor = row.asistencias?.[`${d.key}_color`] || '';
-                          const isPainted = Boolean(dayPaintColor);
+                          const dayPaintColor = isBoth ? 'Amarillo' : (row.asistencias?.[`${d.key}_color`] || '');
+                          const isPainted = Boolean(dayPaintColor) || isBoth;
+                          const effectiveColor = isBoth ? '#fef08a' : getDayPaintColor(dayPaintColor);
                           const hasNote = Boolean(note && String(note).trim());
 
                           return (
                             <td 
                               key={d.key} 
                               className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''} ${isPainted ? 'cell-day--painted' : ''} ${isDayPaintMode ? 'cell-day--paint-mode' : ''}`}
-                              style={isPainted ? { '--day-paint-color': getDayPaintColor(dayPaintColor) } : undefined}
+                              style={isPainted ? { '--day-paint-color': effectiveColor, backgroundColor: effectiveColor } : undefined}
                               onClick={(e) => {
                                 if (isDayPaintMode) {
                                   e.preventDefault();
@@ -2112,7 +2113,7 @@ export default function CobrosView() {
                             >
                               <div
                                 className="cell-day-wrapper"
-                                style={isPainted ? { backgroundColor: getDayPaintColor(dayPaintColor) } : undefined}
+                                style={isPainted ? { backgroundColor: effectiveColor } : undefined}
                               >
                                 <input
                                   type="text"
@@ -2136,12 +2137,17 @@ export default function CobrosView() {
                                     e.target.select();
                                   }}
                                   onChange={(e) => {
+                                    const inputVal = e.target.value;
+                                    const cleaned = normalizeAttendanceCode(inputVal);
                                     const newData = [...data];
                                     const idx = newData.findIndex(r => r.id === row.id);
-                                    if (!newData[idx].asistencias) {
-                                      newData[idx].asistencias = {};
+                                    const curRow = newData[idx];
+                                    const newAsist = { ...(curRow.asistencias || {}) };
+                                    newAsist[d.key] = inputVal;
+                                    if (cleaned === '4') {
+                                      newAsist[`${d.key}_color`] = 'Amarillo';
                                     }
-                                    newData[idx].asistencias[d.key] = e.target.value;
+                                    newData[idx] = { ...curRow, asistencias: newAsist };
                                     setData(newData);
                                   }}
                                   onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
