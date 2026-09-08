@@ -103,6 +103,49 @@ export default function CobrosView() {
   const [errorMessage, setErrorMessage] = useState(null);
   const [syncingAbsences, setSyncingAbsences] = useState(false);
   const [activeNoteModal, setActiveNoteModal] = useState(null); // { rowId, dayKey, dayLabel, studentName, currentValue, currentNote }
+  const DEFAULT_NOTE_SUGGESTIONS = [
+    'TALLARIN A LA MANTEQUILLA CON SALCHICHA',
+    'MENU FIT',
+    'SOLO SOPA',
+    'SIN LACTEOS',
+    'SIN GLUTEN',
+    'FALTA JUSTIFICADA',
+    'ALMUERZO DOBLE'
+  ];
+  const [quickNoteSuggestions, setQuickNoteSuggestions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bfit_quick_note_suggestions');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch (e) {}
+    return DEFAULT_NOTE_SUGGESTIONS;
+  });
+  const [isAddingTag, setIsAddingTag] = useState(false);
+  const [newTagInput, setNewTagInput] = useState('');
+
+  const handleAddQuickTag = () => {
+    const val = String(newTagInput || '').trim().toUpperCase();
+    if (!val) return;
+    if (!quickNoteSuggestions.includes(val)) {
+      const updated = [...quickNoteSuggestions, val];
+      setQuickNoteSuggestions(updated);
+      try {
+        localStorage.setItem('bfit_quick_note_suggestions', JSON.stringify(updated));
+      } catch (e) {}
+    }
+    setNewTagInput('');
+    setIsAddingTag(false);
+  };
+
+  const handleDeleteQuickTag = (indexToDelete) => {
+    const updated = quickNoteSuggestions.filter((_, i) => i !== indexToDelete);
+    setQuickNoteSuggestions(updated);
+    try {
+      localStorage.setItem('bfit_quick_note_suggestions', JSON.stringify(updated));
+    } catch (e) {}
+  };
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDiasModalOpen, setIsDiasModalOpen] = useState(false);
   const [isScrollLocked, setIsScrollLocked] = useState(false);
@@ -1400,7 +1443,7 @@ export default function CobrosView() {
       e.stopPropagation();
 
       // Restringir a los límites reales de la grilla (en pantalla completa sólo navega celdas de datos c >= 6)
-      const minC = isFullscreen ? 6 : 0;
+      const minC = isFullscreen ? 4 : 0;
       targetR = Math.max(0, Math.min(filteredData.length - 1, targetR));
       targetC = Math.max(minC, Math.min(maxC, targetC));
 
@@ -2406,28 +2449,75 @@ export default function CobrosView() {
 
               {/* Quick template tags */}
               <div className="quick-note-tags">
-                <span className="quick-tag-label">Sugerencias rápidas:</span>
-                {[
-                  'TALLARIN A LA MANTEQUILLA CON SALCHICHA',
-                  'MENU FIT',
-                  'SOLO SOPA',
-                  'SIN LACTEOS',
-                  'SIN GLUTEN',
-                  'FALTA JUSTIFICADA',
-                  'ALMUERZO DOBLE'
-                ].map(tag => (
+                <div className="quick-tag-header">
+                  <span className="quick-tag-label">Sugerencias rápidas:</span>
                   <button
-                    key={tag}
                     type="button"
-                    className="quick-note-tag-btn"
-                    onClick={() => {
-                      const el = document.getElementById('dayNoteInput');
-                      if (el) el.value = tag;
-                    }}
+                    className="btn-add-quick-tag"
+                    onClick={() => setIsAddingTag(prev => !prev)}
+                    title="Agregar o quitar sugerencias personalizadas"
                   >
-                    {tag}
+                    {isAddingTag ? 'Cerrar' : '+ Modificar sugerencias'}
                   </button>
-                ))}
+                </div>
+
+                {isAddingTag && (
+                  <div className="quick-tag-add-bar">
+                    <input
+                      type="text"
+                      value={newTagInput}
+                      onChange={(e) => setNewTagInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddQuickTag();
+                        }
+                      }}
+                      placeholder="Escribe sugerencia y presiona Enter..."
+                      className="quick-tag-new-input"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="btn-quick-tag-save"
+                      onClick={handleAddQuickTag}
+                    >
+                      Agregar
+                    </button>
+                  </div>
+                )}
+
+                <div className="quick-tags-list">
+                  {quickNoteSuggestions.map((tag, idx) => (
+                    <div key={`${tag}-${idx}`} className="quick-note-tag-chip">
+                      <button
+                        type="button"
+                        className="quick-note-tag-btn"
+                        onClick={() => {
+                          const el = document.getElementById('dayNoteInput');
+                          if (el) {
+                            el.value = tag;
+                            el.focus();
+                          }
+                        }}
+                        title={`Usar "${tag}"`}
+                      >
+                        {tag}
+                      </button>
+                      <button
+                        type="button"
+                        className="quick-note-tag-del"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteQuickTag(idx);
+                        }}
+                        title="Eliminar esta sugerencia"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
 

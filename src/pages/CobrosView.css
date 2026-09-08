@@ -1317,35 +1317,122 @@
 
 .quick-note-tags {
   display: flex;
-  flex-wrap: wrap;
+  flex-direction: column;
   gap: 0.35rem;
+  width: 100%;
+}
+
+.quick-tag-header {
+  display: flex;
   align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .quick-tag-label {
   font-size: 0.68rem;
   font-weight: 600;
   color: #64748b;
-  width: 100%;
-  margin-bottom: 2px;
 }
 
-.quick-note-tag-btn {
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 0.2rem 0.45rem;
+.btn-add-quick-tag {
+  background: none;
+  border: none;
+  color: #0284c7;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.btn-add-quick-tag:hover {
+  background-color: #e0f2fe;
+}
+
+.quick-tag-add-bar {
+  display: flex;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.quick-tag-new-input {
+  flex: 1;
+  font-size: 0.72rem;
+  padding: 0.25rem 0.45rem;
+  border: 1.5px solid #38bdf8;
+  border-radius: 4px;
+  outline: none;
+  font-family: inherit;
+}
+
+.btn-quick-tag-save {
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  border-radius: 4px;
+  padding: 0 0.6rem;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-quick-tag-save:hover {
+  background: #0369a1;
+}
+
+.quick-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  width: 100%;
+}
+
+.quick-note-tag-chip {
+  display: inline-flex;
+  align-items: center;
   background-color: #f8fafc;
   border: 1px solid #cbd5e1;
   border-radius: 4px;
-  color: #334155;
-  cursor: pointer;
+  overflow: hidden;
   transition: all 0.1s ease;
 }
 
-.quick-note-tag-btn:hover {
-  background-color: #e0f2fe;
+.quick-note-tag-chip:hover {
   border-color: #38bdf8;
+  background-color: #f0f9ff;
+}
+
+.quick-note-tag-chip .quick-note-tag-btn {
+  border: none;
+  background: transparent;
+  padding: 0.2rem 0.4rem;
+  font-size: 0.65rem;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+}
+
+.quick-note-tag-chip .quick-note-tag-btn:hover {
   color: #0369a1;
+}
+
+.quick-note-tag-del {
+  border: none;
+  background: transparent;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 0 0.35rem 0 0.1rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.15s;
+}
+
+.quick-note-tag-del:hover {
+  color: #ef4444;
 }
 
 .day-note-modal-footer {
