@@ -1478,17 +1478,19 @@
 }
 
 .fullscreen-top-bar {
-  min-height: 52px;
+  flex-shrink: 0 !important;
+  min-height: 48px;
   background: #0f172a;
   color: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.45rem 0.75rem;
-  padding: 0.3rem 1rem;
+  gap: 0.4rem 0.65rem;
+  padding: 0.3rem 0.85rem;
   border-bottom: 1px solid #334155;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
-  z-index: 20;
+  z-index: 50 !important;
+  box-sizing: border-box !important;
 }
 
 .fullscreen-top-left {
@@ -2097,4 +2099,69 @@ body.cobros-fullscreen-active .content-area {
 .excel-row td.cell-day.cell-day--both .cell-day-wrapper,
 .excel-row td.cell-day:has(.cell-day-input--both) .cell-day-wrapper {
   background-color: #fef08a !important;
+}
+
+/* Mode Switch: Diario vs Mensual */
+.stats-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  background: #e2e8f0;
+  padding: 2px;
+  border-radius: var(--radius-md);
+  gap: 2px;
+  border: 1px solid #cbd5e1;
+}
+
+.stats-mode-btn {
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.22rem 0.55rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.stats-mode-btn:hover {
+  color: #0f172a;
+}
+
+.stats-mode-btn.active {
+  background: #ffffff;
+  color: #0284c7;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+}
+
+.stat-chip--accent {
+  background-color: #f0fdf4 !important;
+  border-color: #86efac !important;
+}
+
+.stat-chip--accent .text-accent {
+  color: #15803d !important;
+  font-weight: 800 !important;
+}
+
+.stat-chip--highlight {
+  background-color: #f0f9ff !important;
+  border-color: #7dd3fc !important;
+}
+
+.fullscreen-plates-badge--total-dia {
+  background: rgba(34, 197, 94, 0.2) !important;
+  border-color: rgba(74, 222, 128, 0.45) !important;
+}
+
+.fullscreen-plates-badge--total-dia .badge-count--gold {
+  color: #4ade80 !important;
+  font-weight: 900;
+}
+
+@media (max-width: 1750px) {
+  .fullscreen-shortcuts-guide .shortcut-guide-item span {
+    display: none !important;
+  }
 }

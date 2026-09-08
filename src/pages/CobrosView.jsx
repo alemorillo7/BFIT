@@ -149,6 +149,7 @@ export default function CobrosView() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [isDiasModalOpen, setIsDiasModalOpen] = useState(false);
   const [isScrollLocked, setIsScrollLocked] = useState(false);
+  const [statsViewMode, setStatsViewMode] = useState('diario'); // 'diario' | 'mensual'
   const [isDayPaintMode, setIsDayPaintMode] = useState(false);
   const [selectedDayPaintColor, setSelectedDayPaintColor] = useState('Verde');
   const [calendarUpdateKey, setCalendarUpdateKey] = useState(0);
@@ -1282,18 +1283,30 @@ export default function CobrosView() {
     const totalBs = turnData.reduce((acc, r) => acc + Number(r.platos_vendidos_bs || 0), 0);
     const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
 
-    // Platos vendidos HOY (día actual) en el turno seleccionado
+    // Platos vendidos HOY (día actual)
     const now = new Date();
     const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     const isCurrentMonth = selectedMonth === currentYM;
     const todayDayKey = String(now.getDate());
 
-    const platosHoy = isCurrentMonth
+    // 1. Platos hoy en el turno seleccionado
+    const platosHoyTurno = isCurrentMonth
       ? turnData.reduce((acc, r) => {
           const consumption = getAttendanceConsumption(r.asistencias?.[todayDayKey]);
           return acc + consumption.lunches;
         }, 0)
       : null;
+
+    // 2. Platos hoy TOTAL DEL DÍA (sumando TODOS los turnos del colegio hoy)
+    const platosHoyTotalDia = isCurrentMonth
+      ? data.reduce((acc, r) => {
+          const consumption = getAttendanceConsumption(r.asistencias?.[todayDayKey]);
+          return acc + consumption.lunches;
+        }, 0)
+      : null;
+
+    // 3. Platos acumulados en el mes de todos los turnos combinados
+    const totalPlatosMesGlobal = data.reduce((acc, r) => acc + Number(r.platos_vendidos || 0), 0);
 
     // Totales diarios de platos para la fila de resumen (historial diario guardado)
     const targetRows = filteredData.length > 0 ? filteredData : turnData;
@@ -1304,7 +1317,18 @@ export default function CobrosView() {
       }, 0);
     });
 
-    return { totalPlatos, totalBs, inDebtCount, platosHoy, dailyPlateTotals, isCurrentMonth, todayDayKey };
+    return { 
+      totalPlatos, 
+      totalBs, 
+      inDebtCount, 
+      platosHoy: platosHoyTurno, 
+      platosHoyTurno, 
+      platosHoyTotalDia, 
+      totalPlatosMesGlobal, 
+      dailyPlateTotals, 
+      isCurrentMonth, 
+      todayDayKey 
+    };
   }, [data, filteredData, selectedTurn, selectedMonth, currentMonthDays]);
 
   // Unique list of courses for filter dropdown
@@ -1527,16 +1551,16 @@ export default function CobrosView() {
             </div>
 
             <div className="fullscreen-info-badge">
-              <TableIcon size={15} />
-              <span className="fullscreen-badge-title">Planilla de Cobros</span>
+              <TableIcon size={14} />
+              <span className="fullscreen-badge-title">Planilla</span>
               <span className="fullscreen-badge-sep">&bull;</span>
               <span className="fullscreen-badge-month">{monthsList.find(m => m.value === selectedMonth)?.label}</span>
               <span className="fullscreen-badge-sep">&bull;</span>
-              <span className="fullscreen-badge-turn">Turno {turnsList.find(t => t.value === selectedTurn)?.label}</span>
+              <span className="fullscreen-badge-turn">{turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn}</span>
               {courseFilter && (
                 <>
                   <span className="fullscreen-badge-sep">&bull;</span>
-                  <span className="fullscreen-badge-course">Curso: {courseFilter}</span>
+                  <span className="fullscreen-badge-course">{courseFilter}</span>
                 </>
               )}
             </div>
@@ -1545,36 +1569,43 @@ export default function CobrosView() {
           <div className="fullscreen-top-right">
             <div className="fullscreen-shortcuts-guide" aria-label="Guía rápida de códigos de Cobros">
               <span className="shortcuts-guide-title">GUÍA:</span>
-              <span className="shortcut-guide-item shortcut-guide-item--lunch" tabIndex={0} data-tooltip="Solo almuerzo: suma 1 plato">
+              <span className="shortcut-guide-item shortcut-guide-item--lunch" tabIndex={0} data-tooltip="1 = Solo almuerzo: suma 1 plato">
                 <kbd>1</kbd><span>Almuerzo</span>
               </span>
-              <span className="shortcut-guide-item shortcut-guide-item--both" tabIndex={0} data-tooltip={`Almuerzo + merienda: suma 1 plato y descuenta ${SNACK_PRICE_BS} Bs`}>
-                <kbd>4</kbd><span>Almuerzo + Merienda −{SNACK_PRICE_BS} Bs</span>
+              <span className="shortcut-guide-item shortcut-guide-item--both" tabIndex={0} data-tooltip={`4 = Almuerzo + Merienda (−${SNACK_PRICE_BS} Bs)`}>
+                <kbd>4</kbd><span>Alm+Mer</span>
               </span>
-              <span className="shortcut-guide-item shortcut-guide-item--snack" tabIndex={0} data-tooltip={`Solo merienda: descuenta ${SNACK_PRICE_BS} Bs, sin sumar almuerzo`}>
-                <kbd>M</kbd><span>Merienda −{SNACK_PRICE_BS} Bs</span>
+              <span className="shortcut-guide-item shortcut-guide-item--snack" tabIndex={0} data-tooltip={`M = Solo merienda (−${SNACK_PRICE_BS} Bs)`}>
+                <kbd>M</kbd><span>Merienda</span>
               </span>
-              <span className="shortcut-guide-item shortcut-guide-item--absence" tabIndex={0} data-tooltip="Falta: no suma ni descuenta nada">
+              <span className="shortcut-guide-item shortcut-guide-item--absence" tabIndex={0} data-tooltip="F = Falta: no suma ni descuenta">
                 <kbd>F</kbd><span>Falta</span>
               </span>
             </div>
+
             <div 
               className="fullscreen-plates-badge"
-              title={summaryStats.platosHoy !== null
-                ? `Platos vendidos hoy (día ${summaryStats.todayDayKey}) en ${turnsList.find(t => t.value === selectedTurn)?.label}`
-                : `Total platos vendidos en ${turnsList.find(t => t.value === selectedTurn)?.label} (${monthsList.find(m => m.value === selectedMonth)?.label})`
-              }
+              title={`Platos vendidos hoy en este turno (${turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn})`}
             >
-              <Utensils size={14} className="badge-icon" />
-              <span className="badge-count">{summaryStats.platosHoy !== null ? summaryStats.platosHoy : summaryStats.totalPlatos}</span>
-              <span className="badge-label">Platos Vendidos</span>
+              <Utensils size={13} className="badge-icon" />
+              <span className="badge-count">{summaryStats.platosHoyTurno !== null ? summaryStats.platosHoyTurno : summaryStats.totalPlatos}</span>
+              <span className="badge-label">Turno</span>
             </div>
+
+            <div 
+              className="fullscreen-plates-badge fullscreen-plates-badge--total-dia"
+              title="TOTAL de platos vendidos hoy sumando todos los turnos del colegio"
+            >
+              <span className="badge-count badge-count--gold">{summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : summaryStats.totalPlatosMesGlobal}</span>
+              <span className="badge-label">Total Día</span>
+            </div>
+
             <button 
               className="btn-fullscreen-exit"
               onClick={toggleFullscreen}
               title="Salir de Pantalla Completa (Esc)"
             >
-              <Minimize2 size={16} />
+              <Minimize2 size={15} />
               <span>Salir (Esc)</span>
             </button>
           </div>
@@ -1691,16 +1722,55 @@ export default function CobrosView() {
                     <p className="subtitle">Gestión e importes de comidas de alumnos</p>
                   </div>
 
-                  {/* Quick summary stats chips */}
+                  {/* Quick summary stats chips with Daily/Monthly toggle and Total Day stat */}
                   <div className="stats-chips-container">
-                    <div className="stat-chip">
-                      <span className="stat-label">Platos:</span>
-                      <span className="stat-value text-primary">{summaryStats.totalPlatos}</span>
+                    {/* Toggle Diario vs Mensual */}
+                    <div className="stats-mode-switch" title="Cambiar entre vista diaria de hoy y acumulado mensual">
+                      <button
+                        type="button"
+                        className={`stats-mode-btn ${statsViewMode === 'diario' ? 'active' : ''}`}
+                        onClick={() => setStatsViewMode('diario')}
+                      >
+                        ☀️ Hoy
+                      </button>
+                      <button
+                        type="button"
+                        className={`stats-mode-btn ${statsViewMode === 'mensual' ? 'active' : ''}`}
+                        onClick={() => setStatsViewMode('mensual')}
+                      >
+                        📅 Mes
+                      </button>
                     </div>
-                    <div className="stat-chip">
-                      <span className="stat-label">Total:</span>
+
+                    {statsViewMode === 'diario' ? (
+                      <>
+                        <div className="stat-chip stat-chip--highlight" title="Platos vendidos hoy en este turno">
+                          <span className="stat-label">Platos Hoy:</span>
+                          <span className="stat-value text-primary">{summaryStats.platosHoyTurno !== null ? summaryStats.platosHoyTurno : '-'}</span>
+                        </div>
+                        <div className="stat-chip stat-chip--accent" title="TOTAL de platos vendidos hoy en todos los turnos del colegio">
+                          <span className="stat-label">🍽️ Total Día:</span>
+                          <span className="stat-value text-accent">{summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : '-'}</span>
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className="stat-chip" title="Platos acumulados en el mes para este turno">
+                          <span className="stat-label">Platos Mes:</span>
+                          <span className="stat-value text-primary">{summaryStats.totalPlatos}</span>
+                        </div>
+                        <div className="stat-chip stat-chip--accent" title="Platos acumulados en el mes para todo el colegio (todos los turnos)">
+                          <span className="stat-label">🍽️ Total Mes:</span>
+                          <span className="stat-value text-accent">{summaryStats.totalPlatosMesGlobal}</span>
+                        </div>
+                      </>
+                    )}
+
+                    <div className="stat-chip" title="Total en bolivianos de platos vendidos en el mes (Turno actual)">
+                      <span className="stat-label">Importe:</span>
                       <span className="stat-value text-success">{summaryStats.totalBs} Bs</span>
                     </div>
+
                     {summaryStats.inDebtCount > 0 ? (
                       <div className="stat-chip stat-chip--danger" title="Alumnos con saldo negativo">
                         <span className="stat-label">Pendientes:</span>
