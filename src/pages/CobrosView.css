@@ -1391,14 +1391,14 @@
 }
 
 .fullscreen-top-bar {
-  height: 44px;
-  min-height: 44px;
+  min-height: 52px;
   background: #0f172a;
   color: #f8fafc;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 1rem;
+  gap: 0.45rem 0.75rem;
+  padding: 0.3rem 1rem;
   border-bottom: 1px solid #334155;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   z-index: 20;
@@ -1407,6 +1407,8 @@
 .fullscreen-top-left {
   display: flex;
   align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
   gap: 1rem;
 }
 
@@ -1441,6 +1443,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   color: #e2e8f0;
+  white-space: nowrap;
 }
 
 .fullscreen-badge-title {
@@ -1460,6 +1463,7 @@
 .fullscreen-top-right {
   display: flex;
   align-items: center;
+  flex: 0 0 auto;
   gap: 0.75rem;
 }
 
@@ -1564,13 +1568,48 @@
 .shortcut-guide-item--snack { color: #d8b4fe; }
 .shortcut-guide-item--absence { color: #fca5a5; }
 
-@media (max-width: 1450px) {
+@media (max-width: 1750px) {
   .fullscreen-shortcuts-guide .shortcut-guide-item span {
     display: none;
   }
 
   .fullscreen-shortcuts-guide {
     gap: 0.18rem;
+  }
+
+  .fullscreen-top-left,
+  .fullscreen-top-right {
+    gap: 0.5rem;
+  }
+
+  .btn-fullscreen-back,
+  .btn-fullscreen-lock,
+  .fullscreen-top-bar .btn-day-paint,
+  .btn-fullscreen-exit {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 1450px) {
+  .fullscreen-top-bar {
+    align-items: stretch;
+    flex-wrap: wrap;
+    padding: 0.35rem 0.6rem;
+  }
+
+  .fullscreen-top-left,
+  .fullscreen-top-right {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .fullscreen-info-badge {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+
+  .fullscreen-shortcuts-guide {
+    flex: 0 0 auto;
   }
 }
 
@@ -1628,7 +1667,8 @@
   display: flex !important;
   flex-direction: column;
   margin: 0 !important;
-  height: calc(100vh - 44px) !important;
+  height: auto !important;
+  min-height: 0;
   border: none !important;
   border-radius: 0 !important;
   box-shadow: none !important;
@@ -1636,8 +1676,9 @@
 }
 
 .cobros-container--fullscreen .excel-table-container {
-  max-height: calc(100vh - 44px) !important;
-  height: calc(100vh - 44px) !important;
+  max-height: none !important;
+  height: auto !important;
+  min-height: 0;
   flex: 1 1 auto;
   border: none !important;
 }
