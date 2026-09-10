@@ -237,7 +237,8 @@ export default function CobrosView() {
   // Compute pricing based on course name
   const getPricePerPlate = (course) => {
     const norm = String(course || '').toUpperCase();
-    if (norm.endsWith('S') || norm.includes('SECUNDARIA')) {
+    // Match \dS, \dSA, \dSB (e.g. 1S, 2SA, 3SB, 6S) or explicit SECUNDARIA
+    if (/\dS[AB]?$/.test(norm) || norm.includes('SECUNDARIA')) {
       return 35; // Secondary price
     }
     return 32; // Kinder / Primary price
