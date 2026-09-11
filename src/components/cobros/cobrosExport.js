@@ -205,3 +205,52 @@ export const exportFullExcelWorkbook = (allMonthData, selectedMonth, workingDays
   const fileName = `Planilla_Cobros_BFIT_${selectedMonth}_Completo.xlsx`;
   XLSX.writeFile(wb, fileName);
 };
+
+/**
+ * Exporta un Excel limpio con únicamente las columnas:
+ * Nro, ALUMNO, CURSO, TURNO
+ * 
+ * @param {Array} studentRows - Lista de alumnos a exportar (filtrada por curso, turno o completa)
+ * @param {string} title - Título para la hoja y nombre de archivo (ej. 'Curso_1S' o 'Planilla_Completa')
+ * @param {string} selectedMonth - e.g. "2026-09"
+ */
+export const exportSimpleExcelList = (studentRows, title = 'Planilla', selectedMonth = '') => {
+  const wb = XLSX.utils.book_new();
+
+  const headers = ['Nro.', 'ALUMNO', 'CURSO', 'TURNO'];
+  const rows = [headers];
+
+  const sortedRows = [...studentRows].sort((a, b) => {
+    // Primero ordenar por Curso y luego por Alumno
+    const cA = String(a.curso || '');
+    const cB = String(b.curso || '');
+    const courseCmp = cA.localeCompare(cB, undefined, { numeric: true });
+    if (courseCmp !== 0) return courseCmp;
+    return String(a.alumno || '').localeCompare(String(b.alumno || ''));
+  });
+
+  sortedRows.forEach((row, idx) => {
+    rows.push([
+      idx + 1,
+      row.alumno || '',
+      row.curso || '',
+      row.turno || ''
+    ]);
+  });
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  ws['!cols'] = [
+    { wch: 8 },   // Nro.
+    { wch: 38 },  // ALUMNO
+    { wch: 14 },  // CURSO
+    { wch: 14 }   // TURNO
+  ];
+
+  // Limpiar nombre de pestaña para que sea válido en Excel (máximo 31 caracteres y sin caracteres prohibidos)
+  const safeSheetName = title.replace(/[:\\/?*[\]]/g, '_').slice(0, 31) || 'Alumnos';
+  XLSX.utils.book_append_sheet(wb, ws, safeSheetName);
+
+  const cleanFileName = `Lista_${title.replace(/[:\\/?*[\]\s]+/g, '_')}_${selectedMonth || 'BFIT'}.xlsx`;
+  XLSX.writeFile(wb, cleanFileName);
+};

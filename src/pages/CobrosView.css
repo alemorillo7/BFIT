@@ -2178,3 +2178,212 @@ body.cobros-fullscreen-active .content-area {
   transform: translateY(-1px);
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
 }
+
+/* Botón Descargar Excel en la barra de herramientas */
+.btn-export-excel-clean {
+  height: 34px;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: #065f46 !important;
+  background-color: #ecfdf5 !important;
+  border-color: #a7f3d0 !important;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border-radius: var(--radius-md);
+}
+
+.btn-export-excel-clean:hover:not(:disabled) {
+  background-color: #10b981 !important;
+  color: #ffffff !important;
+  border-color: #10b981 !important;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.25);
+}
+
+/* Botón Excel en Pantalla Completa */
+.btn-fullscreen-excel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 0.35rem 0.75rem;
+  border-radius: var(--radius-md);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-fullscreen-excel:hover:not(:disabled) {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+  box-shadow: 0 2px 5px rgba(16, 185, 129, 0.4);
+}
+
+/* Modal de Exportación Limpia (Nombres, Curso y Turno) */
+.export-clean-modal-card {
+  background: #ffffff;
+  border-radius: var(--radius-xl, 14px);
+  max-width: 520px;
+  width: 92%;
+  box-shadow: 0 20px 35px -5px rgba(0, 0, 0, 0.22), 0 10px 15px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  animation: modalScaleIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #e2e8f0;
+}
+
+.export-clean-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.15rem 1.35rem;
+  border-bottom: 1px solid #f1f5f9;
+  background: #fafafa;
+}
+
+.export-clean-modal-title {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.export-clean-modal-title h3 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.export-clean-modal-title .text-emerald {
+  color: #059669;
+}
+
+.export-clean-modal-body {
+  padding: 1.25rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.export-clean-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #475569;
+  line-height: 1.45;
+  background-color: #f8fafc;
+  padding: 0.65rem 0.85rem;
+  border-radius: 8px;
+  border-left: 3px solid #10b981;
+}
+
+.export-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.export-option-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 0.85rem 1rem;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background-color: #ffffff;
+}
+
+.export-option-card:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.export-option-card.active {
+  border-color: #10b981;
+  background-color: #f0fdf4;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.15);
+}
+
+.export-option-card input[type="radio"] {
+  margin-top: 0.2rem;
+  accent-color: #059669;
+  cursor: pointer;
+}
+
+.export-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  flex: 1;
+}
+
+.export-option-title {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.export-option-sub {
+  font-size: 0.76rem;
+  color: #64748b;
+  line-height: 1.35;
+}
+
+.export-course-selector-box {
+  margin-top: 0.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  background: #ffffff;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  border: 1px solid #d1fae5;
+}
+
+.export-course-label {
+  font-size: 0.73rem;
+  font-weight: 700;
+  color: #065f46;
+}
+
+.export-course-select {
+  height: 32px;
+  font-size: 0.8rem;
+  border-color: #a7f3d0 !important;
+  background-color: #ffffff;
+}
+
+.export-clean-modal-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.35rem;
+  border-top: 1px solid #f1f5f9;
+  background: #fafafa;
+}
+
+.btn-confirm-excel-export {
+  background-color: #059669 !important;
+  border-color: #047857 !important;
+  color: #ffffff !important;
+  font-weight: 600;
+  gap: 0.45rem;
+  box-shadow: 0 2px 4px rgba(5, 150, 105, 0.2);
+}
+
+.btn-confirm-excel-export:hover:not(:disabled) {
+  background-color: #047857 !important;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(5, 150, 105, 0.3);
+}
+

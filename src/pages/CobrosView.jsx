@@ -31,8 +31,7 @@ import {
   Paintbrush
 } from 'lucide-react';
 import * as Papa from 'papaparse';
-import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
-import { exportFullExcelWorkbook } from '../components/cobros/cobrosExport';
+import { exportFullExcelWorkbook, exportSimpleExcelList } from '../components/cobros/cobrosExport';
 import { getDynamicWorkingDays, getDynamicMonthNotice } from '../services/calendarService';
 import FinanzasView from '../components/cobros/FinanzasView';
 import RankingPlatosView from '../components/cobros/RankingPlatosView';
@@ -154,6 +153,9 @@ export default function CobrosView() {
   const [isDayPaintMode, setIsDayPaintMode] = useState(false);
   const [selectedDayPaintColor, setSelectedDayPaintColor] = useState('Verde');
   const [calendarUpdateKey, setCalendarUpdateKey] = useState(0);
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [exportScope, setExportScope] = useState('vista'); // 'vista' | 'curso' | 'completa'
+  const [exportCourseSelect, setExportCourseSelect] = useState('');
   const tableContainerRef = useRef(null);
   const lastSyncedMonthRef = useRef('');
   const pressedKeysRef = useRef(new Set());
@@ -1382,6 +1384,57 @@ export default function CobrosView() {
     document.body.removeChild(link);
   };
 
+  // Abre el modal para descargar planilla en Excel (solo Nombre, Curso, Turno)
+  const handleOpenExportModal = () => {
+    if (data.length === 0) {
+      alert('No hay alumnos cargados para exportar en este mes.');
+      return;
+    }
+    // Si ya tiene un curso filtrado en la barra, preseleccionarlo
+    if (courseFilter) {
+      setExportScope('curso');
+      setExportCourseSelect(courseFilter);
+    } else {
+      setExportScope('vista');
+      setExportCourseSelect(uniqueCourses[0] || '');
+    }
+    setIsExportModalOpen(true);
+  };
+
+  // Ejecuta la descarga de Excel limpio (Nro, ALUMNO, CURSO, TURNO)
+  const handleConfirmSimpleExcelExport = (scope = exportScope, customCourse = exportCourseSelect) => {
+    let rowsToExport = [];
+    let fileTitle = '';
+
+    if (scope === 'completa') {
+      // Todos los alumnos de todos los turnos del mes
+      rowsToExport = data;
+      fileTitle = 'Completa_Todos_los_Turnos';
+    } else if (scope === 'curso') {
+      const targetCourse = customCourse || courseFilter;
+      if (!targetCourse) {
+        alert('Por favor selecciona un curso para exportar.');
+        return;
+      }
+      rowsToExport = data.filter(r => String(r.curso || '').trim().toUpperCase() === String(targetCourse).trim().toUpperCase());
+      fileTitle = `Curso_${targetCourse}`;
+    } else {
+      // 'vista': lo que está en pantalla actualmente (respetando filtros de turno y curso)
+      rowsToExport = filteredData;
+      const turnLabel = selectedTurn === 'ALL' ? 'Todos_Turnos' : `Turno_${selectedTurn.replace(':', '_')}`;
+      const courseLabel = courseFilter ? `_${courseFilter}` : '';
+      fileTitle = `${turnLabel}${courseLabel}`;
+    }
+
+    if (!rowsToExport || rowsToExport.length === 0) {
+      alert('No hay alumnos que coincidan con la selección para exportar.');
+      return;
+    }
+
+    exportSimpleExcelList(rowsToExport, fileTitle, selectedMonth);
+    setIsExportModalOpen(false);
+  };
+
   const handleTableKeyUp = useCallback((e) => {
     pressedKeysRef.current.delete(e.key);
     pressedKeysRef.current.delete(e.code);
@@ -1602,6 +1655,16 @@ export default function CobrosView() {
               <span className="badge-count badge-count--gold">{summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : summaryStats.totalPlatosMesGlobal}</span>
               <span className="badge-label">Total Día</span>
             </div>
+
+            <button 
+              className="btn-fullscreen-excel"
+              onClick={handleOpenExportModal}
+              disabled={data.length === 0}
+              title="Descargar lista en Excel (Nombres, Curso y Turno)"
+            >
+              <FileSpreadsheet size={14} />
+              <span>Excel</span>
+            </button>
 
             <button 
               className="btn-fullscreen-exit"
@@ -1951,6 +2014,16 @@ export default function CobrosView() {
                   >
                     {isScrollLocked ? <Lock size={16} /> : <Unlock size={16} />}
                     <span>{isScrollLocked ? 'Fijada' : 'Fijar'}</span>
+                  </button>
+
+                  <button 
+                    className="btn btn-outline btn-export-excel-clean" 
+                    onClick={handleOpenExportModal} 
+                    disabled={data.length === 0}
+                    title="Descargar lista en Excel (Nombres, Curso y Turno)"
+                  >
+                    <FileSpreadsheet size={16} />
+                    <span>Descargar Excel</span>
                   </button>
 
                   <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
@@ -2645,6 +2718,130 @@ export default function CobrosView() {
           loadData();
         }}
       />
+
+      {/* 6. Modal para Descargar Planilla en Excel (Solo Nombre, Curso y Turno) */}
+      {isExportModalOpen && (
+        <div className="day-note-modal-overlay" onClick={() => setIsExportModalOpen(false)}>
+          <div className="export-clean-modal-card" onClick={(e) => e.stopPropagation()}>
+            <div className="export-clean-modal-header">
+              <div className="export-clean-modal-title">
+                <FileSpreadsheet size={20} className="text-emerald" />
+                <h3>Descargar Planilla en Excel</h3>
+              </div>
+              <button 
+                type="button"
+                className="btn-close-modal"
+                onClick={() => setIsExportModalOpen(false)}
+                title="Cerrar"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="export-clean-modal-body">
+              <p className="export-clean-desc">
+                El archivo generado contendrá únicamente las columnas: <strong>Nro.</strong>, <strong>ALUMNO</strong>, <strong>CURSO</strong> y <strong>TURNO</strong>.
+              </p>
+
+              <div className="export-options-list">
+                {/* Opción 1: Vista Actual */}
+                <label className={`export-option-card ${exportScope === 'vista' ? 'active' : ''}`}>
+                  <input 
+                    type="radio" 
+                    name="exportScope" 
+                    value="vista" 
+                    checked={exportScope === 'vista'}
+                    onChange={() => setExportScope('vista')}
+                  />
+                  <div className="export-option-info">
+                    <span className="export-option-title">
+                      📋 Vista actual ({filteredData.length} alumnos)
+                    </span>
+                    <span className="export-option-sub">
+                      Descarga exactamente los alumnos visibles en pantalla (Turno: {selectedTurn === 'ALL' ? 'Todos' : selectedTurn}{courseFilter ? `, Curso: ${courseFilter}` : ''}).
+                    </span>
+                  </div>
+                </label>
+
+                {/* Opción 2: Un Curso Específico */}
+                <label className={`export-option-card ${exportScope === 'curso' ? 'active' : ''}`}>
+                  <input 
+                    type="radio" 
+                    name="exportScope" 
+                    value="curso" 
+                    checked={exportScope === 'curso'}
+                    onChange={() => setExportScope('curso')}
+                  />
+                  <div className="export-option-info">
+                    <span className="export-option-title">
+                      🎓 Por Curso específico
+                    </span>
+                    <span className="export-option-sub">
+                      Descarga todos los alumnos de un curso en particular (sumando cualquier turno).
+                    </span>
+                    {exportScope === 'curso' && (
+                      <div className="export-course-selector-box" onClick={(e) => e.stopPropagation()}>
+                        <label className="export-course-label">Seleccionar curso:</label>
+                        <select 
+                          value={exportCourseSelect} 
+                          onChange={(e) => setExportCourseSelect(e.target.value)}
+                          className="input select-filter export-course-select"
+                        >
+                          {uniqueCourses.map(c => {
+                            const count = data.filter(r => String(r.curso || '').trim().toUpperCase() === String(c).trim().toUpperCase()).length;
+                            return (
+                              <option key={c} value={c}>
+                                {c} ({count} alumnos)
+                              </option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </label>
+
+                {/* Opción 3: Planilla Completa */}
+                <label className={`export-option-card ${exportScope === 'completa' ? 'active' : ''}`}>
+                  <input 
+                    type="radio" 
+                    name="exportScope" 
+                    value="completa" 
+                    checked={exportScope === 'completa'}
+                    onChange={() => setExportScope('completa')}
+                  />
+                  <div className="export-option-info">
+                    <span className="export-option-title">
+                      🌐 Planilla completa ({data.length} alumnos)
+                    </span>
+                    <span className="export-option-sub">
+                      Descarga el padrón general de todos los cursos y turnos del mes de {monthsList.find(m => m.value === selectedMonth)?.label}.
+                    </span>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            <div className="export-clean-modal-footer">
+              <button 
+                type="button"
+                className="btn btn-outline" 
+                onClick={() => setIsExportModalOpen(false)}
+              >
+                Cancelar
+              </button>
+              <button 
+                type="button"
+                className="btn btn-primary btn-confirm-excel-export"
+                onClick={() => handleConfirmSimpleExcelExport()}
+              >
+                <Download size={16} />
+                <span>Descargar Archivo .xlsx</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
