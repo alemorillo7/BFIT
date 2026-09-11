@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { supabaseCobros } from '../lib/supabaseCobrosClient';
 import { 
   Search, 
@@ -2562,7 +2563,7 @@ export default function CobrosView() {
       )}
 
       {/* Day Note / Observation Modal Dialog */}
-      {activeNoteModal && (
+      {activeNoteModal && createPortal(
         <div className="day-note-modal-overlay" onClick={() => setActiveNoteModal(null)}>
           <div className="day-note-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="day-note-modal-header">
@@ -2704,7 +2705,8 @@ export default function CobrosView() {
               </div>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
       {/* 5. Dias Sin Clases & Feriados Configuration Modal */}
@@ -2720,7 +2722,7 @@ export default function CobrosView() {
       />
 
       {/* 6. Modal para Descargar Planilla en Excel (Solo Nombre, Curso y Turno) */}
-      {isExportModalOpen && (
+      {isExportModalOpen && createPortal(
         <div className="day-note-modal-overlay" onClick={() => setIsExportModalOpen(false)}>
           <div className="export-clean-modal-card" onClick={(e) => e.stopPropagation()}>
             <div className="export-clean-modal-header">
@@ -2840,7 +2842,8 @@ export default function CobrosView() {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
