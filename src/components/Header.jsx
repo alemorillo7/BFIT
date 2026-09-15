@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Menu, RefreshCw } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { forceClearCacheAndReload } from '../utils/cacheBuster';
+import SyncStatusBadge from './common/SyncStatusBadge';
 import './Header.css';
 
 const TITLE_BY_PATH = {
@@ -43,6 +44,8 @@ const Header = ({ toggleSidebar, toggleSidebarDesktop }) => {
       </div>
 
       <div className="header-right">
+        <SyncStatusBadge />
+
         <button 
           className="btn-header-refresh" 
           onClick={handleUpdate}

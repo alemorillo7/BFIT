@@ -1,0 +1,6 @@
+// B-FIT Service Worker for Offline-First Capability
+const CACHE_NAME = 'bfit-shell-v1';
+const ASSETS = ['/', '/index.html', '/favicon.svg', '/icons.svg'];
+self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)).catch(console.warn).then(() => self.skipWaiting())); });
+self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k)))).then(() => self.clients.claim())); });
+self.addEventListener('fetch', e => { const u = new URL(e.request.url); if (u.hostname.includes('supabase.co') || u.pathname.startsWith('/rest/') || u.pathname.startsWith('/auth/')) return; if (e.request.mode === 'navigate') { e.respondWith(fetch(e.request).catch(() => caches.match('/index.html') || caches.match('/'))); return; } if (u.origin === self.location.origin) { e.respondWith(caches.match(e.request).then(r => r || fetch(e.request).then(res => { if (res && res.status === 200) { const cl = res.clone(); caches.open(CACHE_NAME).then(c => c.put(e.request, cl)); } return res; }))); } });

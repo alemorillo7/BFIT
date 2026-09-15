@@ -38,6 +38,16 @@ import FinanzasView from '../components/cobros/FinanzasView';
 import RankingPlatosView from '../components/cobros/RankingPlatosView';
 import ImportarExcelView from '../components/cobros/ImportarExcelView';
 import DiasSinClasesModal from '../components/cobros/DiasSinClasesModal';
+import SyncStatusBadge from '../components/common/SyncStatusBadge';
+import { 
+  initOfflineSync, 
+  saveMonthCache, 
+  getMonthCache, 
+  enqueueMutation, 
+  updateRowInMonthCache, 
+  addRowToMonthCache, 
+  removeRowFromMonthCache 
+} from '../services/offlineSyncService';
 import { courseSupportsSnack, getAttendanceConsumption, normalizeAttendanceCode, SNACK_PRICE_BS } from '../../shared/attendance';
 import './CobrosView.css';
 
@@ -283,11 +293,28 @@ export default function CobrosView() {
     return updatedAsistencias;
   }, [currentMonthDays]);
 
-  // Load data for the selected month
+  // Inicializar sincronizador offline en segundo plano
+  useEffect(() => {
+    const cleanup = initOfflineSync(supabaseCobros);
+    return cleanup;
+  }, []);
+
+  // Load data for the selected month (con soporte offline transparente)
   const loadData = useCallback(async () => {
     try {
       setLoading(true);
       setErrorMessage(null);
+
+      // Si el navegador está offline, intentar leer inmediatamente del caché local
+      if (typeof navigator !== 'undefined' && !navigator.onLine) {
+        const cached = await getMonthCache(selectedMonth);
+        if (cached && Array.isArray(cached) && cached.length > 0) {
+          setData(cached);
+          setLoading(false);
+          return;
+        }
+      }
+
       const { data: cobrosData, error } = await supabaseCobros
         .from('cobros')
         .select('*')
@@ -308,10 +335,20 @@ export default function CobrosView() {
           meriendas_consumidas_bs: totals.meriendas_consumidas_bs
         };
       });
+
       setData(enrichedData);
+      // Guardar copia local en IndexedDB para disponibilidad offline
+      saveMonthCache(selectedMonth, enrichedData);
     } catch (err) {
-      console.error('Error loading cobros:', err);
-      setErrorMessage('Error al cargar datos de Cobros desde Supabase.');
+      console.warn('Error conectando con Supabase, intentando cargar copia local offline:', err);
+      // Intentar cargar copia local de respaldo
+      const localFallback = await getMonthCache(selectedMonth);
+      if (localFallback && Array.isArray(localFallback) && localFallback.length > 0) {
+        setData(localFallback);
+        console.log(`Copia local del mes ${selectedMonth} cargada con éxito (${localFallback.length} registros).`);
+      } else {
+        setErrorMessage('Sin conexión y no hay datos guardados localmente para este mes.');
+      }
     } finally {
       setLoading(false);
     }
@@ -347,21 +384,32 @@ export default function CobrosView() {
     newData[rowIndex] = updatedRow;
     setData(newData);
 
+    // Guardar inmediatamente en cache local
+    updateRowInMonthCache(selectedMonth, rowId, { asistencias: newAsistencias });
+
+    const payload = {
+      asistencias: newAsistencias,
+      updated_at: new Date().toISOString()
+    };
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      setActiveNoteModal(null);
+      return;
+    }
+
     setSavingRows(prev => new Set(prev).add(rowId));
 
     try {
       const { error } = await supabaseCobros
         .from('cobros')
-        .update({
-          asistencias: newAsistencias,
-          updated_at: new Date().toISOString()
-        })
+        .update(payload)
         .eq('id', rowId);
 
       if (error) throw error;
     } catch (err) {
-      console.error('Error saving day note:', err);
-      alert('Error al guardar la observación del día.');
+      console.warn('Fallo guardado de nota en Supabase, encolando offline:', err);
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -390,20 +438,28 @@ export default function CobrosView() {
     const newData = [...data];
     newData[rowIndex] = updatedRow;
     setData(newData);
+
+    // Guardar inmediatamente en cache local
+    updateRowInMonthCache(selectedMonth, rowId, { asistencias: newAsistencias });
+
+    const payload = { asistencias: newAsistencias, updated_at: new Date().toISOString() };
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      return;
+    }
+
     setSavingRows(prev => new Set(prev).add(rowId));
 
     try {
       const { error } = await supabaseCobros
         .from('cobros')
-        .update({ asistencias: newAsistencias, updated_at: new Date().toISOString() })
+        .update(payload)
         .eq('id', rowId);
       if (error) throw error;
     } catch (err) {
-      console.error('Error painting paid day:', err);
-      const revertedData = [...data];
-      revertedData[rowIndex] = oldRow;
-      setData(revertedData);
-      alert('No se pudo guardar el color del día.');
+      console.warn('Fallo guardado de color en Supabase, encolando offline:', err);
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -512,6 +568,29 @@ export default function CobrosView() {
     const newData = [...data];
     newData[rowIndex] = updatedRow;
     setData(newData);
+
+    const payload = {
+      alumno: updatedRow.alumno,
+      curso: updatedRow.curso,
+      turno: updatedRow.turno,
+      fecha_inicio: updatedRow.fecha_inicio,
+      fecha_fin: updatedRow.fecha_fin,
+      observaciones: updatedRow.observaciones,
+      asistencias: updatedRow.asistencias,
+      platos_vendidos: updatedRow.platos_vendidos,
+      platos_vendidos_bs: updatedRow.platos_vendidos_bs,
+      pagos_bs: updatedRow.pagos_bs,
+      saldo_merienditas: updatedRow.saldo_merienditas,
+      color: updatedRow.color
+    };
+
+    // Guardar inmediatamente en cache local
+    updateRowInMonthCache(selectedMonth, rowId, payload);
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      return;
+    }
     
     setSavingRows(prev => {
       const next = new Set(prev);
@@ -522,29 +601,13 @@ export default function CobrosView() {
     try {
       const { error } = await supabaseCobros
         .from('cobros')
-        .update({
-          alumno: updatedRow.alumno,
-          curso: updatedRow.curso,
-          turno: updatedRow.turno,
-          fecha_inicio: updatedRow.fecha_inicio,
-          fecha_fin: updatedRow.fecha_fin,
-          observaciones: updatedRow.observaciones,
-          asistencias: updatedRow.asistencias,
-          platos_vendidos: updatedRow.platos_vendidos,
-          platos_vendidos_bs: updatedRow.platos_vendidos_bs,
-          pagos_bs: updatedRow.pagos_bs,
-          saldo_merienditas: updatedRow.saldo_merienditas,
-          color: updatedRow.color
-        })
+        .update(payload)
         .eq('id', rowId);
         
       if (error) throw error;
     } catch (err) {
-      console.error('Error updating row:', err);
-      const revertedData = [...data];
-      revertedData[rowIndex] = oldRow;
-      setData(revertedData);
-      alert('Error al guardar los cambios en la base de datos.');
+      console.warn('Fallo actualizando fila en Supabase, encolando offline:', err);
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -556,7 +619,9 @@ export default function CobrosView() {
 
   // Add new empty student row
   const handleAddRow = async () => {
+    const tempId = Date.now();
     const newRecord = {
+      id: tempId,
       alumno: 'NUEVO ALUMNO',
       curso: 'KINDER A',
       fecha_inicio: null,
@@ -570,20 +635,34 @@ export default function CobrosView() {
       color: null
     };
 
+    // Actualizar UI y cache inmediatamente
+    setData(prev => [...prev, newRecord]);
+    addRowToMonthCache(selectedMonth, newRecord);
+
+    const recordForDb = { ...newRecord };
+    delete recordForDb.id; // Dejar que la BD genere el ID autoincremental si es online
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await enqueueMutation({ type: 'INSERT', table: 'cobros', payload: recordForDb, month: selectedMonth });
+      return;
+    }
+
     try {
       setLoading(true);
       const { data: inserted, error } = await supabaseCobros
         .from('cobros')
-        .insert(newRecord)
+        .insert(recordForDb)
         .select();
 
       if (error) throw error;
       if (inserted && inserted.length > 0) {
-        setData(prev => [...prev, inserted[0]]);
+        // Reemplazar fila temporal con la fila oficial con id asignado por Supabase
+        setData(prev => prev.map(r => r.id === tempId ? inserted[0] : r));
+        updateRowInMonthCache(selectedMonth, tempId, inserted[0]);
       }
     } catch (err) {
-      console.error('Error inserting row:', err);
-      alert('Error al agregar un nuevo registro a la base de datos.');
+      console.warn('Fallo insertando fila en Supabase, encolando offline:', err);
+      await enqueueMutation({ type: 'INSERT', table: 'cobros', payload: recordForDb, month: selectedMonth });
     } finally {
       setLoading(false);
     }
@@ -607,6 +686,19 @@ export default function CobrosView() {
     newData[rowIndex] = updatedRow;
     setData(newData);
 
+    const payload = {
+      pagos_bs: amountToSettle,
+      color: 'Verde',
+      updated_at: new Date().toISOString()
+    };
+
+    updateRowInMonthCache(selectedMonth, rowId, payload);
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      return;
+    }
+
     setSavingRows(prev => {
       const next = new Set(prev);
       next.add(rowId);
@@ -616,20 +708,13 @@ export default function CobrosView() {
     try {
       const { error } = await supabaseCobros
         .from('cobros')
-        .update({
-          pagos_bs: amountToSettle,
-          color: 'Verde',
-          updated_at: new Date().toISOString()
-        })
+        .update(payload)
         .eq('id', rowId);
 
       if (error) throw error;
     } catch (err) {
-      console.error('Error settling student debt:', err);
-      const reverted = [...data];
-      reverted[rowIndex] = row;
-      setData(reverted);
-      alert('Error al saldar la cuenta del alumno.');
+      console.warn('Fallo saldando deuda en Supabase, encolando offline:', err);
+      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -660,6 +745,12 @@ export default function CobrosView() {
     newData[rowIndex] = updatedRow;
     setData(newData);
 
+    // Save locally immediately
+    await updateRowInMonthCache(selectedMonth, rowId, {
+      pagos_bs: fullMonthAmount,
+      asistencias: updatedAsistencias
+    });
+
     setSavingRows(prev => {
       const next = new Set(prev);
       next.add(rowId);
@@ -678,11 +769,17 @@ export default function CobrosView() {
 
       if (error) throw error;
     } catch (err) {
-      console.error('Error setting full month payment:', err);
-      const reverted = [...data];
-      reverted[rowIndex] = row;
-      setData(reverted);
-      alert('Error al registrar el pago del mes completo.');
+      console.warn('Fallo guardando pago mes completo en Supabase, encolando offline:', err);
+      await enqueueMutation({
+        type: 'UPDATE',
+        table: 'cobros',
+        rowId,
+        payload: {
+          pagos_bs: fullMonthAmount,
+          asistencias: updatedAsistencias
+        },
+        month: selectedMonth
+      });
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -713,16 +810,31 @@ export default function CobrosView() {
 
       for (const st of turnStudentsInDebt) {
         const amount = Number(st.platos_vendidos_bs || 0);
-        const { error } = await supabaseCobros
-          .from('cobros')
-          .update({
-            pagos_bs: amount,
-            color: 'Verde',
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', st.id);
+        const payload = {
+          pagos_bs: amount,
+          color: 'Verde',
+          updated_at: new Date().toISOString()
+        };
 
-        if (error) throw error;
+        await updateRowInMonthCache(selectedMonth, st.id, { pagos_bs: amount, color: 'Verde' });
+
+        try {
+          const { error } = await supabaseCobros
+            .from('cobros')
+            .update(payload)
+            .eq('id', st.id);
+
+          if (error) throw error;
+        } catch (subErr) {
+          console.warn('Fallo en Supabase, encolando offline:', subErr);
+          await enqueueMutation({
+            type: 'UPDATE',
+            table: 'cobros',
+            rowId: st.id,
+            payload: { pagos_bs: amount, color: 'Verde' },
+            month: selectedMonth
+          });
+        }
         updatedRows.push({ ...st, pagos_bs: amount, color: 'Verde' });
       }
 
@@ -762,17 +874,37 @@ export default function CobrosView() {
         const price = getPricePerPlate(st.curso);
         const fullMonthAmount = workingDaysCount * price;
         const updatedAsistencias = paintFullMonth(st.asistencias);
+        const payload = {
+          pagos_bs: fullMonthAmount,
+          asistencias: updatedAsistencias,
+          updated_at: new Date().toISOString()
+        };
 
-        const { error } = await supabaseCobros
-          .from('cobros')
-          .update({
-            pagos_bs: fullMonthAmount,
-            asistencias: updatedAsistencias,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', st.id);
+        await updateRowInMonthCache(selectedMonth, st.id, {
+          pagos_bs: fullMonthAmount,
+          asistencias: updatedAsistencias
+        });
 
-        if (error) throw error;
+        try {
+          const { error } = await supabaseCobros
+            .from('cobros')
+            .update(payload)
+            .eq('id', st.id);
+
+          if (error) throw error;
+        } catch (subErr) {
+          console.warn('Fallo en Supabase, encolando offline:', subErr);
+          await enqueueMutation({
+            type: 'UPDATE',
+            table: 'cobros',
+            rowId: st.id,
+            payload: {
+              pagos_bs: fullMonthAmount,
+              asistencias: updatedAsistencias
+            },
+            month: selectedMonth
+          });
+        }
         updatedRows.push({ ...st, pagos_bs: fullMonthAmount, asistencias: updatedAsistencias });
       }
 
@@ -820,17 +952,37 @@ export default function CobrosView() {
         const requiredPayment = Number(st.platos_vendidos_bs || 0);
         const isMerienda = String(st.observaciones || '').toLowerCase().includes('merienda');
         const newColor = isMerienda ? 'Amarillo' : 'Verde';
+        const payload = {
+          pagos_bs: requiredPayment,
+          color: newColor,
+          updated_at: new Date().toISOString()
+        };
 
-        const { error } = await supabaseCobros
-          .from('cobros')
-          .update({
-            pagos_bs: requiredPayment,
-            color: newColor,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', st.id);
+        await updateRowInMonthCache(selectedMonth, st.id, {
+          pagos_bs: requiredPayment,
+          color: newColor
+        });
 
-        if (error) throw error;
+        try {
+          const { error } = await supabaseCobros
+            .from('cobros')
+            .update(payload)
+            .eq('id', st.id);
+
+          if (error) throw error;
+        } catch (subErr) {
+          console.warn('Fallo en Supabase, encolando offline:', subErr);
+          await enqueueMutation({
+            type: 'UPDATE',
+            table: 'cobros',
+            rowId: st.id,
+            payload: {
+              pagos_bs: requiredPayment,
+              color: newColor
+            },
+            month: selectedMonth
+          });
+        }
         updatedRows.push({ ...st, pagos_bs: requiredPayment, color: newColor });
       }
 
@@ -1656,6 +1808,8 @@ export default function CobrosView() {
               <span className="badge-count badge-count--gold">{summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : summaryStats.totalPlatosMesGlobal}</span>
               <span className="badge-label">Total Día</span>
             </div>
+
+            <SyncStatusBadge compact />
 
             <button 
               className="btn-fullscreen-excel"
