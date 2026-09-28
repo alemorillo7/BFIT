@@ -431,7 +431,7 @@ export default function CobrosView() {
     if (selectedDayPaintColor) {
       newAsistencias[`${dayKey}_color`] = selectedDayPaintColor;
     } else {
-      delete newAsistencias[`${dayKey}_color`];
+      newAsistencias[`${dayKey}_color`] = 'none';
     }
 
     const updatedRow = { ...oldRow, asistencias: newAsistencias };
@@ -522,12 +522,13 @@ export default function CobrosView() {
       
       if (cleanedVal === '') {
         delete newAsistencias[key];
+        delete newAsistencias[`${key}_color`];
       } else {
         newAsistencias[key] = cleanedVal;
       }
 
-      // Si pone 4 (Almuerzo + Merienda), se pinta de amarillo automáticamente
-      if (cleanedVal === '4') {
+      // Si pone 4 (Almuerzo + Merienda), se sugiere amarillo por defecto solo si no tenía color previo
+      if (cleanedVal === '4' && !newAsistencias[`${key}_color`]) {
         newAsistencias[`${key}_color`] = 'Amarillo';
       }
 
@@ -2414,16 +2415,34 @@ export default function CobrosView() {
                           const isFalta = sVal === 'F';
                           const isBoth = sVal === '4';
                           const isSoloMerienda = sVal === 'M';
-                          const dayPaintColor = isBoth ? 'Amarillo' : (row.asistencias?.[`${d.key}_color`] || '');
-                          const isPainted = Boolean(dayPaintColor) || isBoth;
-                          const effectiveColor = isBoth ? '#fef08a' : getDayPaintColor(dayPaintColor);
+
+                          // Color de pintura de la casilla:
+                          const explicitColor = row.asistencias?.[`${d.key}_color`];
+                          const isExplicitNone = explicitColor === 'none';
+                          const hasExplicitColor = Boolean(explicitColor && !isExplicitNone);
+
+                          let effectiveColor = null;
+                          let isPainted = false;
+
+                          if (hasExplicitColor) {
+                            isPainted = true;
+                            effectiveColor = getDayPaintColor(explicitColor);
+                          } else if (isExplicitNone) {
+                            isPainted = false;
+                            effectiveColor = null;
+                          } else if (isBoth) {
+                            // Por defecto el código 4 se destaca en amarillo si no fue personalizado
+                            isPainted = true;
+                            effectiveColor = '#fef08a';
+                          }
+
                           const hasNote = Boolean(note && String(note).trim());
 
                           return (
                             <td 
                               key={d.key} 
-                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''} ${isPainted ? 'cell-day--painted' : ''} ${isDayPaintMode ? 'cell-day--paint-mode' : ''}`}
-                              style={isPainted ? { '--day-paint-color': effectiveColor, backgroundColor: effectiveColor } : undefined}
+                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth && !hasExplicitColor && !isExplicitNone ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''} ${isPainted ? 'cell-day--painted' : ''} ${isExplicitNone ? 'cell-day--unpainted' : ''} ${isDayPaintMode ? 'cell-day--paint-mode' : ''}`}
+                              style={isPainted && effectiveColor ? { '--day-paint-color': effectiveColor, backgroundColor: effectiveColor } : (isExplicitNone ? { backgroundColor: '#ffffff' } : undefined)}
                               onClick={(e) => {
                                 if (isDayPaintMode) {
                                   e.preventDefault();
@@ -2461,7 +2480,7 @@ export default function CobrosView() {
                             >
                               <div
                                 className="cell-day-wrapper"
-                                style={isPainted ? { backgroundColor: effectiveColor } : undefined}
+                                style={isPainted && effectiveColor ? { backgroundColor: effectiveColor } : (isExplicitNone ? { backgroundColor: '#ffffff' } : undefined)}
                               >
                                 <input
                                   type="text"
@@ -2492,14 +2511,14 @@ export default function CobrosView() {
                                     const curRow = newData[idx];
                                     const newAsist = { ...(curRow.asistencias || {}) };
                                     newAsist[d.key] = inputVal;
-                                    if (cleaned === '4') {
+                                    if (cleaned === '4' && !newAsist[`${d.key}_color`]) {
                                       newAsist[`${d.key}_color`] = 'Amarillo';
                                     }
                                     newData[idx] = { ...curRow, asistencias: newAsist };
                                     setData(newData);
                                   }}
                                   onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
-                                  className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''} ${isBoth ? 'cell-day-input--both' : ''} ${isSoloMerienda ? 'cell-day-input--merienda' : ''}`}
+                                  className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''} ${isBoth && !hasExplicitColor && !isExplicitNone ? 'cell-day-input--both' : ''} ${isSoloMerienda ? 'cell-day-input--merienda' : ''}`}
                                   maxLength={1}
                                   title={isDayPaintMode ? (selectedDayPaintColor ? 'Clic para aplicar el color elegido a este día' : 'Clic para quitar el color de este día') : (isBoth ? `4 = Almuerzo + Merienda (-${SNACK_PRICE_BS} Bs)` : (isSoloMerienda ? `M = Solo Merienda (-${SNACK_PRICE_BS} Bs)` : (hasNote ? `Observación: ${note} (Doble clic para editar)` : '1 = Almuerzo, 4 = Almuerzo + Merienda, M = Merienda, F = Falta')))}
                                 />

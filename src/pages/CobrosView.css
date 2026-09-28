@@ -660,8 +660,8 @@
   color: #b45309 !important;
 }
 
-.cell-day--both,
-.cell-day:has(.cell-day-input--both) {
+.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
+.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) {
   background-color: #fef3c7 !important;
 }
 
@@ -676,8 +676,15 @@
 }
 
 .cell-day--painted,
-.cell-day--painted:has(.cell-day-input) {
+.cell-day--painted:has(.cell-day-input),
+.cell-day--painted .cell-day-wrapper {
   background-color: var(--day-paint-color) !important;
+}
+
+.cell-day--unpainted,
+.cell-day--unpainted:has(.cell-day-input),
+.cell-day--unpainted .cell-day-wrapper {
+  background-color: #ffffff !important;
 }
 
 .cell-day--painted::after {
@@ -2096,16 +2103,32 @@ body.cobros-fullscreen-active .content-area {
   background-color: var(--day-paint-color) !important;
 }
 
-/* El 4 (Almuerzo + Merienda) SIEMPRE se pinta de amarillo automáticamente */
-.excel-row td.cell-day.cell-day--both,
-.excel-row:hover td.cell-day.cell-day--both,
-.excel-row td.cell-day:has(.cell-day-input--both),
-.excel-row:hover td.cell-day:has(.cell-day-input--both) {
+/* El 4 (Almuerzo + Merienda) por defecto se destaca en amarillo si no fue personalizado con otro color o quitado */
+.excel-row td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
+.excel-row:hover td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
+.excel-row td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted),
+.excel-row:hover td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) {
   background-color: #fef08a !important;
 }
-.excel-row td.cell-day.cell-day--both .cell-day-wrapper,
-.excel-row td.cell-day:has(.cell-day-input--both) .cell-day-wrapper {
+.excel-row td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper {
   background-color: #fef08a !important;
+}
+
+/* Casillas con color explícito personalizado (Verde, Azul, Naranja, etc.) tienen máxima prioridad */
+.excel-row td.cell-day.cell-day--painted,
+.excel-row:hover td.cell-day.cell-day--painted,
+.excel-row td.cell-day.cell-day--painted .cell-day-wrapper,
+.excel-row:hover td.cell-day.cell-day--painted .cell-day-wrapper {
+  background-color: var(--day-paint-color) !important;
+}
+
+/* Casillas con color quitado explícitamente (blanco) */
+.excel-row td.cell-day.cell-day--unpainted,
+.excel-row:hover td.cell-day.cell-day--unpainted,
+.excel-row td.cell-day.cell-day--unpainted .cell-day-wrapper,
+.excel-row:hover td.cell-day.cell-day--unpainted .cell-day-wrapper {
+  background-color: #ffffff !important;
 }
 
 /* Mode Switch: Diario vs Mensual */
