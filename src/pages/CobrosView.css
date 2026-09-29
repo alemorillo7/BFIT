@@ -831,47 +831,47 @@
 }
 
 /* Table Row Hovers & Colored Variants (Colors apply solidly and permanently to ALL cells, preserving special day highlights) */
-.excel-row:hover td:not(.cell-day--painted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row:hover td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #f1f5f9;
 }
 
 /* VERDE: Color visible fijo y nítido tipo Excel (#c6efce) */
-.excel-row.row-color--verde td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--verde td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #c6efce !important;
 }
-.excel-row.row-color--verde:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--verde:hover td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #a7f3d0 !important;
 }
 
 /* AZUL: Color visible fijo y nítido tipo Excel (#bdd7ee) */
-.excel-row.row-color--azul td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--azul td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #bdd7ee !important;
 }
-.excel-row.row-color--azul:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--azul:hover td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #93c5fd !important;
 }
 
 /* AMARILLO: Color visible fijo y nítido (#fef08a) */
-.excel-row.row-color--amarillo td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--amarillo td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #fef08a !important;
 }
-.excel-row.row-color--amarillo:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--amarillo:hover td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #fde047 !important;
 }
 
 /* FFF2CC: Amarillo clásico Excel (#fff2cc) */
-.excel-row.row-color--fff2cc td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--fff2cc td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #fff2cc !important;
 }
-.excel-row.row-color--fff2cc:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--fff2cc:hover td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #fef08a !important;
 }
 
 /* NARANJA: Color visible fijo y nítido tipo Excel (#fce4d6) */
-.excel-row.row-color--naranja td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--naranja td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #fce4d6 !important;
 }
-.excel-row.row-color--naranja:hover td:not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
+.excel-row.row-color--naranja:hover td:not(.cell-day--painted):not(.cell-day--unpainted):not(:has(.cell-day-input--falta)):not(.cell-day--falta):not(:has(.cell-day-input--both)):not(:has(.cell-day-input--merienda)) {
   background-color: #fed7aa !important;
 }
 
@@ -2092,42 +2092,56 @@ body.cobros-fullscreen-active .content-area {
   color: #4ade80 !important;
 }
 
-/* A painted day always wins over the row's automatic balance color. */
+/* A painted day always wins over the row's automatic balance color and row hovers. */
 .excel-row td.cell-day.cell-day--painted,
 .excel-row:hover td.cell-day.cell-day--painted,
-.excel-row.row-color--verde td.cell-day.cell-day--painted,
-.excel-row.row-color--azul td.cell-day.cell-day--painted,
-.excel-row.row-color--amarillo td.cell-day.cell-day--painted,
-.excel-row.row-color--naranja td.cell-day.cell-day--painted,
-.excel-row.row-color--fff2cc td.cell-day.cell-day--painted {
+.excel-row[class*="row-color--"] td.cell-day.cell-day--painted,
+.excel-row[class*="row-color--"]:hover td.cell-day.cell-day--painted {
+  background-color: var(--day-paint-color) !important;
+}
+
+.excel-row td.cell-day.cell-day--painted .cell-day-wrapper,
+.excel-row:hover td.cell-day.cell-day--painted .cell-day-wrapper,
+.excel-row[class*="row-color--"] td.cell-day.cell-day--painted .cell-day-wrapper,
+.excel-row[class*="row-color--"]:hover td.cell-day.cell-day--painted .cell-day-wrapper {
   background-color: var(--day-paint-color) !important;
 }
 
 /* El 4 (Almuerzo + Merienda) por defecto se destaca en amarillo si no fue personalizado con otro color o quitado */
 .excel-row td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
 .excel-row:hover td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
+.excel-row[class*="row-color--"] td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
+.excel-row[class*="row-color--"]:hover td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
 .excel-row td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted),
-.excel-row:hover td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) {
-  background-color: #fef08a !important;
-}
-.excel-row td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
-.excel-row td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper {
+.excel-row:hover td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted),
+.excel-row[class*="row-color--"] td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted),
+.excel-row[class*="row-color--"]:hover td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) {
   background-color: #fef08a !important;
 }
 
-/* Casillas con color explícito personalizado (Verde, Azul, Naranja, etc.) tienen máxima prioridad */
-.excel-row td.cell-day.cell-day--painted,
-.excel-row:hover td.cell-day.cell-day--painted,
-.excel-row td.cell-day.cell-day--painted .cell-day-wrapper,
-.excel-row:hover td.cell-day.cell-day--painted .cell-day-wrapper {
-  background-color: var(--day-paint-color) !important;
+.excel-row td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row:hover td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row[class*="row-color--"] td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row[class*="row-color--"]:hover td.cell-day.cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row:hover td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row[class*="row-color--"] td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper,
+.excel-row[class*="row-color--"]:hover td.cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) .cell-day-wrapper {
+  background-color: #fef08a !important;
 }
 
 /* Casillas con color quitado explícitamente (blanco) */
 .excel-row td.cell-day.cell-day--unpainted,
 .excel-row:hover td.cell-day.cell-day--unpainted,
+.excel-row[class*="row-color--"] td.cell-day.cell-day--unpainted,
+.excel-row[class*="row-color--"]:hover td.cell-day.cell-day--unpainted {
+  background-color: #ffffff !important;
+}
+
 .excel-row td.cell-day.cell-day--unpainted .cell-day-wrapper,
-.excel-row:hover td.cell-day.cell-day--unpainted .cell-day-wrapper {
+.excel-row:hover td.cell-day.cell-day--unpainted .cell-day-wrapper,
+.excel-row[class*="row-color--"] td.cell-day.cell-day--unpainted .cell-day-wrapper,
+.excel-row[class*="row-color--"]:hover td.cell-day.cell-day--unpainted .cell-day-wrapper {
   background-color: #ffffff !important;
 }
 

@@ -519,10 +519,15 @@ export default function CobrosView() {
       const cleanedVal = normalizeAttendanceCode(value);
       const oldDayVal = normalizeAttendanceCode(newAsistencias[key]);
       const newDayVal = cleanedVal;
+
+      // Si el valor no cambió (por ejemplo al navegar con flechas o hacer clic), no hacer nada
+      if (cleanedVal === oldDayVal) {
+        return;
+      }
       
       if (cleanedVal === '') {
         delete newAsistencias[key];
-        delete newAsistencias[`${key}_color`];
+        // Nota: NO borramos newAsistencias[`${key}_color`] para preservar días pintados por prepago/mes completo
       } else {
         newAsistencias[key] = cleanedVal;
       }
@@ -2518,7 +2523,7 @@ export default function CobrosView() {
                                     setData(newData);
                                   }}
                                   onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
-                                  className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''} ${isBoth && !hasExplicitColor && !isExplicitNone ? 'cell-day-input--both' : ''} ${isSoloMerienda ? 'cell-day-input--merienda' : ''}`}
+                                  className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''} ${isBoth ? 'cell-day-input--both' : ''} ${isSoloMerienda ? 'cell-day-input--merienda' : ''}`}
                                   maxLength={1}
                                   title={isDayPaintMode ? (selectedDayPaintColor ? 'Clic para aplicar el color elegido a este día' : 'Clic para quitar el color de este día') : (isBoth ? `4 = Almuerzo + Merienda (-${SNACK_PRICE_BS} Bs)` : (isSoloMerienda ? `M = Solo Merienda (-${SNACK_PRICE_BS} Bs)` : (hasNote ? `Observación: ${note} (Doble clic para editar)` : '1 = Almuerzo, 4 = Almuerzo + Merienda, M = Merienda, F = Falta')))}
                                 />
