@@ -532,9 +532,11 @@ export default function CobrosView() {
         newAsistencias[key] = cleanedVal;
       }
 
-      // Si pone 4 (Almuerzo + Merienda), se sugiere amarillo por defecto solo si no tenía color previo
-      if (cleanedVal === '4' && !newAsistencias[`${key}_color`]) {
+      // Si pone 4 (Almuerzo + Merienda), siempre se pinta de amarillo automáticamente
+      if (cleanedVal === '4') {
         newAsistencias[`${key}_color`] = 'Amarillo';
+      } else if (oldDayVal === '4' && newAsistencias[`${key}_color`] === 'Amarillo') {
+        delete newAsistencias[`${key}_color`];
       }
 
       updatedRow.asistencias = newAsistencias;
@@ -2516,8 +2518,10 @@ export default function CobrosView() {
                                     const curRow = newData[idx];
                                     const newAsist = { ...(curRow.asistencias || {}) };
                                     newAsist[d.key] = inputVal;
-                                    if (cleaned === '4' && !newAsist[`${d.key}_color`]) {
+                                    if (cleaned === '4') {
                                       newAsist[`${d.key}_color`] = 'Amarillo';
+                                    } else if (curRow.asistencias?.[d.key] === '4' && newAsist[`${d.key}_color`] === 'Amarillo') {
+                                      delete newAsist[`${d.key}_color`];
                                     }
                                     newData[idx] = { ...curRow, asistencias: newAsist };
                                     setData(newData);
