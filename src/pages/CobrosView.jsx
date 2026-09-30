@@ -1033,47 +1033,51 @@ export default function CobrosView() {
     try {
       setLoading(true);
       
-      // Query the database to retrieve students across ALL turns and months
-      const { data: allRecords, error: fetchErr } = await supabaseCobros
+      // Calculate the immediately previous calendar month (e.g. 2026-10 → 2026-09)
+      const [selYear, selMonthNum] = selectedMonth.split('-').map(Number);
+      const prevDate = new Date(selYear, selMonthNum - 2);
+      const prevMonth = `${prevDate.getFullYear()}-${String(prevDate.getMonth() + 1).padStart(2, '0')}`;
+
+      // Query ONLY the previous month — no global limit, guarantees all students (including manually added) are fetched
+      const { data: prevRecords, error: fetchErr } = await supabaseCobros
         .from('cobros')
-        .select('alumno, curso, turno, observaciones, color, mes')
-        .limit(5000);
+        .select('alumno, curso, turno, observaciones, color')
+        .eq('mes', prevMonth);
         
       if (fetchErr) throw fetchErr;
+
+      // Get existing records for the target month to avoid duplicates
+      const { data: existingInSelectedMonth, error: existingErr } = await supabaseCobros
+        .from('cobros')
+        .select('alumno, turno')
+        .eq('mes', selectedMonth);
+        
+      if (existingErr) throw existingErr;
       
       let studentsToCopy = [];
-      if (allRecords && allRecords.length > 0) {
-        // Sort active months and pick the most recent one containing data
-        const uniqueMonths = [...new Set(allRecords.map(r => r.mes))].sort();
-        // Exclude the current selected month
-        const previousMonths = uniqueMonths.filter(m => m !== selectedMonth);
+      if (prevRecords && prevRecords.length > 0) {
+        const existingKeys = new Set(
+          (existingInSelectedMonth || []).map(r => `${String(r.alumno).trim().toLowerCase()}_${r.turno}`)
+        );
         
-        if (previousMonths.length > 0) {
-          const latestMonthWithData = previousMonths[previousMonths.length - 1];
-          const latestRecords = allRecords.filter(r => r.mes === latestMonthWithData);
-          
-          // Exclude any student/turn that already exists in the selected month
-          const existingInSelectedMonth = allRecords.filter(r => r.mes === selectedMonth);
-          const existingKeys = new Set(existingInSelectedMonth.map(r => `${String(r.alumno).trim().toLowerCase()}_${r.turno}`));
-          
-          studentsToCopy = latestRecords
-            .filter(r => !existingKeys.has(`${String(r.alumno).trim().toLowerCase()}_${r.turno}`))
-            .map(r => ({
-              alumno: r.alumno,
-              curso: r.curso,
-              turno: r.turno,
-              observaciones: r.observaciones || null,
-              color: r.color
-            }));
-        }
+        studentsToCopy = prevRecords
+          .filter(r => !existingKeys.has(`${String(r.alumno).trim().toLowerCase()}_${r.turno}`))
+          .map(r => ({
+            alumno: r.alumno,
+            curso: r.curso,
+            turno: r.turno,
+            observaciones: r.observaciones || null,
+            color: r.color
+          }));
       }
       
       if (studentsToCopy.length === 0) {
-        alert("No se encontraron registros de meses anteriores en la base de datos o todos los alumnos ya fueron importados.");
+        const prevMonthLabel = monthsList.find(m => m.value === prevMonth)?.label || prevMonth;
+        alert(`No se encontraron alumnos en el mes anterior (${prevMonthLabel}) o todos ya fueron importados.`);
         return;
       }
       
-      // Create empty records for the selected month across all turns
+      // Create records for the selected month across all turns
       const newRecords = studentsToCopy.map(s => {
         const price = getPricePerPlate(s.curso);
         const pagosBs = prepayMonth ? (workingDaysCount * price) : 0;
