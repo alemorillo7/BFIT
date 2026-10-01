@@ -2314,11 +2314,12 @@ export default function CobrosView() {
                 {filteredData.length > 0 ? (
                   filteredData.map((row, index) => {
                     const isSaving = savingRows.has(row.id);
+                    const rowColorClass = row.color ? `row-color--${String(row.color).toLowerCase()}` : '';
                     
                     return (
                       <tr 
                         key={row.id} 
-                        className={`excel-row ${isSaving ? 'row-saving' : ''}`}
+                        className={`excel-row ${rowColorClass} ${isSaving ? 'row-saving' : ''}`}
                       >
                         <td className="cell-nro text-center">{index + 1}</td>
                         <td className="cell-alumno">
