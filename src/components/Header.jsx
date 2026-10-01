@@ -3,6 +3,7 @@ import { Menu, RefreshCw } from 'lucide-react';
 import { useLocation } from 'react-router-dom';
 import { forceClearCacheAndReload } from '../utils/cacheBuster';
 import SyncStatusBadge from './common/SyncStatusBadge';
+import { APP_VERSION } from '../version';
 import './Header.css';
 
 const TITLE_BY_PATH = {
@@ -46,15 +47,18 @@ const Header = ({ toggleSidebar, toggleSidebarDesktop }) => {
       <div className="header-right">
         <SyncStatusBadge />
 
-        <button 
-          className="btn-header-refresh" 
-          onClick={handleUpdate}
-          disabled={updating}
-          title="Borra la memoria caché y cookies del navegador y recarga la última versión del sistema"
-        >
-          <RefreshCw size={14} className={updating ? 'spinner' : ''} />
-          <span>{updating ? 'Actualizando...' : 'Actualizar Versión'}</span>
-        </button>
+        <div className="header-update-wrap">
+          <button 
+            className="btn-header-refresh" 
+            onClick={handleUpdate}
+            disabled={updating}
+            title="Borra la memoria caché y cookies del navegador y recarga la última versión del sistema"
+          >
+            <RefreshCw size={14} className={updating ? 'spinner' : ''} />
+            <span>{updating ? 'Actualizando...' : 'Actualizar Versión'}</span>
+          </button>
+          <span className="app-version">v{APP_VERSION}</span>
+        </div>
 
         <div className="user-info">
           <span className="user-name">Administrador</span>
