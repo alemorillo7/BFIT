@@ -4,4 +4,4 @@
 //   MINOR (x.+1.0): nuevas funcionalidades
 //   MAJOR (+1.0.0): cambios grandes o reestructuraciones
 
-export const APP_VERSION = '1.0.2';
+export const APP_VERSION = '1.0.3';
