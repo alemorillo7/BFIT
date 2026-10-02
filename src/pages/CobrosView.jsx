@@ -2312,18 +2312,10 @@ export default function CobrosView() {
                 {filteredData.length > 0 ? (
                   filteredData.map((row, index) => {
                     const isSaving = savingRows.has(row.id);
-                    const isMeriendaRow = String(row.observaciones || '').toLowerCase().includes('merienda');
-                    const effectiveRowColor = row.color || (
-                      (Number(row.platos_vendidos || 0) > 0 || Number(row.pagos_bs || 0) > 0)
-                        ? (isMeriendaRow ? 'Amarillo' : ((Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0) >= 0) ? 'Verde' : 'Azul'))
-                        : ''
-                    );
-                    const rowColorClass = effectiveRowColor ? `row-color--${String(effectiveRowColor).toLowerCase()}` : '';
-                    
                     return (
                       <tr 
                         key={row.id} 
-                        className={`excel-row ${rowColorClass} ${isSaving ? 'row-saving' : ''}`}
+                        className={`excel-row ${isSaving ? 'row-saving' : ''}`}
                       >
                         <td className="cell-nro text-center">{index + 1}</td>
                         <td className="cell-alumno">
