@@ -471,7 +471,7 @@ export default function CobrosView() {
   };
 
   // Handle cell changes and auto-save
-  const handleCellChange = async (rowId, key, value) => {
+  const handleCellChange = async (rowId, key, value, originalValue) => {
     const rowIndex = data.findIndex(r => r.id === rowId);
     if (rowIndex === -1) return;
     
@@ -518,13 +518,10 @@ export default function CobrosView() {
       // It is a day cell change
       const newAsistencias = { ...(oldRow.asistencias || {}) };
       const cleanedVal = normalizeAttendanceCode(value);
-      const oldDayVal = normalizeAttendanceCode(newAsistencias[key]);
+      const oldDayVal = originalValue !== undefined 
+        ? normalizeAttendanceCode(originalValue) 
+        : normalizeAttendanceCode(newAsistencias[key]);
       const newDayVal = cleanedVal;
-
-      // Si el valor no cambió (por ejemplo al navegar con flechas o hacer clic), no hacer nada
-      if (cleanedVal === oldDayVal) {
-        return;
-      }
       
       if (cleanedVal === '') {
         delete newAsistencias[key];
@@ -590,7 +587,8 @@ export default function CobrosView() {
       platos_vendidos_bs: updatedRow.platos_vendidos_bs,
       pagos_bs: updatedRow.pagos_bs,
       saldo_merienditas: updatedRow.saldo_merienditas,
-      color: updatedRow.color
+      color: updatedRow.color,
+      updated_at: new Date().toISOString()
     };
 
     // Guardar inmediatamente en cache local
@@ -2314,7 +2312,13 @@ export default function CobrosView() {
                 {filteredData.length > 0 ? (
                   filteredData.map((row, index) => {
                     const isSaving = savingRows.has(row.id);
-                    const rowColorClass = row.color ? `row-color--${String(row.color).toLowerCase()}` : '';
+                    const isMeriendaRow = String(row.observaciones || '').toLowerCase().includes('merienda');
+                    const effectiveRowColor = row.color || (
+                      (Number(row.platos_vendidos || 0) > 0 || Number(row.pagos_bs || 0) > 0)
+                        ? (isMeriendaRow ? 'Amarillo' : ((Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0) >= 0) ? 'Verde' : 'Azul'))
+                        : ''
+                    );
+                    const rowColorClass = effectiveRowColor ? `row-color--${String(effectiveRowColor).toLowerCase()}` : '';
                     
                     return (
                       <tr 
@@ -2500,7 +2504,10 @@ export default function CobrosView() {
                                   value={val}
                                   data-r={index}
                                   data-c={4 + dIdx}
-                                  onFocus={(e) => e.target.select()}
+                                   onFocus={(e) => {
+                                     e.target.select();
+                                     e.target.dataset.original = e.target.value;
+                                   }}
                                   onMouseDown={(e) => {
                                     if (isDayPaintMode) {
                                       e.preventDefault();
@@ -2532,7 +2539,13 @@ export default function CobrosView() {
                                     newData[idx] = { ...curRow, asistencias: newAsist };
                                     setData(newData);
                                   }}
-                                  onBlur={(e) => handleCellChange(row.id, d.key, e.target.value)}
+                                  onBlur={(e) => {
+                                     const original = e.target.dataset.original;
+                                     const current = e.target.value;
+                                     if (original === undefined || normalizeAttendanceCode(current) !== normalizeAttendanceCode(original)) {
+                                       handleCellChange(row.id, d.key, current, original);
+                                     }
+                                   }}
                                   className={`cell-day-input text-center ${isFalta ? 'cell-day-input--falta' : ''} ${isBoth ? 'cell-day-input--both' : ''} ${isSoloMerienda ? 'cell-day-input--merienda' : ''}`}
                                   maxLength={1}
                                   title={isDayPaintMode ? (selectedDayPaintColor ? 'Clic para aplicar el color elegido a este día' : 'Clic para quitar el color de este día') : (isBoth ? `4 = Almuerzo + Merienda (-${SNACK_PRICE_BS} Bs)` : (isSoloMerienda ? `M = Solo Merienda (-${SNACK_PRICE_BS} Bs)` : (hasNote ? `Observación: ${note} (Doble clic para editar)` : '1 = Almuerzo, 4 = Almuerzo + Merienda, M = Merienda, F = Falta')))}
