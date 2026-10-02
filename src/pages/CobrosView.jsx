@@ -1808,16 +1808,16 @@ export default function CobrosView() {
               title={`Platos vendidos hoy en este turno (${turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn})`}
             >
               <Utensils size={13} className="badge-icon" />
-              <span className="badge-count">{summaryStats.platosHoyTurno !== null ? summaryStats.platosHoyTurno : summaryStats.totalPlatos}</span>
-              <span className="badge-label">Turno</span>
+              <span className="badge-count">{summaryStats.totalPlatos}</span>
+              <span className="badge-label">Turno Mes</span>
             </div>
 
             <div 
               className="fullscreen-plates-badge fullscreen-plates-badge--total-dia"
-              title="TOTAL de platos vendidos hoy sumando todos los turnos del colegio"
+              title="TOTAL de platos vendidos en el mes sumando todos los turnos del colegio"
             >
-              <span className="badge-count badge-count--gold">{summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : summaryStats.totalPlatosMesGlobal}</span>
-              <span className="badge-label">Total Día</span>
+              <span className="badge-count badge-count--gold">{summaryStats.totalPlatosMesGlobal}</span>
+              <span className="badge-label">Total Mes</span>
             </div>
 
             <SyncStatusBadge compact />
@@ -2312,6 +2312,7 @@ export default function CobrosView() {
                 {filteredData.length > 0 ? (
                   filteredData.map((row, index) => {
                     const isSaving = savingRows.has(row.id);
+                    const rowTotals = calculateRowTotals(row.asistencias, row.curso);
                     return (
                       <tr 
                         key={row.id} 
@@ -2522,13 +2523,25 @@ export default function CobrosView() {
                                     const idx = newData.findIndex(r => r.id === row.id);
                                     const curRow = newData[idx];
                                     const newAsist = { ...(curRow.asistencias || {}) };
-                                    newAsist[d.key] = inputVal;
+                                    if (cleaned === '') {
+                                      delete newAsist[d.key];
+                                    } else {
+                                      newAsist[d.key] = cleaned;
+                                    }
                                     if (cleaned === '4') {
                                       newAsist[`${d.key}_color`] = 'Amarillo';
                                     } else if (curRow.asistencias?.[d.key] === '4' && newAsist[`${d.key}_color`] === 'Amarillo') {
                                       delete newAsist[`${d.key}_color`];
                                     }
-                                    newData[idx] = { ...curRow, asistencias: newAsist };
+                                    const totals = calculateRowTotals(newAsist, curRow.curso);
+                                    newData[idx] = { 
+                                      ...curRow, 
+                                      asistencias: newAsist,
+                                      platos_vendidos: totals.platos_vendidos,
+                                      platos_vendidos_bs: totals.platos_vendidos_bs,
+                                      meriendas_consumidas: totals.meriendas_consumidas,
+                                      meriendas_consumidas_bs: totals.meriendas_consumidas_bs
+                                    };
                                     setData(newData);
                                   }}
                                   onBlur={(e) => {
@@ -2584,10 +2597,10 @@ export default function CobrosView() {
                         })}
                         {/* Calculated fields */}
                         <td className="cell-total text-center text-bold bg-light">
-                          {row.platos_vendidos}
+                          {rowTotals.platos_vendidos}
                         </td>
                         <td className="cell-total text-center text-bold bg-light text-success">
-                          {row.platos_vendidos_bs} Bs
+                          {rowTotals.platos_vendidos_bs} Bs
                         </td>
 
                         {/* Cargar Pago (Bs) */}
@@ -2633,7 +2646,7 @@ export default function CobrosView() {
 
                         {/* Saldo Almuerzo */}
                         {(() => {
-                          const netBalance = Number(row.pagos_bs || 0) - Number(row.platos_vendidos_bs || 0);
+                          const netBalance = Number(row.pagos_bs || 0) - Number(rowTotals.platos_vendidos_bs || 0);
                           const balanceClass = netBalance > 0 ? 'text-success' : netBalance < 0 ? 'text-danger' : 'text-muted';
                           return (
                             <td className={`cell-balance text-center text-bold bg-light ${balanceClass}`}>
