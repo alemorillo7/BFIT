@@ -1,6 +1,6 @@
 // B-FIT Service Worker for Offline-First Capability
 // IMPORTANTE: Cambiar CACHE_VERSION en cada deploy para invalidar el cache anterior
-const CACHE_VERSION = 'v4';
+const CACHE_VERSION = 'v5';
 const CACHE_NAME = `bfit-shell-${CACHE_VERSION}`;
 
 // Solo cacheamos el HTML shell y assets estáticos pequeños

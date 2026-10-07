@@ -50,6 +50,8 @@ import {
   removeRowFromMonthCache 
 } from '../services/offlineSyncService';
 import { courseSupportsSnack, getAttendanceConsumption, normalizeAttendanceCode, SNACK_PRICE_BS } from '../../shared/attendance';
+import { forceClearCacheAndReload } from '../utils/cacheBuster';
+import { APP_VERSION } from '../version';
 import './CobrosView.css';
 
 const monthsList = [
@@ -114,6 +116,7 @@ export default function CobrosView() {
   const [savingRows, setSavingRows] = useState(new Set());
   const [errorMessage, setErrorMessage] = useState(null);
   const [syncingAbsences, setSyncingAbsences] = useState(false);
+  const [isReloadingSystem, setIsReloadingSystem] = useState(false);
   const [activeNoteModal, setActiveNoteModal] = useState(null); // { rowId, dayKey, dayLabel, studentName, currentValue, currentNote }
   const DEFAULT_NOTE_SUGGESTIONS = [
     'TALLARIN A LA MANTEQUILLA CON SALCHICHA',
@@ -1821,6 +1824,19 @@ export default function CobrosView() {
             </div>
 
             <SyncStatusBadge compact />
+
+            <button
+              className="btn-fullscreen-update"
+              onClick={async () => {
+                setIsReloadingSystem(true);
+                await forceClearCacheAndReload();
+              }}
+              disabled={isReloadingSystem}
+              title="Borra la memoria caché y recarga la última versión del sistema"
+            >
+              <RefreshCw size={13} className={isReloadingSystem ? 'spinner' : ''} />
+              <span>{isReloadingSystem ? 'Actualizando...' : `v${APP_VERSION}`}</span>
+            </button>
 
             <button 
               className="btn-fullscreen-excel"
