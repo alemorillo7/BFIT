@@ -34,6 +34,11 @@ const getDB = () => {
     }
 
     try {
+      // Solicitar persistencia al navegador para que nunca limpie los datos locales por falta de espacio
+      if (typeof navigator !== 'undefined' && navigator.storage && navigator.storage.persist) {
+        navigator.storage.persist().catch(() => {});
+      }
+
       const request = window.indexedDB.open(DB_NAME, DB_VERSION);
 
       request.onupgradeneeded = (e) => {
@@ -364,11 +369,22 @@ export const initOfflineSync = (supabaseClient) => {
     if (navigator.onLine && syncStatus.pendingCount > 0 && !syncStatus.isSyncing) {
       processSyncQueue(supabaseClient);
     }
-  }, 45000);
+  }, 8000); // Revisar cada 8 segundos si hay microcortes
+
+  // Si la pestaña vuelve a tener foco o visibilidad, reintentar enviar cola de inmediato
+  const handleVisibility = () => {
+    if (document.visibilityState === 'visible' && navigator.onLine) {
+      processSyncQueue(supabaseClient);
+    }
+  };
+  window.addEventListener('focus', handleOnline);
+  document.addEventListener('visibilitychange', handleVisibility);
 
   return () => {
     window.removeEventListener('online', handleOnline);
     window.removeEventListener('offline', handleOffline);
+    window.removeEventListener('focus', handleOnline);
+    document.removeEventListener('visibilitychange', handleVisibility);
     clearInterval(intervalId);
   };
 };

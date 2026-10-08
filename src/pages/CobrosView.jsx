@@ -45,6 +45,7 @@ import {
   saveMonthCache, 
   getMonthCache, 
   enqueueMutation, 
+  getPendingMutations,
   updateRowInMonthCache, 
   addRowToMonthCache, 
   removeRowFromMonthCache 
@@ -334,11 +335,26 @@ export default function CobrosView() {
         
       if (error) throw error;
       
+      // Recuperar cualquier cambio pendiente local (por microcortes) para no pisarlo con datos viejos de red
+      let pendingMap = new Map();
+      try {
+        const pendingQueue = await getPendingMutations();
+        pendingQueue.forEach(m => {
+          if (m.month === selectedMonth && m.type === 'UPDATE' && m.rowId) {
+            pendingMap.set(m.rowId, m.payload);
+          }
+        });
+      } catch (qErr) {
+        console.warn('Error leyendo mutaciones pendientes:', qErr);
+      }
+
       // Enrich each row with accurate real-time plates and merienda calculations
       const enrichedData = (cobrosData || []).map(row => {
-        const totals = calculateRowTotals(row.asistencias, row.curso);
+        const localOverride = pendingMap.get(row.id);
+        const effectiveRow = localOverride ? { ...row, ...localOverride } : row;
+        const totals = calculateRowTotals(effectiveRow.asistencias, effectiveRow.curso);
         return {
-          ...row,
+          ...effectiveRow,
           platos_vendidos: totals.platos_vendidos,
           platos_vendidos_bs: totals.platos_vendidos_bs,
           meriendas_consumidas: totals.meriendas_consumidas,
