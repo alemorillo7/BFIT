@@ -45,6 +45,8 @@ import {
   saveMonthCache, 
   getMonthCache, 
   enqueueMutation, 
+  saveMutation,
+  processSyncQueue,
   getPendingMutations,
   updateRowInMonthCache, 
   addRowToMonthCache, 
@@ -418,24 +420,18 @@ export default function CobrosView() {
       updated_at: new Date().toISOString()
     };
 
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
-      setActiveNoteModal(null);
-      return;
-    }
-
     setSavingRows(prev => new Set(prev).add(rowId));
 
     try {
-      const { error } = await supabaseCobros
-        .from('cobros')
-        .update(payload)
-        .eq('id', rowId);
-
-      if (error) throw error;
+      await saveMutation(supabaseCobros, {
+        type: 'UPDATE',
+        table: 'cobros',
+        rowId,
+        payload,
+        month: selectedMonth
+      });
     } catch (err) {
-      console.warn('Fallo guardado de nota en Supabase, encolando offline:', err);
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      console.warn('Fallo guardado de nota (guardado localmente):', err);
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -470,22 +466,18 @@ export default function CobrosView() {
 
     const payload = { asistencias: newAsistencias, updated_at: new Date().toISOString() };
 
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
-      return;
-    }
-
     setSavingRows(prev => new Set(prev).add(rowId));
 
     try {
-      const { error } = await supabaseCobros
-        .from('cobros')
-        .update(payload)
-        .eq('id', rowId);
-      if (error) throw error;
+      await saveMutation(supabaseCobros, {
+        type: 'UPDATE',
+        table: 'cobros',
+        rowId,
+        payload,
+        month: selectedMonth
+      });
     } catch (err) {
-      console.warn('Fallo guardado de color en Supabase, encolando offline:', err);
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      console.warn('Fallo guardado de color (guardado localmente):', err);
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -619,11 +611,6 @@ export default function CobrosView() {
     // Guardar inmediatamente en cache local
     updateRowInMonthCache(selectedMonth, rowId, payload);
 
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
-      return;
-    }
-    
     setSavingRows(prev => {
       const next = new Set(prev);
       next.add(rowId);
@@ -631,15 +618,15 @@ export default function CobrosView() {
     });
 
     try {
-      const { error } = await supabaseCobros
-        .from('cobros')
-        .update(payload)
-        .eq('id', rowId);
-        
-      if (error) throw error;
+      await saveMutation(supabaseCobros, {
+        type: 'UPDATE',
+        table: 'cobros',
+        rowId,
+        payload,
+        month: selectedMonth
+      });
     } catch (err) {
-      console.warn('Fallo actualizando fila en Supabase, encolando offline:', err);
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      console.warn('Fallo guardando cambio (guardado localmente):', err);
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -664,18 +651,26 @@ export default function CobrosView() {
       asistencias: {},
       platos_vendidos: 0,
       platos_vendidos_bs: 0,
+      pagos_bs: 0,
+      saldo_merienditas: 0,
       color: null
     };
 
     // Actualizar UI y cache inmediatamente
     setData(prev => [...prev, newRecord]);
-    addRowToMonthCache(selectedMonth, newRecord);
+    await addRowToMonthCache(selectedMonth, newRecord);
 
     const recordForDb = { ...newRecord };
     delete recordForDb.id; // Dejar que la BD genere el ID autoincremental si es online
 
     if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      await enqueueMutation({ type: 'INSERT', table: 'cobros', payload: recordForDb, month: selectedMonth });
+      await enqueueMutation({
+        type: 'INSERT',
+        table: 'cobros',
+        tempId,
+        payload: recordForDb,
+        month: selectedMonth
+      });
       return;
     }
 
@@ -690,11 +685,17 @@ export default function CobrosView() {
       if (inserted && inserted.length > 0) {
         // Reemplazar fila temporal con la fila oficial con id asignado por Supabase
         setData(prev => prev.map(r => r.id === tempId ? inserted[0] : r));
-        updateRowInMonthCache(selectedMonth, tempId, inserted[0]);
+        await updateRowInMonthCache(selectedMonth, tempId, inserted[0]);
       }
     } catch (err) {
       console.warn('Fallo insertando fila en Supabase, encolando offline:', err);
-      await enqueueMutation({ type: 'INSERT', table: 'cobros', payload: recordForDb, month: selectedMonth });
+      await enqueueMutation({
+        type: 'INSERT',
+        table: 'cobros',
+        tempId,
+        payload: recordForDb,
+        month: selectedMonth
+      });
     } finally {
       setLoading(false);
     }
@@ -726,11 +727,6 @@ export default function CobrosView() {
 
     updateRowInMonthCache(selectedMonth, rowId, payload);
 
-    if (typeof navigator !== 'undefined' && !navigator.onLine) {
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
-      return;
-    }
-
     setSavingRows(prev => {
       const next = new Set(prev);
       next.add(rowId);
@@ -738,15 +734,15 @@ export default function CobrosView() {
     });
 
     try {
-      const { error } = await supabaseCobros
-        .from('cobros')
-        .update(payload)
-        .eq('id', rowId);
-
-      if (error) throw error;
+      await saveMutation(supabaseCobros, {
+        type: 'UPDATE',
+        table: 'cobros',
+        rowId,
+        payload,
+        month: selectedMonth
+      });
     } catch (err) {
-      console.warn('Fallo saldando deuda en Supabase, encolando offline:', err);
-      await enqueueMutation({ type: 'UPDATE', table: 'cobros', rowId, payload, month: selectedMonth });
+      console.warn('Fallo saldando deuda (guardado localmente):', err);
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -777,11 +773,14 @@ export default function CobrosView() {
     newData[rowIndex] = updatedRow;
     setData(newData);
 
-    // Save locally immediately
-    await updateRowInMonthCache(selectedMonth, rowId, {
+    const payload = {
       pagos_bs: fullMonthAmount,
-      asistencias: updatedAsistencias
-    });
+      asistencias: updatedAsistencias,
+      updated_at: new Date().toISOString()
+    };
+
+    // Save locally immediately
+    await updateRowInMonthCache(selectedMonth, rowId, payload);
 
     setSavingRows(prev => {
       const next = new Set(prev);
@@ -790,28 +789,15 @@ export default function CobrosView() {
     });
 
     try {
-      const { error } = await supabaseCobros
-        .from('cobros')
-        .update({
-          pagos_bs: fullMonthAmount,
-          asistencias: updatedAsistencias,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', rowId);
-
-      if (error) throw error;
-    } catch (err) {
-      console.warn('Fallo guardando pago mes completo en Supabase, encolando offline:', err);
-      await enqueueMutation({
+      await saveMutation(supabaseCobros, {
         type: 'UPDATE',
         table: 'cobros',
         rowId,
-        payload: {
-          pagos_bs: fullMonthAmount,
-          asistencias: updatedAsistencias
-        },
+        payload,
         month: selectedMonth
       });
+    } catch (err) {
+      console.warn('Fallo guardando pago mes completo (guardado localmente):', err);
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -849,24 +835,13 @@ export default function CobrosView() {
         };
 
         await updateRowInMonthCache(selectedMonth, st.id, { pagos_bs: amount, color: 'Verde' });
-
-        try {
-          const { error } = await supabaseCobros
-            .from('cobros')
-            .update(payload)
-            .eq('id', st.id);
-
-          if (error) throw error;
-        } catch (subErr) {
-          console.warn('Fallo en Supabase, encolando offline:', subErr);
-          await enqueueMutation({
-            type: 'UPDATE',
-            table: 'cobros',
-            rowId: st.id,
-            payload: { pagos_bs: amount, color: 'Verde' },
-            month: selectedMonth
-          });
-        }
+        await enqueueMutation({
+          type: 'UPDATE',
+          table: 'cobros',
+          rowId: st.id,
+          payload,
+          month: selectedMonth
+        });
         updatedRows.push({ ...st, pagos_bs: amount, color: 'Verde' });
       }
 
@@ -875,6 +850,7 @@ export default function CobrosView() {
         return match ? match : item;
       }));
 
+      processSyncQueue(supabaseCobros);
       alert(`¡Se saldaron exitosamente ${updatedRows.length} alumnos del Turno ${selectedTurn}!`);
     } catch (err) {
       console.error('Error settling all students:', err);
@@ -916,27 +892,13 @@ export default function CobrosView() {
           pagos_bs: fullMonthAmount,
           asistencias: updatedAsistencias
         });
-
-        try {
-          const { error } = await supabaseCobros
-            .from('cobros')
-            .update(payload)
-            .eq('id', st.id);
-
-          if (error) throw error;
-        } catch (subErr) {
-          console.warn('Fallo en Supabase, encolando offline:', subErr);
-          await enqueueMutation({
-            type: 'UPDATE',
-            table: 'cobros',
-            rowId: st.id,
-            payload: {
-              pagos_bs: fullMonthAmount,
-              asistencias: updatedAsistencias
-            },
-            month: selectedMonth
-          });
-        }
+        await enqueueMutation({
+          type: 'UPDATE',
+          table: 'cobros',
+          rowId: st.id,
+          payload,
+          month: selectedMonth
+        });
         updatedRows.push({ ...st, pagos_bs: fullMonthAmount, asistencias: updatedAsistencias });
       }
 
@@ -945,6 +907,7 @@ export default function CobrosView() {
         return match ? match : item;
       }));
 
+      processSyncQueue(supabaseCobros);
       alert(`¡Se cargó el pago de mes completo a ${updatedRows.length} alumnos del Turno ${selectedTurn}!`);
     } catch (err) {
       console.error('Error setting full month for all students:', err);
@@ -994,27 +957,13 @@ export default function CobrosView() {
           pagos_bs: requiredPayment,
           color: newColor
         });
-
-        try {
-          const { error } = await supabaseCobros
-            .from('cobros')
-            .update(payload)
-            .eq('id', st.id);
-
-          if (error) throw error;
-        } catch (subErr) {
-          console.warn('Fallo en Supabase, encolando offline:', subErr);
-          await enqueueMutation({
-            type: 'UPDATE',
-            table: 'cobros',
-            rowId: st.id,
-            payload: {
-              pagos_bs: requiredPayment,
-              color: newColor
-            },
-            month: selectedMonth
-          });
-        }
+        await enqueueMutation({
+          type: 'UPDATE',
+          table: 'cobros',
+          rowId: st.id,
+          payload,
+          month: selectedMonth
+        });
         updatedRows.push({ ...st, pagos_bs: requiredPayment, color: newColor });
       }
 
@@ -1023,6 +972,7 @@ export default function CobrosView() {
         return match ? match : item;
       }));
 
+      processSyncQueue(supabaseCobros);
       alert(`¡Se saldaron exitosamente ${updatedRows.length} alumnos con deuda! Sus cuentas quedaron al día.`);
     } catch (err) {
       console.error('Error settling all debts:', err);
@@ -1153,16 +1103,17 @@ export default function CobrosView() {
         return next;
       });
 
-      const { error } = await supabaseCobros
-        .from('cobros')
-        .delete()
-        .eq('id', rowId);
-
-      if (error) throw error;
       setData(prev => prev.filter(r => r.id !== rowId));
+      await removeRowFromMonthCache(selectedMonth, rowId);
+
+      await saveMutation(supabaseCobros, {
+        type: 'DELETE',
+        table: 'cobros',
+        rowId,
+        month: selectedMonth
+      });
     } catch (err) {
-      console.error('Error deleting row:', err);
-      alert('Error al eliminar el registro de la base de datos.');
+      console.warn('Error eliminando fila (guardado localmente):', err);
     } finally {
       setSavingRows(prev => {
         const next = new Set(prev);
@@ -1198,15 +1149,46 @@ export default function CobrosView() {
         return;
       }
 
-      // 2. Fetch ALL students for the target month from Supabase across ALL turns
-      const { data: dbRecords, error: fetchErr } = await supabaseCobros
-        .from('cobros')
-        .select('*')
-        .eq('mes', targetMonth);
+      // 2. Fetch ALL students for the target month from Supabase (or local cache if offline)
+      let sourceRecords = [];
+      try {
+        const { data: records, error: fetchErr } = await supabaseCobros
+          .from('cobros')
+          .select('*')
+          .eq('mes', targetMonth);
 
-      if (fetchErr) throw fetchErr;
+        if (fetchErr) throw fetchErr;
+        sourceRecords = records || [];
+      } catch (e) {
+        console.warn('No se pudo consultar Supabase para sync de faltas, usando cache local:', e);
+        sourceRecords = (await getMonthCache(targetMonth)) || [];
+      }
+
+      if (!sourceRecords || sourceRecords.length === 0) {
+        sourceRecords = (await getMonthCache(targetMonth)) || [];
+      }
+
+      // Overlay pending outbox mutations so uncommitted edits are not lost
+      const pendingMutations = await getPendingMutations();
+      const monthMutations = pendingMutations.filter(
+        m => m.month === targetMonth && m.type === 'UPDATE'
+      );
+      const dbRecords = sourceRecords.map(r => {
+        const studentPending = monthMutations.filter(m => m.rowId === r.id);
+        if (studentPending.length === 0) return r;
+        const mergedPayload = studentPending.reduce((acc, m) => ({ ...acc, ...(m.payload || {}) }), {});
+        return {
+          ...r,
+          ...mergedPayload,
+          asistencias: {
+            ...(r.asistencias || {}),
+            ...(mergedPayload.asistencias || {})
+          }
+        };
+      });
+
       if (!dbRecords || dbRecords.length === 0) {
-        if (!isSilent) alert("No se encontraron registros de alumnos en la base de datos.");
+        if (!isSilent) alert("No se encontraron registros de alumnos en la base de datos ni en la memoria local.");
         return;
       }
 
@@ -1397,19 +1379,24 @@ export default function CobrosView() {
         return;
       }
 
-      // 5. Save updates to Supabase
+      // 5. Save updates to local cache and outbox, then trigger sync in background
       for (const updatedStudent of studentsToUpdate) {
-        const { error: saveErr } = await supabaseCobros
-          .from('cobros')
-          .update({
-            asistencias: updatedStudent.asistencias,
-            platos_vendidos: updatedStudent.platos_vendidos,
-            platos_vendidos_bs: updatedStudent.platos_vendidos_bs,
-            color: updatedStudent.color
-          })
-          .eq('id', updatedStudent.id);
+        const payload = {
+          asistencias: updatedStudent.asistencias,
+          platos_vendidos: updatedStudent.platos_vendidos,
+          platos_vendidos_bs: updatedStudent.platos_vendidos_bs,
+          color: updatedStudent.color,
+          updated_at: new Date().toISOString()
+        };
 
-        if (saveErr) throw saveErr;
+        await updateRowInMonthCache(targetMonth, updatedStudent.id, payload);
+        await enqueueMutation({
+          type: 'UPDATE',
+          table: 'cobros',
+          rowId: updatedStudent.id,
+          payload,
+          month: targetMonth
+        });
       }
 
       // 6. Refresh state of the current view
@@ -1419,6 +1406,8 @@ export default function CobrosView() {
           return matchUpdated ? matchUpdated : student;
         });
       });
+
+      processSyncQueue(supabaseCobros);
 
       if (!isSilent) {
         alert(`Sincronización completada con éxito. Se actualizaron ${studentsToUpdate.length} alumnos (${importedFaltas} faltas y ${importedCambios} observaciones de menú sincronizadas).`);
@@ -2384,10 +2373,12 @@ export default function CobrosView() {
                             onClick={(e) => e.target.select()}
                             onChange={(e) => {
                               if (isFullscreen) return;
+                              const val = e.target.value;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].alumno = e.target.value;
+                              newData[idx].alumno = val;
                               setData(newData);
+                              updateRowInMonthCache(selectedMonth, row.id, { alumno: val });
                             }}
                             onBlur={(e) => {
                               if (!isFullscreen) handleCellChange(row.id, 'alumno', e.target.value);
@@ -2408,10 +2399,12 @@ export default function CobrosView() {
                             onClick={(e) => e.target.select()}
                             onChange={(e) => {
                               if (isFullscreen) return;
+                              const val = e.target.value;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].curso = e.target.value;
+                              newData[idx].curso = val;
                               setData(newData);
+                              updateRowInMonthCache(selectedMonth, row.id, { curso: val });
                             }}
                             onBlur={(e) => {
                               if (!isFullscreen) handleCellChange(row.id, 'curso', e.target.value);
@@ -2432,10 +2425,12 @@ export default function CobrosView() {
                             onClick={(e) => e.target.select()}
                             onChange={(e) => {
                               if (isFullscreen) return;
+                              const val = e.target.value;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].turno = e.target.value;
+                              newData[idx].turno = val;
                               setData(newData);
+                              updateRowInMonthCache(selectedMonth, row.id, { turno: val });
                             }}
                             onBlur={(e) => {
                               if (!isFullscreen) handleCellChange(row.id, 'turno', e.target.value);
@@ -2457,10 +2452,12 @@ export default function CobrosView() {
                             placeholder="-"
                             onChange={(e) => {
                               if (isFullscreen) return;
+                              const val = e.target.value;
                               const newData = [...data];
                               const idx = newData.findIndex(r => r.id === row.id);
-                              newData[idx].observaciones = e.target.value;
+                              newData[idx].observaciones = val;
                               setData(newData);
+                              updateRowInMonthCache(selectedMonth, row.id, { observaciones: val });
                             }}
                             onBlur={(e) => {
                               if (!isFullscreen) handleCellChange(row.id, 'observaciones', e.target.value);
@@ -2596,6 +2593,7 @@ export default function CobrosView() {
                                       meriendas_consumidas_bs: totals.meriendas_consumidas_bs
                                     };
                                     setData(newData);
+                                    updateRowInMonthCache(selectedMonth, row.id, { asistencias: newAsist, ...totals });
                                   }}
                                   onBlur={(e) => {
                                      const original = e.target.dataset.original;
@@ -2672,6 +2670,7 @@ export default function CobrosView() {
                                 const idx = newData.findIndex(r => r.id === row.id);
                                 newData[idx].pagos_bs = e.target.value;
                                 setData(newData);
+                                updateRowInMonthCache(selectedMonth, row.id, { pagos_bs: e.target.value });
                               }}
                               onBlur={(e) => handleCellChange(row.id, 'pagos_bs', e.target.value)}
                               className="cell-balance-input-field text-center text-bold"
@@ -2723,10 +2722,12 @@ export default function CobrosView() {
                                   placeholder="0"
                                   title="Pago cargado para meriendas (Bs)"
                                   onChange={(e) => {
+                                    const val = e.target.value;
                                     const newData = [...data];
                                     const idx = newData.findIndex(r => r.id === row.id);
-                                    newData[idx].saldo_merienditas = e.target.value;
+                                    newData[idx].saldo_merienditas = val;
                                     setData(newData);
+                                    updateRowInMonthCache(selectedMonth, row.id, { saldo_merienditas: val });
                                   }}
                                   onBlur={(e) => handleCellChange(row.id, 'saldo_merienditas', e.target.value)}
                                   className="cell-balance-input-field text-center text-bold text-info"
