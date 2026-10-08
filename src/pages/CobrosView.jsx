@@ -110,7 +110,13 @@ export default function CobrosView() {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('planilla'); // 'planilla' | 'finanzas' | 'importar' | 'ranking'
   const [selectedMonth, setSelectedMonth] = useState(getCurrentMonthDefault);
-  const [selectedTurn, setSelectedTurn] = useState('11:50');
+  const [selectedTurn, setSelectedTurn] = useState(() => {
+    try {
+      const saved = localStorage.getItem('bfit_selected_turn');
+      if (saved && turnsList.some(t => t.value === saved)) return saved;
+    } catch (e) {}
+    return '11:25';
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
   const [savingRows, setSavingRows] = useState(new Set());
@@ -1779,7 +1785,19 @@ export default function CobrosView() {
               <span className="fullscreen-badge-sep">&bull;</span>
               <span className="fullscreen-badge-month">{monthsList.find(m => m.value === selectedMonth)?.label}</span>
               <span className="fullscreen-badge-sep">&bull;</span>
-              <span className="fullscreen-badge-turn">{selectedTurn === 'ALL' ? '🌐 Todos los Turnos' : (turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn)}</span>
+              <select
+                value={selectedTurn}
+                onChange={(e) => {
+                  setSelectedTurn(e.target.value);
+                  try { localStorage.setItem('bfit_selected_turn', e.target.value); } catch (err) {}
+                }}
+                className="fullscreen-turn-select"
+                title="Cambiar turno en pantalla completa"
+              >
+                {turnsList.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
               {courseFilter && (
                 <>
                   <span className="fullscreen-badge-sep">&bull;</span>
@@ -2074,7 +2092,10 @@ export default function CobrosView() {
                     <Clock size={16} className="filter-icon" />
                     <select
                       value={selectedTurn}
-                      onChange={(e) => setSelectedTurn(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedTurn(e.target.value);
+                        try { localStorage.setItem('bfit_selected_turn', e.target.value); } catch (err) {}
+                      }}
                       className="input select-filter turn-select"
                     >
                       {turnsList.map(t => (

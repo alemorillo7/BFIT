@@ -1517,6 +1517,28 @@
   font-weight: 700;
 }
 
+.fullscreen-turn-select {
+  background: rgba(15, 23, 42, 0.7);
+  color: #f8fafc;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.fullscreen-turn-select option {
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+.fullscreen-turn-select:focus {
+  border-color: #38bdf8;
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.3);
+}
+
 .fullscreen-top-right {
   display: flex;
   align-items: center;
