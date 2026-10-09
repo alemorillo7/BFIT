@@ -1835,19 +1835,35 @@ export default function CobrosView() {
 
             <div 
               className="fullscreen-plates-badge"
-              title={`Platos vendidos hoy en este turno (${turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn})`}
+              title={statsViewMode === 'diario' && summaryStats.platosHoyTurno !== null 
+                ? `Platos vendidos hoy en este turno (${turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn}) - Clic para ver mes` 
+                : `Platos acumulados en el mes para este turno - Clic para ver día`}
+              onClick={() => setStatsViewMode(prev => prev === 'diario' ? 'mensual' : 'diario')}
+              style={{ cursor: 'pointer' }}
             >
               <Utensils size={13} className="badge-icon" />
-              <span className="badge-count">{summaryStats.totalPlatos}</span>
-              <span className="badge-label">Turno Mes</span>
+              <span className="badge-count">
+                {statsViewMode === 'diario' && summaryStats.platosHoyTurno !== null ? summaryStats.platosHoyTurno : summaryStats.totalPlatos}
+              </span>
+              <span className="badge-label">
+                {statsViewMode === 'diario' && summaryStats.platosHoyTurno !== null ? 'Platos Hoy' : 'Turno Mes'}
+              </span>
             </div>
 
             <div 
               className="fullscreen-plates-badge fullscreen-plates-badge--total-dia"
-              title="TOTAL de platos vendidos en el mes sumando todos los turnos del colegio"
+              title={statsViewMode === 'diario' && summaryStats.platosHoyTotalDia !== null
+                ? 'TOTAL de platos vendidos hoy sumando todos los turnos del colegio - Clic para ver mes'
+                : 'TOTAL de platos vendidos en el mes sumando todos los turnos del colegio - Clic para ver día'}
+              onClick={() => setStatsViewMode(prev => prev === 'diario' ? 'mensual' : 'diario')}
+              style={{ cursor: 'pointer' }}
             >
-              <span className="badge-count badge-count--gold">{summaryStats.totalPlatosMesGlobal}</span>
-              <span className="badge-label">Total Mes</span>
+              <span className="badge-count badge-count--gold">
+                {statsViewMode === 'diario' && summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : summaryStats.totalPlatosMesGlobal}
+              </span>
+              <span className="badge-label">
+                {statsViewMode === 'diario' && summaryStats.platosHoyTotalDia !== null ? 'Total Día' : 'Total Mes'}
+              </span>
             </div>
 
             <SyncStatusBadge compact />
