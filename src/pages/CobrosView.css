@@ -662,7 +662,7 @@
 
 .cell-day--both:not(.cell-day--painted):not(.cell-day--unpainted),
 .cell-day:has(.cell-day-input--both):not(.cell-day--painted):not(.cell-day--unpainted) {
-  background-color: #fef3c7 !important;
+  background-color: #fef08a !important;
 }
 
 .cell-day-input--merienda {

@@ -81,7 +81,6 @@ const turnsList = [
 
 const colorOptions = [
   { value: '', label: 'Sin color' },
-  { value: 'FFF2CC', label: 'Amarillo Excel' },
   { value: 'Verde', label: 'Verde' },
   { value: 'Azul', label: 'Azul' },
   { value: 'Amarillo', label: 'Amarillo' },
@@ -89,10 +88,10 @@ const colorOptions = [
 ];
 
 const dayPaintColorValues = {
-  FFF2CC: '#fde047',
+  FFF2CC: '#fef08a',
   Verde: '#86efac',
   Azul: '#93c5fd',
-  Amarillo: '#fcd34d',
+  Amarillo: '#fef08a',
   Naranja: '#fdba74'
 };
 
@@ -301,7 +300,12 @@ export default function CobrosView() {
   const paintFullMonth = useCallback((asistencias) => {
     const updatedAsistencias = { ...(asistencias || {}) };
     currentMonthDays.forEach((day) => {
-      updatedAsistencias[`${day.key}_color`] = 'Verde';
+      const val = updatedAsistencias[day.key];
+      // Solo pintar casillas que ya tengan asistencia registrada activa (ej: '1')
+      // Las casillas vacías o futuras se mantienen en blanco
+      if (val && String(val).trim() !== '' && val !== '4' && val !== 'F') {
+        updatedAsistencias[`${day.key}_color`] = 'Verde';
+      }
     });
     return updatedAsistencias;
   }, [currentMonthDays]);
@@ -2484,16 +2488,17 @@ export default function CobrosView() {
                           let effectiveColor = null;
                           let isPainted = false;
 
-                          if (hasExplicitColor) {
-                            isPainted = true;
-                            effectiveColor = getDayPaintColor(explicitColor);
-                          } else if (isExplicitNone) {
+                          if (isExplicitNone) {
                             isPainted = false;
                             effectiveColor = null;
                           } else if (isBoth) {
-                            // Por defecto el código 4 se destaca en amarillo si no fue personalizado
+                            // Regla de negocio: El código 4 (Almuerzo + Merienda) SIEMPRE tiene prioridad
+                            // y se destaca en el Amarillo Oficial (#fef08a), aunque el alumno tenga el día en Verde por mes completo.
                             isPainted = true;
                             effectiveColor = '#fef08a';
+                          } else if (hasExplicitColor) {
+                            isPainted = true;
+                            effectiveColor = getDayPaintColor(explicitColor);
                           }
 
                           const hasNote = Boolean(note && String(note).trim());
@@ -2501,7 +2506,7 @@ export default function CobrosView() {
                           return (
                             <td 
                               key={d.key} 
-                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth && !hasExplicitColor && !isExplicitNone ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''} ${isPainted ? 'cell-day--painted' : ''} ${isExplicitNone ? 'cell-day--unpainted' : ''} ${isDayPaintMode ? 'cell-day--paint-mode' : ''}`}
+                              className={`cell-day ${hasNote ? 'cell-day--has-note' : ''} ${isFalta ? 'cell-day--falta' : ''} ${isBoth && !isExplicitNone ? 'cell-day--both' : ''} ${isSoloMerienda ? 'cell-day--merienda' : ''} ${isPainted ? 'cell-day--painted' : ''} ${isExplicitNone ? 'cell-day--unpainted' : ''} ${isDayPaintMode ? 'cell-day--paint-mode' : ''}`}
                               style={isPainted && effectiveColor ? { '--day-paint-color': effectiveColor, backgroundColor: effectiveColor } : (isExplicitNone ? { backgroundColor: '#ffffff' } : undefined)}
                               onClick={(e) => {
                                 if (isDayPaintMode) {
