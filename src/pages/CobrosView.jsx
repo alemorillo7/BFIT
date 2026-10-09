@@ -300,12 +300,8 @@ export default function CobrosView() {
   const paintFullMonth = useCallback((asistencias) => {
     const updatedAsistencias = { ...(asistencias || {}) };
     currentMonthDays.forEach((day) => {
-      const val = updatedAsistencias[day.key];
-      // Solo pintar casillas que ya tengan asistencia registrada activa (ej: '1')
-      // Las casillas vacías o futuras se mantienen en blanco
-      if (val && String(val).trim() !== '' && val !== '4' && val !== 'F') {
-        updatedAsistencias[`${day.key}_color`] = 'Verde';
-      }
+      // Pinta la fila completa en Verde (código 4 mantiene su Amarillo prioritario en el render)
+      updatedAsistencias[`${day.key}_color`] = 'Verde';
     });
     return updatedAsistencias;
   }, [currentMonthDays]);
@@ -770,7 +766,8 @@ export default function CobrosView() {
     const updatedRow = {
       ...row,
       pagos_bs: fullMonthAmount,
-      asistencias: updatedAsistencias
+      asistencias: updatedAsistencias,
+      color: 'Verde'
     };
 
     const newData = [...data];
@@ -780,6 +777,7 @@ export default function CobrosView() {
     const payload = {
       pagos_bs: fullMonthAmount,
       asistencias: updatedAsistencias,
+      color: 'Verde',
       updated_at: new Date().toISOString()
     };
 
@@ -889,12 +887,14 @@ export default function CobrosView() {
         const payload = {
           pagos_bs: fullMonthAmount,
           asistencias: updatedAsistencias,
+          color: 'Verde',
           updated_at: new Date().toISOString()
         };
 
         await updateRowInMonthCache(selectedMonth, st.id, {
           pagos_bs: fullMonthAmount,
-          asistencias: updatedAsistencias
+          asistencias: updatedAsistencias,
+          color: 'Verde'
         });
         await enqueueMutation({
           type: 'UPDATE',
@@ -903,7 +903,7 @@ export default function CobrosView() {
           payload,
           month: selectedMonth
         });
-        updatedRows.push({ ...st, pagos_bs: fullMonthAmount, asistencias: updatedAsistencias });
+        updatedRows.push({ ...st, pagos_bs: fullMonthAmount, asistencias: updatedAsistencias, color: 'Verde' });
       }
 
       setData(prev => prev.map(item => {
