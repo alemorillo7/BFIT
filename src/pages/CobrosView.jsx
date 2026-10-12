@@ -97,6 +97,24 @@ const dayPaintColorValues = {
 
 const getDayPaintColor = (color) => dayPaintColorValues[color] || color;
 
+// Normaliza el valor de color guardado (tolera mayúsculas/espacios y asistencias serializadas como string)
+const normalizeStoredColor = (raw) => {
+  if (raw === undefined || raw === null) return '';
+  const str = String(raw).trim();
+  if (!str) return '';
+  if (str.toLowerCase() === 'none') return 'none';
+  const match = Object.keys(dayPaintColorValues).find(k => k.toLowerCase() === str.toLowerCase());
+  return match || str;
+};
+
+const parseAsistencias = (value) => {
+  if (!value) return {};
+  if (typeof value === 'string') {
+    try { return JSON.parse(value) || {}; } catch { return {}; }
+  }
+  return value;
+};
+
 // Helper to get real current month default (e.g. '2026-09')
 const getCurrentMonthDefault = () => {
   const now = new Date();
@@ -322,7 +340,7 @@ export default function CobrosView() {
       if (typeof navigator !== 'undefined' && !navigator.onLine) {
         const cached = await getMonthCache(selectedMonth);
         if (cached && Array.isArray(cached) && cached.length > 0) {
-          setData(cached);
+          setData(cached.map(r => ({ ...r, asistencias: parseAsistencias(r.asistencias) })));
           setLoading(false);
           return;
         }
@@ -353,7 +371,11 @@ export default function CobrosView() {
       // Enrich each row with accurate real-time plates and merienda calculations
       const enrichedData = (cobrosData || []).map(row => {
         const localOverride = pendingMap.get(row.id);
-        const effectiveRow = localOverride ? { ...row, ...localOverride } : row;
+        const baseAsist = parseAsistencias(row.asistencias);
+        // Fusionar (no reemplazar): una mutación pendiente vieja sin claves *_color no debe borrar los colores del servidor
+        const effectiveRow = localOverride
+          ? { ...row, ...localOverride, asistencias: { ...baseAsist, ...parseAsistencias(localOverride.asistencias) } }
+          : { ...row, asistencias: baseAsist };
         const totals = calculateRowTotals(effectiveRow.asistencias, effectiveRow.curso);
         return {
           ...effectiveRow,
@@ -372,7 +394,7 @@ export default function CobrosView() {
       // Intentar cargar copia local de respaldo
       const localFallback = await getMonthCache(selectedMonth);
       if (localFallback && Array.isArray(localFallback) && localFallback.length > 0) {
-        setData(localFallback);
+        setData(localFallback.map(r => ({ ...r, asistencias: parseAsistencias(r.asistencias) })));
         console.log(`Copia local del mes ${selectedMonth} cargada con éxito (${localFallback.length} registros).`);
       } else {
         setErrorMessage('Sin conexión y no hay datos guardados localmente para este mes.');
@@ -2497,7 +2519,7 @@ export default function CobrosView() {
                           const isSoloMerienda = sVal === 'M';
 
                           // Color de pintura de la casilla:
-                          const explicitColor = row.asistencias?.[`${d.key}_color`];
+                          const explicitColor = normalizeStoredColor(row.asistencias?.[`${d.key}_color`]);
                           const isExplicitNone = explicitColor === 'none';
                           const hasExplicitColor = Boolean(explicitColor && !isExplicitNone);
 
