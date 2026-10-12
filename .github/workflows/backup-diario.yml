@@ -1,0 +1,32 @@
+name: Respaldo diario Supabase
+on:
+  schedule:
+    - cron: '0 6 * * *'   # 02:00 Bolivia (GMT-4)
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Descargar datos
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: node scripts/backup-all.mjs
+      - name: Cifrar (el repo es público)
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          gzip -9 backups/cobros_all.json
+          openssl enc -aes-256-cbc -pbkdf2 -salt -pass env:BACKUP_PASSPHRASE -in backups/cobros_all.json.gz -out backups/cobros_$(date -u +%F).json.gz.enc
+          rm backups/cobros_all.json.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: respaldo-cobros-cifrado
+          path: backups/*.enc
+          retention-days: 60
