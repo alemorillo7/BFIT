@@ -28,3 +28,6 @@ dist-ssr
 .env.local
 .env.*.local
 
+
+# Respaldos locales de la base (datos de alumnos, no subir)
+backups/

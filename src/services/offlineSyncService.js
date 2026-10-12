@@ -463,6 +463,21 @@ const runSyncLoop = async (supabaseClient) => {
 
       try {
         if (item.type === 'UPDATE') {
+          // Guarda anti-pérdida: ninguna copia local vieja puede borrar celdas pintadas del servidor.
+          // Quitar un color se guarda como 'none' (nunca como clave ausente), así que una clave
+          // *_color que existe en el servidor y falta en el payload es una copia desactualizada.
+          if (payload && payload.asistencias && typeof payload.asistencias === 'object') {
+            const { data: serverRow, error: readErr } = await withTimeout(
+              supabaseClient.from(table).select('asistencias').eq('id', item.rowId).maybeSingle()
+            );
+            if (readErr) throw readErr;
+            const serverAsist = (serverRow && serverRow.asistencias) || {};
+            const merged = { ...payload.asistencias };
+            Object.keys(serverAsist).forEach((k) => {
+              if (k.endsWith('_color') && !(k in merged)) merged[k] = serverAsist[k];
+            });
+            payload = { ...payload, asistencias: merged };
+          }
           const { data, error } = await withTimeout(
             supabaseClient.from(table).update(payload).eq('id', item.rowId).select('id')
           );

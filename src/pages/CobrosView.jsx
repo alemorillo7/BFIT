@@ -573,7 +573,7 @@ export default function CobrosView() {
       if (cleanedVal === '4') {
         newAsistencias[`${key}_color`] = 'Amarillo';
       } else if (oldDayVal === '4' && newAsistencias[`${key}_color`] === 'Amarillo') {
-        delete newAsistencias[`${key}_color`];
+        newAsistencias[`${key}_color`] = 'none'; // 'none' (no borrar la clave) para que la guarda anti-pérdida no la restaure
       }
 
       updatedRow.asistencias = newAsistencias;
@@ -1572,12 +1572,21 @@ export default function CobrosView() {
       exportRow['Pago Merienda (Bs)'] = pagoMerienda;
       exportRow['Meriendas Consumidas'] = meriendas;
       exportRow['Saldo Merienda (Bs)'] = pagoMerienda - (meriendas * SNACK_PRICE_BS);
+
+      // Respaldo de pintura y notas (al final para no alterar las columnas existentes)
+      exportRow['Color Fila'] = row.color || '';
+      currentMonthDays.forEach(d => {
+        exportRow[`Color ${d.label}`] = row.asistencias?.[`${d.key}_color`] || '';
+      });
+      currentMonthDays.forEach(d => {
+        exportRow[`Nota ${d.label}`] = row.asistencias?.[`${d.key}_nota`] || '';
+      });
       
       return exportRow;
     });
 
     const csv = Papa.unparse(csvData);
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
@@ -2624,7 +2633,7 @@ export default function CobrosView() {
                                     if (cleaned === '4') {
                                       newAsist[`${d.key}_color`] = 'Amarillo';
                                     } else if (curRow.asistencias?.[d.key] === '4' && newAsist[`${d.key}_color`] === 'Amarillo') {
-                                      delete newAsist[`${d.key}_color`];
+                                      newAsist[`${d.key}_color`] = 'none';
                                     }
                                     const totals = calculateRowTotals(newAsist, curRow.curso);
                                     newData[idx] = { 
