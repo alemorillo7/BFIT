@@ -34,7 +34,7 @@ import {
 import * as Papa from 'papaparse';
 import { exportFullExcelWorkbook, exportSimpleExcelList } from '../components/cobros/cobrosExport';
 import { getDynamicWorkingDays, getDynamicMonthNotice } from '../services/calendarService';
-import { fetchSheetData } from '../services/dataService';
+import { fetchSheetData, sendWebhookMutation } from '../services/dataService';
 import FinanzasView from '../components/cobros/FinanzasView';
 import RankingPlatosView from '../components/cobros/RankingPlatosView';
 import ImportarExcelView from '../components/cobros/ImportarExcelView';
@@ -193,6 +193,7 @@ export default function CobrosView() {
   const [statsViewMode, setStatsViewMode] = useState('diario'); // 'diario' | 'mensual'
   const [isDayPaintMode, setIsDayPaintMode] = useState(false);
   const [selectedDayPaintColor, setSelectedDayPaintColor] = useState('Verde');
+  const [isSavingBackup, setIsSavingBackup] = useState(false);
   const [calendarUpdateKey, setCalendarUpdateKey] = useState(0);
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
   const [exportScope, setExportScope] = useState('vista'); // 'vista' | 'curso' | 'completa'
@@ -589,6 +590,7 @@ export default function CobrosView() {
         updatedRow.color = net >= 0 ? 'Verde' : 'Azul';
       }
 
+      try {
       // Real-time two-way synchronization of absences (Faltas) with Google Sheets
       const formattedDate = `${selectedMonth}-${String(key).padStart(2, '0')}`;
       if (oldDayVal === 'F' && newDayVal !== 'F') {
@@ -606,6 +608,10 @@ export default function CobrosView() {
           fecha: formattedDate,
           motivo_de_falta: 'Falta registrada manualmente en panel de Cobros.'
         }).catch(err => console.error('Error sending mutation ALTA:', err));
+      }
+      } catch (webhookErr) {
+        // La sincronización con Google Sheets nunca debe impedir guardar la celda
+        console.warn('Error enviando falta a Google Sheets:', webhookErr);
       }
     }
     
@@ -1547,8 +1553,8 @@ export default function CobrosView() {
   }, [data]);
 
   // Export to CSV
-  const handleExport = () => {
-    const csvData = filteredData.map((row, index) => {
+  const buildCsv = (rows) => {
+    const csvData = rows.map((row, index) => {
       const exportRow = {
         'Nro.': index + 1,
         'Alumno': row.alumno,
@@ -1585,16 +1591,57 @@ export default function CobrosView() {
       return exportRow;
     });
 
-    const csv = Papa.unparse(csvData);
+    return Papa.unparse(csvData);
+  };
+
+  const downloadCsv = (csv, filename) => {
+    // BOM para que Excel (también en Mac) abra bien los acentos
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', `Cobros_Planilla_${selectedMonth}_Turno_${selectedTurn.replace(':', '_')}.csv`);
+    link.setAttribute('download', filename);
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleExport = () => {
+    downloadCsv(buildCsv(filteredData), `Cobros_Planilla_${selectedMonth}_Turno_${selectedTurn.replace(':', '_')}.csv`);
+  };
+
+  // Botón Guardar: envía todo lo pendiente a la base y descarga un CSV de respaldo
+  // con TODOS los turnos del mes (números, colores y notas).
+  const handleSaveAndBackup = async () => {
+    if (isSavingBackup) return;
+    setIsSavingBackup(true);
+    try {
+      // Forzar guardado de la celda que se está editando
+      if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
+      await new Promise(r => setTimeout(r, 300));
+      if (navigator.onLine) await processSyncQueue(supabaseCobros);
+      const pending = (await getPendingMutations()).length;
+
+      const sorted = [...data].sort((a, b) =>
+        String(a.turno || '').localeCompare(String(b.turno || '')) || String(a.alumno || '').localeCompare(String(b.alumno || '')));
+      const now = new Date();
+      const pad = (n) => String(n).padStart(2, '0');
+      const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}`;
+      downloadCsv(buildCsv(sorted), `Respaldo_BFIT_${selectedMonth}_${stamp}.csv`);
+
+      if (pending > 0) {
+        alert(`Respaldo descargado. ATENCIÓN: hay ${pending} cambio(s) que todavía no llegaron a la base (sin internet). Quedan guardados en este equipo y se envían solos al volver la conexión. NO borres datos del navegador hasta que el contador quede en 0.`);
+      } else {
+        alert('✅ Todo guardado en la base y respaldo CSV descargado.');
+      }
+    } catch (err) {
+      console.error('Error en Guardar/Respaldo:', err);
+      alert('No se pudo completar el guardado. Los cambios siguen en este equipo; probá de nuevo con internet.');
+    } finally {
+      setIsSavingBackup(false);
+    }
   };
 
   // Abre el modal para descargar planilla en Excel (solo Nombre, Curso, Turno)
@@ -1777,6 +1824,16 @@ export default function CobrosView() {
             >
               <ArrowLeft size={18} />
               <span>Volver al Panel</span>
+            </button>
+
+            <button
+              className="btn-fullscreen-back btn-save-backup"
+              onClick={handleSaveAndBackup}
+              disabled={isSavingBackup || data.length === 0}
+              title="Guardar todo en la base y descargar respaldo CSV del mes (todos los turnos, con colores)"
+            >
+              {isSavingBackup ? <Loader2 size={16} className="spinner" /> : <Save size={16} />}
+              <span>{isSavingBackup ? 'Guardando...' : 'Guardar'}</span>
             </button>
 
             <button 
@@ -2283,6 +2340,16 @@ export default function CobrosView() {
                   >
                     <FileSpreadsheet size={16} />
                     <span>Descargar Excel</span>
+                  </button>
+
+                  <button
+                    className="btn btn-primary btn-save-backup"
+                    onClick={handleSaveAndBackup}
+                    disabled={isSavingBackup || data.length === 0}
+                    title="Guardar todo en la base y descargar respaldo CSV del mes (todos los turnos, con colores)"
+                  >
+                    {isSavingBackup ? <Loader2 size={16} className="spinner" /> : <Save size={16} />}
+                    <span>{isSavingBackup ? 'Guardando...' : 'Guardar'}</span>
                   </button>
 
                   <button className="btn btn-outline btn-export" onClick={handleExport} disabled={data.length === 0}>
