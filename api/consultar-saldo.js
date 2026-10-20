@@ -39,14 +39,16 @@ export default withErrorHandling(async (request) => {
       .filter(w => w.length >= 3 && !['del', 'las', 'los', 'pre', 'kin', 'kinder'].includes(w));
   };
 
-  const targetMes = mes || '2026-08';
-  const filteredRecords = allRecords.filter(r => r.mes === targetMes);
+  // Los saldos son por mes (cada mes es una fila nueva en cobros, sin arrastre).
+  // Sin "mes" explícito se usa el mes actual en Bolivia; si el alumno todavía no
+  // tiene fila en el mes actual, se cae al mes más reciente donde sí figura.
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz', year: 'numeric', month: '2-digit' })
+    .formatToParts(new Date());
+  const currentMes = `${parts.find(p => p.type === 'year').value}-${parts.find(p => p.type === 'month').value}`;
 
   const queryWords = getWords(nombre);
-  let bestMatch = null;
-  let maxMatches = 0;
 
-  filteredRecords.forEach(record => {
+  const scoreRecord = (record) => {
     const dbWords = getWords(record.alumno);
     let matches = 0;
     queryWords.forEach(sWord => {
@@ -60,7 +62,25 @@ export default withErrorHandling(async (request) => {
         }
       });
     });
+    return matches;
+  };
 
+  let targetMes = mes || currentMes;
+  if (!mes) {
+    const mesesDelAlumno = [...new Set(
+      allRecords.filter(r => r.mes <= currentMes && scoreRecord(r) >= 2).map(r => r.mes)
+    )].sort();
+    if (mesesDelAlumno.length > 0 && !mesesDelAlumno.includes(currentMes)) {
+      targetMes = mesesDelAlumno[mesesDelAlumno.length - 1];
+    }
+  }
+  const filteredRecords = allRecords.filter(r => r.mes === targetMes);
+
+  let bestMatch = null;
+  let maxMatches = 0;
+
+  filteredRecords.forEach(record => {
+    const matches = scoreRecord(record);
     if (matches > maxMatches) {
       maxMatches = matches;
       bestMatch = record;
