@@ -1034,7 +1034,16 @@ export default function CobrosView() {
       return;
     }
 
-    const prepayMonth = window.confirm(`¿Deseas que los alumnos inicien con el pago del MES COMPLETO (${workingDaysCount} días hábiles) precargado en Verde?\n\n- Aceptar (OK): Precargar pago del mes completo\n- Cancelar: Iniciar con pagos en 0 Bs`);
+    // Precargar el mes completo a TODOS es muy raro y difícil de deshacer: exige escribirlo a propósito.
+    // Por defecto (Enter, Aceptar con el campo vacío o Cancelar) los alumnos arrancan con pagos en 0 Bs y sin pintar.
+    const respuestaPrepago = window.prompt(
+      `Los alumnos se van a crear con pagos en 0 Bs y sin pintar.\n\n` +
+      `Solo si TODOS pagaron el MES COMPLETO (${workingDaysCount} días hábiles) por adelantado, escribí: MES COMPLETO\n\n` +
+      `Para seguir normal, dejá el campo vacío y tocá Aceptar.`,
+      ''
+    );
+    if (respuestaPrepago === null) return;
+    const prepayMonth = respuestaPrepago.trim().toUpperCase() === 'MES COMPLETO';
 
     try {
       setLoading(true);
