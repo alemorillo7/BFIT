@@ -16,6 +16,8 @@
  *     gana) para que un envío viejo nunca pise uno nuevo.
  */
 
+import { computeRowTotals, computeRowColor } from '../../shared/attendance';
+
 const DB_NAME = 'bfit_offline_db';
 const DB_VERSION = 1;
 const STORE_MONTHS = 'month_cache';
@@ -463,20 +465,46 @@ const runSyncLoop = async (supabaseClient) => {
 
       try {
         if (item.type === 'UPDATE') {
-          // Guarda anti-pérdida: ninguna copia local vieja puede borrar celdas pintadas del servidor.
-          // Quitar un color se guarda como 'none' (nunca como clave ausente), así que una clave
-          // *_color que existe en el servidor y falta en el payload es una copia desactualizada.
-          if (payload && payload.asistencias && typeof payload.asistencias === 'object') {
+          // Guarda anti-pérdida (v1.1.12): el servidor es la fuente de verdad de las celdas.
+          //  - Los cambios de celda llegan como "asistenciasPatch" ({ set, del }) y se aplican
+          //    sobre lo que HAY en el servidor, nunca sobre la copia local del dispositivo.
+          //  - Si un payload trae "asistencias" completo (operaciones masivas o versiones viejas
+          //    de la app), ninguna clave que exista en el servidor (número, color o nota) se
+          //    pierde por faltar en la copia local: una copia vieja no puede borrar nada.
+          //    Borrar una celda a propósito se hace SOLO con asistenciasPatch.del.
+          //  El 26/10 una copia vieja del turno 11:25 pisó los días 21-23 de 33 alumnos así.
+          const patches = group
+            .filter((q) => q.asistenciasPatch && typeof q.asistenciasPatch === 'object')
+            .map((q) => q.asistenciasPatch);
+          const hasFullAsist = !!(payload && payload.asistencias && typeof payload.asistencias === 'object');
+          let mergedFields = null;
+          if (hasFullAsist || patches.length > 0) {
             const { data: serverRow, error: readErr } = await withTimeout(
-              supabaseClient.from(table).select('asistencias').eq('id', item.rowId).maybeSingle()
+              supabaseClient.from(table).select('asistencias,curso,pagos_bs,observaciones').eq('id', item.rowId).maybeSingle()
             );
             if (readErr) throw readErr;
             const serverAsist = (serverRow && serverRow.asistencias) || {};
-            const merged = { ...payload.asistencias };
-            Object.keys(serverAsist).forEach((k) => {
-              if (k.endsWith('_color') && !(k in merged)) merged[k] = serverAsist[k];
+            const merged = hasFullAsist ? { ...payload.asistencias } : { ...serverAsist };
+            if (hasFullAsist) {
+              Object.keys(serverAsist).forEach((k) => {
+                if (!(k in merged)) merged[k] = serverAsist[k];
+              });
+            }
+            patches.forEach((p) => {
+              Object.assign(merged, (p && p.set) || {});
+              ((p && p.del) || []).forEach((k) => { delete merged[k]; });
             });
-            payload = { ...payload, asistencias: merged };
+            const curso = payload.curso !== undefined ? payload.curso : (serverRow ? serverRow.curso : undefined);
+            const pagos = payload.pagos_bs !== undefined ? payload.pagos_bs : (serverRow ? serverRow.pagos_bs : 0);
+            const obs = payload.observaciones !== undefined ? payload.observaciones : (serverRow ? serverRow.observaciones : '');
+            const totals = computeRowTotals(merged, curso);
+            mergedFields = {
+              asistencias: merged,
+              platos_vendidos: totals.platos_vendidos,
+              platos_vendidos_bs: totals.platos_vendidos_bs,
+              color: computeRowColor(totals, pagos, obs),
+            };
+            payload = { ...payload, ...mergedFields };
           }
           const { data, error } = await withTimeout(
             supabaseClient.from(table).update(payload).eq('id', item.rowId).select('id')
@@ -486,6 +514,14 @@ const runSyncLoop = async (supabaseClient) => {
             // La fila no existe en el servidor: no tiene sentido reintentar,
             // pero NO lo tiramos: queda archivado para recuperación manual.
             archiveFailed(group, 'La fila no existe en el servidor (0 filas actualizadas)');
+          } else if (mergedFields) {
+            // Reparar la copia local con lo que quedó en el servidor y reflejarlo en pantalla
+            if (item.month) updateRowInMonthCache(item.month, item.rowId, mergedFields);
+            try {
+              window.dispatchEvent(new CustomEvent('bfit:row-merged', {
+                detail: { rowId: item.rowId, month: item.month, fields: mergedFields },
+              }));
+            } catch (e) { /* entorno sin window */ }
           }
         } else if (item.type === 'INSERT') {
           const { data, error } = await withTimeout(

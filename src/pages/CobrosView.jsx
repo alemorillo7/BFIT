@@ -413,6 +413,24 @@ export default function CobrosView() {
     return () => window.clearTimeout(timer);
   }, [loadData]);
 
+  // Cuando la sincronización fusiona una fila con lo que había en el servidor
+  // (celdas cargadas desde otro dispositivo), reflejarlo en pantalla sin pisar
+  // lo que se esté escribiendo en ese momento.
+  useEffect(() => {
+    const onRowMerged = (e) => {
+      const { rowId, month, fields } = (e && e.detail) || {};
+      if (!rowId || month !== selectedMonth || !fields) return;
+      setData(prev => prev.map(r => {
+        if (r.id !== rowId) return r;
+        const asistencias = { ...(fields.asistencias || {}), ...(r.asistencias || {}) };
+        const next = { ...r, ...fields, asistencias };
+        return { ...next, ...calculateRowTotals(asistencias, next.curso) };
+      }));
+    };
+    window.addEventListener('bfit:row-merged', onRowMerged);
+    return () => window.removeEventListener('bfit:row-merged', onRowMerged);
+  }, [selectedMonth, calculateRowTotals]);
+
   // Save or delete observation note for a specific day and student
   const handleSaveDayNote = async (rowId, dayKey, noteText) => {
     const rowIndex = data.findIndex(r => r.id === rowId);
@@ -438,10 +456,11 @@ export default function CobrosView() {
     // Guardar inmediatamente en cache local
     updateRowInMonthCache(selectedMonth, rowId, { asistencias: newAsistencias });
 
-    const payload = {
-      asistencias: newAsistencias,
-      updated_at: new Date().toISOString()
-    };
+    // Solo se manda la nota que cambió; el servidor conserva el resto de la fila.
+    const asistenciasPatch = cleanNote === ''
+      ? { set: {}, del: [`${dayKey}_nota`] }
+      : { set: { [`${dayKey}_nota`]: cleanNote }, del: [] };
+    const payload = { updated_at: new Date().toISOString() };
 
     setSavingRows(prev => new Set(prev).add(rowId));
 
@@ -451,6 +470,7 @@ export default function CobrosView() {
         table: 'cobros',
         rowId,
         payload,
+        asistenciasPatch,
         month: selectedMonth
       });
     } catch (err) {
@@ -487,7 +507,9 @@ export default function CobrosView() {
     // Guardar inmediatamente en cache local
     updateRowInMonthCache(selectedMonth, rowId, { asistencias: newAsistencias });
 
-    const payload = { asistencias: newAsistencias, updated_at: new Date().toISOString() };
+    // Solo se manda el color que cambió; el servidor conserva el resto de la fila.
+    const asistenciasPatch = { set: { [`${dayKey}_color`]: newAsistencias[`${dayKey}_color`] }, del: [] };
+    const payload = { updated_at: new Date().toISOString() };
 
     setSavingRows(prev => new Set(prev).add(rowId));
 
@@ -497,6 +519,7 @@ export default function CobrosView() {
         table: 'cobros',
         rowId,
         payload,
+        asistenciasPatch,
         month: selectedMonth
       });
     } catch (err) {
@@ -517,6 +540,8 @@ export default function CobrosView() {
     
     const oldRow = data[rowIndex];
     let updatedRow = { ...oldRow };
+    // Cambio de UNA celda diaria: se manda como parche y el servidor conserva el resto
+    let asistenciasPatch = null;
 
     const isMerienda = (obs) => String(obs || '').toLowerCase().includes('merienda');
 
@@ -563,18 +588,23 @@ export default function CobrosView() {
         : normalizeAttendanceCode(newAsistencias[key]);
       const newDayVal = cleanedVal;
       
+      asistenciasPatch = { set: {}, del: [] };
       if (cleanedVal === '') {
         delete newAsistencias[key];
+        asistenciasPatch.del.push(key);
         // Nota: NO borramos newAsistencias[`${key}_color`] para preservar días pintados por prepago/mes completo
       } else {
         newAsistencias[key] = cleanedVal;
+        asistenciasPatch.set[key] = cleanedVal;
       }
 
       // Si pone 4 (Almuerzo + Merienda), siempre se pinta de amarillo automáticamente
       if (cleanedVal === '4') {
         newAsistencias[`${key}_color`] = 'Amarillo';
+        asistenciasPatch.set[`${key}_color`] = 'Amarillo';
       } else if (oldDayVal === '4' && newAsistencias[`${key}_color`] === 'Amarillo') {
         newAsistencias[`${key}_color`] = 'none'; // 'none' (no borrar la clave) para que la guarda anti-pérdida no la restaure
+        asistenciasPatch.set[`${key}_color`] = 'none';
       }
 
       updatedRow.asistencias = newAsistencias;
@@ -620,24 +650,22 @@ export default function CobrosView() {
     newData[rowIndex] = updatedRow;
     setData(newData);
 
-    const payload = {
-      alumno: updatedRow.alumno,
-      curso: updatedRow.curso,
-      turno: updatedRow.turno,
-      fecha_inicio: updatedRow.fecha_inicio,
-      fecha_fin: updatedRow.fecha_fin,
-      observaciones: updatedRow.observaciones,
-      asistencias: updatedRow.asistencias,
+    // Solo se envía lo que cambió, NUNCA la fila completa desde la copia local:
+    // una copia vieja del navegador pisaba días cargados desde otro dispositivo
+    // (26/10, turno 11:25). Las celdas van como parche; los totales los recalcula
+    // la sincronización sobre la fila fusionada con el servidor.
+    const basePayload = {
       platos_vendidos: updatedRow.platos_vendidos,
       platos_vendidos_bs: updatedRow.platos_vendidos_bs,
-      pagos_bs: updatedRow.pagos_bs,
-      saldo_merienditas: updatedRow.saldo_merienditas,
       color: updatedRow.color,
       updated_at: new Date().toISOString()
     };
+    const payload = asistenciasPatch
+      ? basePayload
+      : { ...basePayload, [key]: updatedRow[key] };
 
-    // Guardar inmediatamente en cache local
-    updateRowInMonthCache(selectedMonth, rowId, payload);
+    // Guardar inmediatamente en cache local (la copia local sí lleva la fila completa)
+    updateRowInMonthCache(selectedMonth, rowId, { ...payload, asistencias: updatedRow.asistencias });
 
     setSavingRows(prev => {
       const next = new Set(prev);
@@ -651,6 +679,7 @@ export default function CobrosView() {
         table: 'cobros',
         rowId,
         payload,
+        ...(asistenciasPatch ? { asistenciasPatch } : {}),
         month: selectedMonth
       });
     } catch (err) {

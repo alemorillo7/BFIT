@@ -31,3 +31,42 @@ export function getAttendanceConsumption(value) {
 export function isAttendanceDayKey(key) {
   return /^\d+$/.test(String(key));
 }
+
+/** Precio del almuerzo según el curso (secundaria 35, el resto 32). */
+export function getPricePerPlate(course) {
+  const norm = String(course || '').toUpperCase();
+  if (/\dS[AB]?$/.test(norm) || norm.includes('SECUNDARIA')) return 35;
+  return 32;
+}
+
+/**
+ * Totales de una fila a partir de sus celdas diarias. Es la misma cuenta que hace
+ * la planilla; la usa también la sincronización para recalcular después de fusionar
+ * una fila con lo que había en el servidor.
+ */
+export function computeRowTotals(asistencias, course) {
+  let plates = 0;
+  let meriendas = 0;
+  const snack = courseSupportsSnack(course);
+  Object.keys(asistencias || {}).forEach((key) => {
+    if (!isAttendanceDayKey(key)) return;
+    const consumption = getAttendanceConsumption(asistencias[key]);
+    plates += consumption.lunches;
+    meriendas += snack ? consumption.snacks : 0;
+  });
+  return {
+    platos_vendidos: plates,
+    platos_vendidos_bs: plates * getPricePerPlate(course),
+    meriendas_consumidas: meriendas,
+    meriendas_consumidas_bs: meriendas * SNACK_PRICE_BS,
+  };
+}
+
+/** Color de la fila (misma regla que la planilla): '' sin actividad, Amarillo merienda, Verde al día, Azul debe. */
+export function computeRowColor(totals, pagosBs, observaciones) {
+  const pagos = Number(pagosBs || 0);
+  const hasActivity = Number((totals && totals.platos_vendidos) || 0) > 0 || pagos > 0;
+  if (!hasActivity) return '';
+  if (String(observaciones || '').toLowerCase().includes('merienda')) return 'Amarillo';
+  return pagos - Number((totals && totals.platos_vendidos_bs) || 0) >= 0 ? 'Verde' : 'Azul';
+}
