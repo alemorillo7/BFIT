@@ -84,7 +84,7 @@ export default function RankingPlatosView({
           name: cleanName,
           key,
           count: 0,
-          turns: { '11:25': 0, '11:50': 0, '12:00': 0, '12:40': 0, '13:05': 0 },
+          turns: { '11:50': 0, '11:25': 0, '12:00': 0, '12:40': 0, '13:05': 0 },
           courses: {},
           category: category,
           changeRequests: 0

@@ -72,8 +72,8 @@ const monthsList = [
 
 const turnsList = [
   { value: 'ALL', label: '🌐 Todos los Turnos (Global)' },
-  { value: '11:25', label: 'Turno 11:25' },
   { value: '11:50', label: 'Turno 11:50' },
+  { value: '11:25', label: 'Turno 11:25' },
   { value: '12:00', label: 'Turno 12:00' },
   { value: '12:40', label: 'Turno 12:40' },
   { value: '13:05', label: 'Turno 13:05' }
@@ -1059,7 +1059,7 @@ export default function CobrosView() {
     const monthLabel = monthsList.find(m => m.value === selectedMonth)?.label;
     const workingDaysCount = currentMonthDays.length;
     
-    if (!window.confirm(`¿Deseas inicializar el mes de ${monthLabel} para TODOS LOS TURNOS (11:25, 11:50, 12:00, 12:40 y 13:05) con los alumnos del último mes registrado?`)) {
+    if (!window.confirm(`¿Deseas inicializar el mes de ${monthLabel} para TODOS LOS TURNOS (11:50, 11:25, 12:00, 12:40 y 13:05) con los alumnos del último mes registrado?`)) {
       return;
     }
 
@@ -2428,7 +2428,7 @@ export default function CobrosView() {
           {data.length === 0 ? (
             <>
               <h3>No hay alumnos cargados en {monthsList.find(m => m.value === selectedMonth)?.label}</h3>
-              <p>Puedes inicializar automáticamente <strong>todos los turnos (11:25, 11:50, 12:00, 12:40 y 13:05)</strong> con la lista completa de alumnos del último mes registrado con un solo clic.</p>
+              <p>Puedes inicializar automáticamente <strong>todos los turnos (11:50, 11:25, 12:00, 12:40 y 13:05)</strong> con la lista completa de alumnos del último mes registrado con un solo clic.</p>
               <div className="empty-state-actions">
                 <button className="btn btn-primary" onClick={handleInitializeMonth}>
                   <RefreshCw size={18} />
