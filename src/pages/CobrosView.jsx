@@ -1961,34 +1961,31 @@ export default function CobrosView() {
 
             <div 
               className="fullscreen-plates-badge"
-              title={statsViewMode === 'diario' && summaryStats.platosHoyTurno !== null 
-                ? `Platos vendidos hoy en este turno (${turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn}) - Clic para ver mes` 
-                : `Platos acumulados en el mes para este turno - Clic para ver día`}
-              onClick={() => setStatsViewMode(prev => prev === 'diario' ? 'mensual' : 'diario')}
-              style={{ cursor: 'pointer' }}
+              title={summaryStats.platosHoyTurno !== null
+                ? `Platos vendidos hoy en este turno (${turnsList.find(t => t.value === selectedTurn)?.label || selectedTurn})`
+                : 'Platos acumulados en el mes para este turno (el mes elegido no es el actual)'}
             >
+              {/* Pantalla completa: SIEMPRE el total del día (pedido de Fernanda). El mensual queda en el panel de estadísticas. */}
               <Utensils size={13} className="badge-icon" />
               <span className="badge-count">
-                {statsViewMode === 'diario' && summaryStats.platosHoyTurno !== null ? summaryStats.platosHoyTurno : summaryStats.totalPlatos}
+                {summaryStats.platosHoyTurno !== null ? summaryStats.platosHoyTurno : summaryStats.totalPlatos}
               </span>
               <span className="badge-label">
-                {statsViewMode === 'diario' && summaryStats.platosHoyTurno !== null ? 'Platos Hoy' : 'Turno Mes'}
+                {summaryStats.platosHoyTurno !== null ? 'Platos Hoy' : 'Turno Mes'}
               </span>
             </div>
 
-            <div 
+            <div
               className="fullscreen-plates-badge fullscreen-plates-badge--total-dia"
-              title={statsViewMode === 'diario' && summaryStats.platosHoyTotalDia !== null
-                ? 'TOTAL de platos vendidos hoy sumando todos los turnos del colegio - Clic para ver mes'
-                : 'TOTAL de platos vendidos en el mes sumando todos los turnos del colegio - Clic para ver día'}
-              onClick={() => setStatsViewMode(prev => prev === 'diario' ? 'mensual' : 'diario')}
-              style={{ cursor: 'pointer' }}
+              title={summaryStats.platosHoyTotalDia !== null
+                ? 'TOTAL de platos vendidos hoy sumando todos los turnos del colegio'
+                : 'TOTAL de platos del mes sumando todos los turnos (el mes elegido no es el actual)'}
             >
               <span className="badge-count badge-count--gold">
-                {statsViewMode === 'diario' && summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : summaryStats.totalPlatosMesGlobal}
+                {summaryStats.platosHoyTotalDia !== null ? summaryStats.platosHoyTotalDia : summaryStats.totalPlatosMesGlobal}
               </span>
               <span className="badge-label">
-                {statsViewMode === 'diario' && summaryStats.platosHoyTotalDia !== null ? 'Total Día' : 'Total Mes'}
+                {summaryStats.platosHoyTotalDia !== null ? 'Total Día' : 'Total Mes'}
               </span>
             </div>
 
