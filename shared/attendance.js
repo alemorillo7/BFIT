@@ -62,6 +62,68 @@ export function computeRowTotals(asistencias, course) {
   };
 }
 
+/**
+ * Saldo de almuerzos según cómo trabaja Fernanda en la planilla: los pagos se
+ * marcan PINTANDO los días, no en la columna "Cargar Pago".
+ *   - Día con almuerzo pintado Verde            → consumido y pagado (no suma ni resta)
+ *   - Día con almuerzo en Azul o sin color      → consumido sin pagar (deuda)
+ *   - Día con almuerzo en Amarillo (código 4)   → la planilla lo pinta sola, no dice si está
+ *     pagado: cuenta como pagado si la fila no tiene ningún día Azul, si no como deuda
+ *   - Día Verde SIN almuerzo (futuro, F, vacío) → día prepagado, queda a favor
+ * Si algún día se usa la columna "Cargar Pago" (pagos_bs > 0) se respeta la cuenta
+ * clásica pagos − consumo, para no contar dos veces.
+ */
+export function computeColorBalance(asistencias, course, pagosBs) {
+  const a = asistencias || {};
+  const price = getPricePerPlate(course);
+  const colorOf = (k) => {
+    const c = String(a[`${k}_color`] || '').trim();
+    return c && c.toLowerCase() !== 'none' ? c : '';
+  };
+  const dayKeys = Object.keys(a).filter(isAttendanceDayKey).sort((x, y) => Number(x) - Number(y));
+  const pagos = Number(pagosBs || 0);
+
+  const consumidos = dayKeys
+    .map((k) => ({ k, lunches: getAttendanceConsumption(a[k]).lunches, color: colorOf(k) }))
+    .filter((d) => d.lunches > 0);
+  const totalConsumoBs = consumidos.reduce((s, d) => s + d.lunches * price, 0);
+
+  if (pagos > 0) {
+    return {
+      saldo_bs: pagos - totalConsumoBs,
+      fuente: 'pagos_bs',
+      dias_debe: [], dias_pagados: [], dias_prepagados: [],
+    };
+  }
+
+  const filaTieneAzul = consumidos.some((d) => /^azul$/i.test(d.color));
+  const diasDebe = [];
+  const diasPagados = [];
+  let deudaBs = 0;
+  for (const d of consumidos) {
+    const pagado = /^verde$/i.test(d.color) || (/^amarillo$/i.test(d.color) && !filaTieneAzul);
+    if (pagado) diasPagados.push(d.k);
+    else { diasDebe.push(d.k); deudaBs += d.lunches * price; }
+  }
+
+  // Todas las claves de color Verde cuyo día no tiene almuerzo (también días sin clave de valor)
+  const keysConColor = Object.keys(a)
+    .filter((k) => /^\d+_color$/.test(k))
+    .map((k) => k.replace('_color', ''));
+  const diasPrepagados = [...new Set(keysConColor)]
+    .filter((k) => /^verde$/i.test(colorOf(k)) && getAttendanceConsumption(a[k]).lunches === 0)
+    .sort((x, y) => Number(x) - Number(y));
+  const creditoBs = diasPrepagados.length * price;
+
+  return {
+    saldo_bs: creditoBs - deudaBs,
+    fuente: 'colores',
+    dias_debe: diasDebe,
+    dias_pagados: diasPagados,
+    dias_prepagados: diasPrepagados,
+  };
+}
+
 /** Color de la fila (misma regla que la planilla): '' sin actividad, Amarillo merienda, Verde al día, Azul debe. */
 export function computeRowColor(totals, pagosBs, observaciones) {
   const pagos = Number(pagosBs || 0);

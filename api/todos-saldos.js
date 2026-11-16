@@ -1,6 +1,6 @@
 import { supabaseCobrosAdmin } from './_lib/supabaseCobros.js';
 import { json, methodNotAllowed, withErrorHandling } from './_lib/http.js';
-import { courseSupportsSnack, getAttendanceConsumption, isAttendanceDayKey, SNACK_PRICE_BS } from '../shared/attendance.js';
+import { computeColorBalance, courseSupportsSnack, getAttendanceConsumption, isAttendanceDayKey, SNACK_PRICE_BS } from '../shared/attendance.js';
 
 export const config = { runtime: 'edge' };
 
@@ -55,9 +55,10 @@ export default withErrorHandling(async (request) => {
     // - Verde (Green): Prepaid / Credit in favor
     // - Amarillo (Yellow) / FFF2CC: Almuerzo + Merienda
     // - Other: Neutral (paid/no debt)
+    // Saldo según los colores de la planilla (Fernanda marca los pagos pintando los días).
     const pagosBs = Number(record.pagos_bs || 0);
-    const platosVendidosBs = Number(record.platos_vendidos_bs || 0);
-    const saldoBs = pagosBs - platosVendidosBs;
+    const balance = computeColorBalance(asistencias, record.curso, pagosBs);
+    const saldoBs = balance.saldo_bs;
 
     // Calculate meriendas: days with '4' (Almuerzo+Merienda) or 'M' (Solo Merienda)
     const diasMerienda = courseSupportsSnack(record.curso)
@@ -102,6 +103,10 @@ export default withErrorHandling(async (request) => {
       meriendas_consumidas: diasMerienda,
       dias_consumidos: diasConsumidos,
       saldo_bs: saldoBs,
+      saldo_fuente: balance.fuente,
+      dias_debe: balance.dias_debe,
+      dias_pagados: balance.dias_pagados,
+      dias_prepagados: balance.dias_prepagados,
       color: record.color || null,
       info_saldo: infoSaldo
     };
