@@ -1537,10 +1537,24 @@ export default function CobrosView() {
     const inDebtCount = turnData.filter(r => Number(r.pagos_bs || 0) < Number(r.platos_vendidos_bs || 0)).length;
 
     // Platos vendidos HOY (día actual)
-    const now = new Date();
-    const currentYM = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    const isCurrentMonth = selectedMonth === currentYM;
-    const todayDayKey = String(now.getDate());
+    // "Hoy" en hora de Bolivia (no depende de la zona horaria de la compu)
+    const boParts = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/La_Paz', year: 'numeric', month: '2-digit', day: '2-digit' })
+      .formatToParts(new Date());
+    const boPart = (t) => boParts.find(p => p.type === t)?.value;
+    const currentYM = `${boPart('year')}-${boPart('month')}`;
+    const clockMatchesMonth = selectedMonth === currentYM;
+    // Si el reloj de la compu no coincide con el mes elegido (fecha mal configurada),
+    // se usa el último día del mes que tiene platos cargados, para que el contador no quede en "-".
+    const lastLoadedDay = (() => {
+      let max = 0;
+      data.forEach(r => Object.keys(r.asistencias || {}).forEach(k => {
+        if (/^\d+$/.test(k) && getAttendanceConsumption(r.asistencias[k]).lunches > 0) max = Math.max(max, Number(k));
+      }));
+      return max;
+    })();
+    // Solo cuando el reloj está ATRASADO respecto del mes elegido (meses pasados siguen mostrando el total del mes)
+    const isCurrentMonth = clockMatchesMonth || (selectedMonth > currentYM && lastLoadedDay > 0);
+    const todayDayKey = clockMatchesMonth ? String(Number(boPart('day'))) : String(lastLoadedDay);
 
     // 1. Platos hoy en el turno seleccionado
     const platosHoyTurno = isCurrentMonth
